@@ -131,7 +131,7 @@ export default function Characters() {
                     Редактировать
                   </Button>
                   <Button variant="outline" asChild size="sm">
-                    <Link to="/create">Создать похожего</Link>
+                    <Link to={`/characters/${item.id}`}>Просмотр</Link>
                   </Button>
                   <Button
                     variant="destructive"
@@ -153,7 +153,7 @@ export default function Characters() {
           <div className="mt-2 text-sm">Сохраните героя на шаге «Итоги».</div>
           <div className="mt-6">
             <Button asChild>
-              <Link to="/create">Создать нового</Link>
+              <Link to="/create">Созда��ь нового</Link>
             </Button>
           </div>
         </div>

@@ -13,6 +13,8 @@ export type Basics = {
   race: string;
   class: string;
   background: string;
+  backgroundBonuses?: Partial<Record<keyof Abilities, number>>;
+  raceBonuses?: Partial<Record<keyof Abilities, number>>;
   alignment: string;
   level: number;
   subclass: string;
@@ -49,6 +51,8 @@ const defaultDraft: CharacterDraft = {
     race: "Человек",
     class: "Воин",
     background: "Академик",
+    backgroundBonuses: {},
+    raceBonuses: {},
     alignment: "Хаотично-добрый",
     level: 1,
     subclass: "",
@@ -80,6 +84,8 @@ type Ctx = {
     s2?: keyof Abilities,
   ) => void;
   setAsiFeat: (level: number, feat?: string) => void;
+  setBackgroundBonuses: (b: Partial<Record<keyof Abilities, number>>) => void;
+  setRaceBonuses: (b: Partial<Record<keyof Abilities, number>>) => void;
   save: () => void;
 };
 
@@ -144,6 +150,16 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             asi: { ...prev, [level]: { ...prevLevel, mode: "feat", feat } },
           };
         }),
+          setBackgroundBonuses: (b) =>
+        setDraft((d) => ({
+          ...d,
+          basics: { ...d.basics, backgroundBonuses: { ...(d.basics.backgroundBonuses || {}), ...b } },
+        })),
+      setRaceBonuses: (b) =>
+        setDraft((d) => ({
+          ...d,
+          basics: { ...d.basics, raceBonuses: { ...(d.basics.raceBonuses || {}), ...b } },
+        })),
       save: () => {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));

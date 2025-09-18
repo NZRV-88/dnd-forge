@@ -21,6 +21,7 @@ import Start from "./pages/create/Start";
 import AbilitiesPick from "./pages/create/Abilities";
 import EquipmentPick from "./pages/create/Equipment";
 import Summary from "./pages/create/Summary";
+import CharacterView from "./pages/CharacterView";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/create/abilities" element={<AbilitiesPick />} />
               <Route path="/create/equipment" element={<EquipmentPick />} />
               <Route path="/create/summary" element={<Summary />} />
+              <Route path="/characters/:id" element={<CharacterView />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

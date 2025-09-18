@@ -44,19 +44,20 @@ export default function AbilitiesPick() {
   const handleAssign = (ability: string, value: number) => {
     setAssign((prev) => {
       const updated = { ...prev };
-      // Удаляем предыдущее значение, если оно уже было назначено
-      Object.keys(updated).forEach((k) => {
-        if (updated[k] === value && k !== ability) updated[k] = undefined as any;
-      });
       updated[ability] = value;
       return updated;
     });
   };
 
-  // Проверка, все ли значения распределены
-  const allAssigned =
-    Object.values(assign).filter((v) => typeof v === "number").length === 6 &&
-    pool.every((v) => Object.values(assign).includes(v));
+  // Проверка, все ли значения распределены (учитываем дубликаты)
+  const allAssigned = (() => {
+    const assignedValues = Object.values(assign).filter((v) => typeof v === "number") as number[];
+    if (assignedValues.length !== pool.length) return false;
+    const freq = (arr: number[]) => arr.reduce((m, x) => ((m[x] = (m[x] || 0) + 1), m), {} as Record<number, number>);
+    const aFreq = freq(assignedValues);
+    const pFreq = freq(pool);
+    return Object.keys(pFreq).every((k) => aFreq[Number(k)] === pFreq[Number(k)]);
+  })();
 
   // Сохранить и перейти далее
   const handleNext = () => {
@@ -115,18 +116,31 @@ export default function AbilitiesPick() {
               <select
                 className="rounded-md border bg-background px-2 py-1"
                 value={assign[key] ?? ""}
-                onChange={(e) => handleAssign(key, Number(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "") {
+                    setAssign((prev) => {
+                      const updated = { ...prev };
+                      delete updated[key];
+                      return updated;
+                    });
+                  } else {
+                    handleAssign(key, Number(val));
+                  }
+                }}
               >
                 <option value="">—</option>
-                {pool.map((v) => (
-                  <option
-                    key={v}
-                    value={v}
-                    disabled={Object.values(assign).includes(v) && assign[key] !== v}
-                  >
-                    {v}
-                  </option>
-                ))}
+                {pool.map((v, idx) => {
+                  const assignedCount = Object.values(assign).filter((x) => x === v).length;
+                  const availableCount = pool.filter((p) => p === v).length;
+                  // If value already fully assigned elsewhere and it's not the current selection, hide it
+                  if (assignedCount >= availableCount && assign[key] !== v) return null;
+                  return (
+                    <option key={`${idx}-${v}`} value={v}>
+                      {v}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           ))}
