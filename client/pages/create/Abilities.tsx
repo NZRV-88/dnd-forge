@@ -116,15 +116,27 @@ export default function AbilitiesPick() {
               <select
                 className="rounded-md border bg-background px-2 py-1"
                 value={assign[key] ?? ""}
-                onChange={(e) => handleAssign(key, Number(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "") {
+                    setAssign((prev) => {
+                      const updated = { ...prev };
+                      delete updated[key];
+                      return updated;
+                    });
+                  } else {
+                    handleAssign(key, Number(val));
+                  }
+                }}
               >
                 <option value="">—</option>
                 {pool.map((v, idx) => {
                   const assignedCount = Object.values(assign).filter((x) => x === v).length;
                   const availableCount = pool.filter((p) => p === v).length;
-                  const disabled = assignedCount >= availableCount && assign[key] !== v;
+                  // If value already fully assigned elsewhere and it's not the current selection, hide it
+                  if (assignedCount >= availableCount && assign[key] !== v) return null;
                   return (
-                    <option key={`${idx}-${v}`} value={v} disabled={disabled}>
+                    <option key={`${idx}-${v}`} value={v}>
                       {v}
                     </option>
                   );
