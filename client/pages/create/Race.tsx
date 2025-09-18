@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ const races = [
   { key: "Дворф", desc: "Выносливые и стойкие, мастера ремесла и войны.", skills: ["Выносливость"], bonuses: { con: 2 } },
   {
     key: "Полуорк",
-    desc: "Сильные и внушающие страх, но способные на героизм.",
+    desc: "Сильные и внушающ��е страх, но способные на героизм.",
     skills: ["Атлетика"],
     bonuses: { str: 2 },
   },
