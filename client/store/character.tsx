@@ -14,6 +14,7 @@ export type Basics = {
   class: string;
   background: string;
   backgroundBonuses?: Partial<Record<keyof Abilities, number>>;
+  raceBonuses?: Partial<Record<keyof Abilities, number>>;
   alignment: string;
   level: number;
   subclass: string;
