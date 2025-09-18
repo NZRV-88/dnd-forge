@@ -51,6 +51,7 @@ const defaultDraft: CharacterDraft = {
     class: "Воин",
     background: "Академик",
     backgroundBonuses: {},
+    raceBonuses: {},
     alignment: "Хаотично-добрый",
     level: 1,
     subclass: "",
