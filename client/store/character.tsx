@@ -147,10 +147,15 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             asi: { ...prev, [level]: { ...prevLevel, mode: "feat", feat } },
           };
         }),
-      setBackgroundBonuses: (b) =>
+          setBackgroundBonuses: (b) =>
         setDraft((d) => ({
           ...d,
           basics: { ...d.basics, backgroundBonuses: { ...(d.basics.backgroundBonuses || {}), ...b } },
+        })),
+      setRaceBonuses: (b) =>
+        setDraft((d) => ({
+          ...d,
+          basics: { ...d.basics, raceBonuses: { ...(d.basics.raceBonuses || {}), ...b } },
         })),
       save: () => {
         try {
