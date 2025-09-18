@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -77,6 +78,59 @@ export default function CharacterView() {
   const b = char.basics || {};
   const equipment = char.equipment || [];
 
+  // Skills map: Russian name -> ability key
+  const SKILLS: Record<string, keyof typeof finalStats | string> = {
+    "Атлетика": "str",
+    "Акробатика": "dex",
+    "Ловкость рук": "dex",
+    "Скрытность": "dex",
+    "Аркана": "int",
+    "История": "int",
+    "Расследование": "int",
+    "Природа": "int",
+    "Религия": "int",
+    "Обращение с животными": "wis",
+    "Проницательность": "wis",
+    "Медицина": "wis",
+    "Восприятие": "wis",
+    "Выживание": "wis",
+    "Обман": "cha",
+    "Запугивание": "cha",
+    "Выступление": "cha",
+    "Убеждение": "cha",
+  };
+
+  // proficiency bonus based on level
+  const profBonus = (() => {
+    const lvl = b.level || 1;
+    if (lvl >= 17) return 6;
+    if (lvl >= 13) return 5;
+    if (lvl >= 9) return 4;
+    if (lvl >= 5) return 3;
+    return 2;
+  })();
+
+  const speed = (b as any).speed || 30; // default 30 ft
+
+  const initiative = (() => {
+    const dex = (finalStats as any).dex || 0;
+    return Math.floor((dex - 10) / 2);
+  })();
+
+  const ac = (() => {
+    // naive AC calc: base 10 + dex mod; detect light armor keywords
+    const dexMod = Math.floor(((finalStats as any).dex || 0 - 10) / 2);
+    const eq = equipment.join(" ").toLowerCase();
+    if (eq.includes("кольч") || eq.includes("кольчуга") || eq.includes("chain")) return 16; // chain
+    if (eq.includes("кольчуга")) return 16;
+    if (eq.includes("кожан") || eq.includes("leather")) return 11 + dexMod;
+    return 10 + dexMod;
+  })();
+
+  // local skill prof state
+  const [skillsState, setSkillsState] = useState<Record<string, { prof: boolean }>>(() => (char.skills) || {});
+  const [extraHp, setExtraHp] = useState<number>(0);
+
   const hpMax = (() => {
     const die: Record<string, number> = {
       barbarian: 12,
@@ -142,6 +196,72 @@ export default function CharacterView() {
               <div className="flex items-center gap-2">
                 <button className="h-8 w-8 rounded-md border" onClick={() => saveHp(Math.max(0, (curHp ?? 0) - 1))}>−</button>
                 <button className="h-8 w-8 rounded-md border" onClick={() => saveHp(Math.min(hpMax, (curHp ?? 0) + 1))}>+</button>
+              </div>
+            </div>
+
+            <div className="mt-4 text-sm">
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                <div>Класс доспеха (КД)</div>
+                <div className="font-semibold">{ac}</div>
+                <div>Бонус мастерства</div>
+                <div className="font-semibold">+{profBonus}</div>
+                <div>Скорость</div>
+                <div className="font-semibold">{speed} фт</div>
+                <div>Инициатива</div>
+                <div className="font-semibold">{initiative >= 0 ? `+${initiative}` : initiative}</div>
+              </div>
+
+              <div className="mt-3">
+                <div className="text-xs text-muted-foreground">Навыки</div>
+                <div className="mt-2 grid gap-2 text-sm">
+                  {Object.entries(SKILLS).map(([skill, ability]) => {
+                    const prof = skillsState[skill]?.prof || false;
+                    const abilityVal = (finalStats as any)[ability as string] || 0;
+                    const total = Math.floor((abilityVal - 10) / 2) + (prof ? profBonus : 0);
+                    return (
+                      <label key={skill} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={prof}
+                            onChange={(e) => {
+                              const next = { ...(skillsState || {}) };
+                              next[skill] = { prof: e.target.checked };
+                              setSkillsState(next);
+                              // persist into character
+                              try {
+                                const raw = localStorage.getItem(LIST_KEY) || "[]";
+                                const list = JSON.parse(raw);
+                                const idx = list.findIndex((c: any) => String(c.id) === String(id));
+                                if (idx !== -1) {
+                                  list[idx].skills = next;
+                                  localStorage.setItem(LIST_KEY, JSON.stringify(list));
+                                  setChar(list[idx]);
+                                }
+                              } catch {}
+                            }}
+                          />
+                          <span>{skill}</span>
+                        </div>
+                        <div className="font-semibold">{total >= 0 ? `+${total}` : total}</div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <div className="text-xs text-muted-foreground">Доп. очки здоровья</div>
+                <div className="mt-2 flex items-center gap-2">
+                  <input type="number" className="w-24 rounded-md border px-2 py-1" value={extraHp} onChange={(e) => setExtraHp(Number(e.target.value))} />
+                  <Button onClick={() => {
+                    const add = Number(extraHp) || 0;
+                    if (add === 0) return;
+                    const next = Math.min(hpMax, (curHp ?? 0) + add);
+                    saveHp(next);
+                    setExtraHp(0);
+                  }}>Добави��ь</Button>
+                </div>
               </div>
             </div>
 
