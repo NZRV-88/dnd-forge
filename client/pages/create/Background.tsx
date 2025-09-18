@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ const ABILITIES = [
   { key: "con", label: "Телосложение" },
   { key: "int", label: "Интеллект" },
   { key: "wis", label: "Мудрость" },
-  { key: "cha", label: "Харизма" },
+  { key: "cha", label: "Х��ризма" },
 ];
 
 const backgrounds = [
@@ -29,7 +28,7 @@ const backgrounds = [
   { key: "Воин", desc: "Опыт службы, дисциплина и боевые навыки.", skills: ["Атлетика", "Выживание"] },
   { key: "Отшельник", desc: "Годы уединения, духовные прозрения.", skills: ["Медицина", "Выживание"] },
   { key: "Моряк", desc: "Море, корабли и дальние странствия.", skills: ["Навигация", "Манипуляция"] },
-  { key: "Благородный", desc: "Знатное происхождение, связи и обязанности.", skills: ["Убеждение", "История"] },
+  { key: "Благородный", desc: "Знатное происхождение, связи и обязанности.", skills: ["Убежден��е", "История"] },
   { key: "Преступник", desc: "Подпо��ье, контакты и скрытность.", skills: ["Скрытность", "Улица"] },
 ];
 
