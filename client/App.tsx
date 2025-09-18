@@ -21,6 +21,7 @@ import Start from "./pages/create/Start";
 import AbilitiesPick from "./pages/create/Abilities";
 import EquipmentPick from "./pages/create/Equipment";
 import Summary from "./pages/create/Summary";
+import CharacterView from "./pages/CharacterView";
 
 const queryClient = new QueryClient();
 
