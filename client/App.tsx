@@ -45,6 +45,7 @@ const App = () => (
               <Route path="/create/abilities" element={<AbilitiesPick />} />
               <Route path="/create/equipment" element={<EquipmentPick />} />
               <Route path="/create/summary" element={<Summary />} />
+              <Route path="/characters/:id" element={<CharacterView />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
