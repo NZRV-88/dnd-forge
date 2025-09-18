@@ -85,6 +85,7 @@ type Ctx = {
   ) => void;
   setAsiFeat: (level: number, feat?: string) => void;
   setBackgroundBonuses: (b: Partial<Record<keyof Abilities, number>>) => void;
+  setRaceBonuses: (b: Partial<Record<keyof Abilities, number>>) => void;
   save: () => void;
 };
 
