@@ -1,0 +1,41 @@
+export { Fighter } from "./Fighter";
+export { Rogue } from "./Rogue";
+export { Wizard } from "./Wizard";
+export { Cleric } from "./Cleric";
+export { Ranger } from "./Ranger";
+export { Bard } from "./Bard";
+export { Barbarian } from "./Barbarian";
+export { Monk } from "./Monk";
+export { Paladin } from "./Paladin";
+export { Warlock } from "./Warlock";
+export { Sorcerer } from "./Sorcerer";
+export { Druid } from "./Druid";
+
+import type { ClassInfo } from "./types";
+import { Fighter } from "./Fighter";
+import { Rogue } from "./Rogue";
+import { Wizard } from "./Wizard";
+import { Cleric } from "./Cleric";
+import { Ranger } from "./Ranger";
+import { Bard } from "./Bard";
+import { Barbarian } from "./Barbarian";
+import { Monk } from "./Monk";
+import { Paladin } from "./Paladin";
+import { Warlock } from "./Warlock";
+import { Sorcerer } from "./Sorcerer";
+import { Druid } from "./Druid";
+
+export const CLASS_CATALOG: ClassInfo[] = [
+  Fighter,
+  Rogue,
+  Wizard,
+  Cleric,
+  Ranger,
+  Bard,
+  Barbarian,
+  Monk,
+  Paladin,
+  Warlock,
+  Sorcerer,
+  Druid,
+];

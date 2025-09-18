@@ -1,0 +1,34 @@
+body {
+  background: url('/images/parchment-bg.jpg') repeat;
+  color: #2D4739;
+  font-family: 'Uncial Antiqua', 'Cinzel', serif;
+}
+
+h1, h2, h3 {
+  font-family: 'Cinzel', serif;
+  color: #7B2D26;
+  text-shadow: 0 2px 8px #C9B03788;
+}
+
+button, .btn {
+  background: linear-gradient(90deg, #7B2D26 0%, #C9B037 100%);
+  color: #fff8e1;
+  border: 2px solid #C9B037;
+  border-radius: 8px;
+  font-family: 'Cinzel', serif;
+  box-shadow: 0 2px 8px #1A1A1A55;
+  transition: background 0.3s;
+}
+
+button:hover, .btn:hover {
+  background: linear-gradient(90deg, #C9B037 0%, #7B2D26 100%);
+  color: #7B2D26;
+}
+
+.card, .modal, .accordionItem {
+  background: #fff8e1;
+  border: 2px solid #7B2D26;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #1A1A1A55;
+  padding: 16px;
+}
