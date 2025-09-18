@@ -34,7 +34,7 @@ export type Abilities = {
 export type AsiSelection = {
   mode: "asi" | "feat";
   s1?: keyof Abilities; // +1 к характеристике
-  s2?: keyof Abilities; // +1 к характеристике (может совпадать с s1 => +2)
+  s2?: keyof Abilities; // +1 к характеристике (м��жет совпадать с s1 => +2)
   feat?: string;
 };
 
@@ -146,6 +146,11 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             asi: { ...prev, [level]: { ...prevLevel, mode: "feat", feat } },
           };
         }),
+      setBackgroundBonuses: (b) =>
+        setDraft((d) => ({
+          ...d,
+          basics: { ...d.basics, backgroundBonuses: { ...(d.basics.backgroundBonuses || {}), ...b } },
+        })),
       save: () => {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
