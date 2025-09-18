@@ -13,6 +13,7 @@ export type Basics = {
   race: string;
   class: string;
   background: string;
+  backgroundBonuses?: Partial<Record<keyof Abilities, number>>;
   alignment: string;
   level: number;
   subclass: string;
