@@ -34,7 +34,7 @@ export type Abilities = {
 export type AsiSelection = {
   mode: "asi" | "feat";
   s1?: keyof Abilities; // +1 к характеристике
-  s2?: keyof Abilities; // +1 к характеристике (м��жет совпадать с s1 => +2)
+  s2?: keyof Abilities; // +1 к характеристике (может совпадать с s1 => +2)
   feat?: string;
 };
 
@@ -50,6 +50,7 @@ const defaultDraft: CharacterDraft = {
     race: "Человек",
     class: "Воин",
     background: "Академик",
+    backgroundBonuses: {},
     alignment: "Хаотично-добрый",
     level: 1,
     subclass: "",
