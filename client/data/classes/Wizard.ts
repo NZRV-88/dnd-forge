@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Wizard: ClassInfo = {
   key: "wizard",
+  name: "Волшебник",
   desc: "Ученый маг, владеющий множеством заклинаний.",
   hitDice: 6, // d6
   mainStats: ["Интеллект"],

@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Monk: ClassInfo = {
   key: "monk",
+  name: "Монах",
   desc: "Ки, дисциплина и невероятная скорость.",
   hitDice: 8, // d8
   mainStats: ["Ловкость", "Телосложение"],

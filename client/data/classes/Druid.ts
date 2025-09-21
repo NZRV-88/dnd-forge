@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Druid: ClassInfo = {
   key: "druid",
+  name: "Друид",
   desc: "Защитник природы и меняющий облик заклинатель.",
   hitDice: 8, // d8
   mainStats: ["Мудрость"],

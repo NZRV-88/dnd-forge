@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Bard: ClassInfo = {
   key: "bard",
+  name: "Бард",
   desc: "Вдохновитель и универсал с магией музыки.",
   hitDice: 8, // d8
   mainStats: ["Харизма", "Ловкость"],

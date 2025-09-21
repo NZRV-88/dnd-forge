@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Warlock: ClassInfo = {
   key: "warlock",
+  name: "Колдун",
   hitDice: 8, // d8
   mainStats: ["Харизма"],
   desc: "Сила покровителя и древних договоров.",

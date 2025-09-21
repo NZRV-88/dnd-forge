@@ -1,304 +1,368 @@
-import { useMemo, useState } from "react";
+// /pages/CharacterView.tsx
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import AbilityScores from "@/components/characterList/AbilityScores";
+import ProficiencySpeed from "@/components/characterList/ProficiencySpeed";
+import HealthBlock from "@/components/characterList/HealthBlock";
+import SavingThrows from "@/components/characterList/SavingThrows";
+import Skills from "@/components/characterList/Skills";
+import PassiveSenses from "@/components/characterList/PassiveSenses";
+import Proficiencies from "@/components/characterList/Proficiencies";
+import InitiativeAC from "@/components/characterList/InitiativeAC";
+import RollLog from "@/components/characterList/RollLog";
+import { ALL_FEATS } from "@/data/feats";
 import { Button } from "@/components/ui/button";
+import { RACE_LABELS } from "@/data/races";
+import { CLASS_LABELS } from "@/data/classes";
 
 const LIST_KEY = "dnd-ru-characters";
 
-const CLASS_LABELS: Record<string, string> = {
-  fighter: "Воин",
-  rogue: "Плут",
-  wizard: "Волшебник",
-  cleric: "Жрец",
-  ranger: "Следопыт",
-  bard: "Бард",
-  barbarian: "Варвар",
-  monk: "Монах",
-  paladin: "Паладин",
-  warlock: "Колдун",
-  sorcerer: "Чародей",
-  druid: "Друид",
-};
-
 export default function CharacterView() {
-  const { id } = useParams();
-  const nav = useNavigate();
-  const [char, setChar] = useState<any | null>(null);
-  const [curHp, setCurHp] = useState<number | null>(null);
+    const { id } = useParams();
+    const nav = useNavigate();
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LIST_KEY) || "[]";
-      const list = JSON.parse(raw);
-      const found = list.find((c: any) => String(c.id) === String(id));
-      setChar(found || null);
-      if (found) setCurHp(Math.max(0, (found.basics.hpCurrent ?? 0)));
-    } catch (e) {
-      setChar(null);
+    // character + local controlled HP state
+    const [char, setChar] = useState<any | null>(null);
+    const [curHp, setCurHp] = useState<number>(0);
+    const [tempHp, setTempHp] = useState<number>(0);
+
+    // roll log UI
+    const [rollLog, setRollLog] = useState<string[]>([]);
+    const [showLog, setShowLog] = useState(false);
+
+
+    // normalize skills/proficiencies on load
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(LIST_KEY) || "[]";
+            const list = JSON.parse(raw);
+            const found = list.find((c: any) => String(c.id) === String(id));
+            if (!found) {
+                setChar(null);
+                return;
+            }
+
+            // Normalise skills into array of keys (and accept different incoming formats)
+            if (found.skills) {
+                if (Array.isArray(found.skills)) {
+                    // already array -> ok
+                } else if (typeof found.skills === "object") {
+                    // convert object like { "Атлетика": { prof: true }, "Обман": true } -> array of names
+                    const arr: string[] = [];
+                    for (const [k, v] of Object.entries(found.skills)) {
+                        if (v && (v === true || (typeof v === "object" && ("prof" in v ? (v as any).prof : true)))) {
+                            arr.push(k);
+                        }
+                    }
+                    found.skills = arr;
+                } else {
+                    found.skills = [];
+                }
+            } else {
+                found.skills = [];
+            }
+
+            setChar(found);
+            setCurHp(found.basics?.hpCurrent ?? 0);
+            setTempHp(found.basics?.hpTemp ?? 0);
+        } catch (e) {
+            setChar(null);
+        }
+    }, [id]);
+
+    // final stats calculation (ASIs + race + feats as before)
+    const finalStats = useMemo(() => {
+        if (!char) return {};
+        const basics = char.basics || {};
+        const stats = char.stats || {};
+        const raceBonuses = basics.raceBonuses || {};
+        const backgroundBonuses = basics.backgroundBonuses || {};
+        const asi = char.asi || {};
+
+        const asiBonuses: Record<string, number> = {};
+        const featBonuses: Record<string, number> = {};
+        let extraInitiative = 0;
+        let extraSpeed = 0;
+        let extraHp = 0;
+
+        Object.values(asi).forEach((s: any) => {
+            if (!s) return;
+            if (s.mode === "asi") {
+                if (s.s1) asiBonuses[s.s1] = (asiBonuses[s.s1] || 0) + 1;
+                if (s.s2) asiBonuses[s.s2] = (asiBonuses[s.s2] || 0) + 1;
+            } else if (s.mode === "feat" && s.feat) {
+                const feat = ALL_FEATS.find((f) => f.key === s.feat);
+                if (!feat?.effects) return;
+                if (feat.effects.abilities) {
+                    for (const [k, v] of Object.entries(feat.effects.abilities)) {
+                        featBonuses[k] = (featBonuses[k] || 0) + (v as number);
+                    }
+                }
+                if (feat.effects.abilityChoice && s.choice) {
+                    const chosen = s.choice as string;
+                    if (feat.effects.abilityChoice.includes(chosen)) {
+                        featBonuses[chosen] = (featBonuses[chosen] || 0) + 1;
+                    }
+                }
+                if (feat.effects.initiative) extraInitiative += feat.effects.initiative;
+                if (feat.effects.speed) extraSpeed += feat.effects.speed;
+                if (feat.effects.hp) extraHp += feat.effects.hp;
+            }
+        });
+
+        const keys = ["str", "dex", "con", "int", "wis", "cha"] as const;
+        const out: Record<string, number> = {};
+        keys.forEach((k) => {
+            const base = stats[k] || 0;
+            out[k] =
+                base +
+                (raceBonuses[k] || 0) +
+                (backgroundBonuses[k] || 0) +
+                (asiBonuses[k] || 0) +
+                (featBonuses[k] || 0);
+        });
+
+        return {
+            ...out,
+            _extraInitiative: extraInitiative,
+            _extraSpeed: extraSpeed,
+            _extraHp: extraHp,
+        };
+    }, [char]);
+
+    if (!char) {
+        return (
+            <div className="container mx-auto py-10 text-center">
+                <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-10">
+                    <div className="text-lg">Персонаж не найден</div>
+                    <div className="mt-4"><Button onClick={() => nav(-1)}>Назад</Button></div>
+                </div>
+            </div>
+        );
     }
-  }, [id]);
 
-  const finalStats = useMemo(() => {
-    if (!char) return {};
-    const basics = char.basics || {};
-    const stats = char.stats || {};
-    const raceBonuses = basics.raceBonuses || {};
-    const backgroundBonuses = basics.backgroundBonuses || {};
-    const asi = char.asi || {};
-    const asiBonuses: Record<string, number> = {};
-    Object.values(asi).forEach((s: any) => {
-      if (!s) return;
-      if (s.mode === "asi") {
-        if (s.s1) asiBonuses[s.s1] = (asiBonuses[s.s1] || 0) + 1;
-        if (s.s2) asiBonuses[s.s2] = (asiBonuses[s.s2] || 0) + 1;
-      }
-    });
-    const keys = ["str", "dex", "con", "int", "wis", "cha"] as const;
-    const out: Record<string, number> = {};
-    keys.forEach((k) => {
-      const base = stats[k] || 0;
-      out[k] = base + (raceBonuses[k] || 0) + (backgroundBonuses[k] || 0) + (asiBonuses[k] || 0);
-    });
-    return out;
-  }, [char]);
+    const b = char.basics || {};
 
-  if (!char) {
-    return (
-      <div className="container mx-auto py-10">
-        <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-10 text-center">
-          <div className="text-lg">Персонаж не найден</div>
-          <div className="mt-4">
-            <Button onClick={() => nav(-1)}>Назад</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    // раса, подраса, класс, подкласс
 
-  const b = char.basics || {};
-  const equipment = char.equipment || [];
 
-  // Skills map: Russian name -> ability key
-  const SKILLS: Record<string, keyof typeof finalStats | string> = {
-    "Атлетика": "str",
-    "Акробатика": "dex",
-    "Ловкость рук": "dex",
-    "Скрытность": "dex",
-    "Аркана": "int",
-    "История": "int",
-    "Расследование": "int",
-    "Природа": "int",
-    "Религия": "int",
-    "Обращение с животными": "wis",
-    "Проницательность": "wis",
-    "Медицина": "wis",
-    "Восприятие": "wis",
-    "Выживание": "wis",
-    "Обман": "cha",
-    "Запугивание": "cha",
-    "Выступление": "cha",
-    "Убеждение": "cha",
-  };
+    // speed, initiative, hpMax, proficiency
+    const speed = (b.speed || 30) + (finalStats as any)._extraSpeed;
+    const initiative =
+        Math.floor((((finalStats as any).dex || 0) - 10) / 2) +
+        ((finalStats as any)._extraInitiative || 0);
 
-  // proficiency bonus based on level
-  const profBonus = (() => {
-    const lvl = b.level || 1;
-    if (lvl >= 17) return 6;
-    if (lvl >= 13) return 5;
-    if (lvl >= 9) return 4;
-    if (lvl >= 5) return 3;
-    return 2;
-  })();
+    const hpMax = (() => {
+        const die: Record<string, number> = {
+            barbarian: 12, bard: 8, fighter: 10, wizard: 6, druid: 8,
+            cleric: 8, warlock: 8, monk: 8, paladin: 10, rogue: 8,
+            ranger: 10, sorcerer: 6,
+        };
+        const d = die[b.class as keyof typeof die] || 8;
+        const con = (finalStats as any).con ?? 0;
+        const conMod = Math.floor((con - 10) / 2);
+        const level = b.level || 1;
+        const hpMode = b.hpMode || "fixed";
+        let hp = d + conMod;
+        if (hpMode === "fixed") hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
+        else hp += (level - 1) * (1 + conMod);
+        const extra = ((finalStats as any)._extraHp || 0) * level;
+        return Math.max(0, hp + extra);
+    })();
 
-  const speed = (b as any).speed || 30; // default 30 ft
+    const proficiencyBonus = (() => {
+        const level = b.level || 1;
+        if (level >= 17) return 6;
+        if (level >= 13) return 5;
+        if (level >= 9) return 4;
+        if (level >= 5) return 3;
+        return 2;
+    })();
 
-  const initiative = (() => {
-    const dex = (finalStats as any).dex || 0;
-    return Math.floor((dex - 10) / 2);
-  })();
+    // skill profs set (normalized)
+    const skillProfs: string[] = Array.isArray(char.skills) ? char.skills : [];
 
-  const ac = (() => {
-    // naive AC calc: base 10 + dex mod; detect light armor keywords
-    const dexMod = Math.floor(((finalStats as any).dex || 0 - 10) / 2);
-    const eq = equipment.join(" ").toLowerCase();
-    if (eq.includes("кольч") || eq.includes("кольчуга") || eq.includes("chain")) return 16; // chain
-    if (eq.includes("кольчуга")) return 16;
-    if (eq.includes("кожан") || eq.includes("leather")) return 11 + dexMod;
-    return 10 + dexMod;
-  })();
-
-  // local skill prof state
-  const [skillsState, setSkillsState] = useState<Record<string, { prof: boolean }>>(() => (char.skills) || {});
-  const [extraHp, setExtraHp] = useState<number>(0);
-
-  const hpMax = (() => {
-    const die: Record<string, number> = {
-      barbarian: 12,
-      bard: 8,
-      fighter: 10,
-      wizard: 6,
-      druid: 8,
-      cleric: 8,
-      warlock: 8,
-      monk: 8,
-      paladin: 10,
-      rogue: 8,
-      ranger: 10,
-      sorcerer: 6,
+    // universal addRoll function: any child can call it
+    const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "") => {
+        const d20 = Math.floor(Math.random() * 20) + 1;
+        const total = d20 + bonus;
+        const entry = `${desc} (${abilityKey.toUpperCase()}${type ? `, ${type}` : ""}): 🎲 ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        setRollLog((prev) => [entry, ...prev].slice(0, 200));
     };
-    const d = die[b.class as keyof typeof die] || 8;
-    const con = char.stats?.con ?? 0;
-    const conMod = Math.floor((con - 10) / 2);
-    const level = b.level || 1;
-    const hpMode = b.hpMode || "fixed";
-    let hp = d + conMod;
-    if (hpMode === "fixed") hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
-    else hp += (level - 1) * (1 + conMod);
-    return Math.max(0, hp);
-  })();
 
-  const mod = (v: number) => {
-    const m = Math.floor((v - 10) / 2);
-    return `${m >= 0 ? "+" : ""}${m}`;
-  };
+    // Save changes (we update localStorage so hp changes persist)
+    const saveAll = () => {
+        try {
+            const raw = localStorage.getItem(LIST_KEY) || "[]";
+            const list = JSON.parse(raw);
+            const idx = list.findIndex((c: any) => String(c.id) === String(id));
+            if (idx >= 0) {
+                list[idx].basics.hpCurrent = curHp;
+                list[idx].basics.hpTemp = tempHp;
+                list[idx].skills = skillProfs;
+                localStorage.setItem(LIST_KEY, JSON.stringify(list));
+                setChar(list[idx]);
+            }
+        } catch { /* silent */ }
+    };
 
-  const saveHp = (val: number) => {
-    setCurHp(val);
-    try {
-      const raw = localStorage.getItem(LIST_KEY) || "[]";
-      const list = JSON.parse(raw);
-      const idx = list.findIndex((c: any) => String(c.id) === String(id));
-      if (idx !== -1) {
-        list[idx].basics.hpCurrent = val;
-        localStorage.setItem(LIST_KEY, JSON.stringify(list));
-      }
-    } catch {}
-  };
+    // small helper to format ability mods
+    const formatMod = (v: number) => {
+        const m = Math.floor((v - 10) / 2);
+        return m >= 0 ? `+${m}` : `${m}`;
+    };
 
-  return (
-    <div className="container mx-auto py-10">
-      <div className="mx-auto max-w-4xl rounded-2xl border bg-gradient-to-b from-amber-50 via-amber-100 to-amber-50 p-6 shadow-2xl">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-extrabold">{b.name || "Без имени"}</h1>
-            <div className="text-sm text-muted-foreground">{b.race} • {CLASS_LABELS[b.class] || b.class}{b.subclass ? ` • ${b.subclass}` : ""} • ур. {b.level}</div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={() => nav(-1)}>Назад</Button>
-          </div>
-        </div>
+    return (
+        <div className="bg-neutral-900 text-gray-200 min-h-screen p-6 font-sans flex justify-center">
+            <div className="w-[1200px]">
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="col-span-1 rounded-md border bg-white/60 p-4">
-            <div className="mb-3 text-xs text-muted-foreground">Здоровье</div>
-            <div className="flex items-center gap-3">
-              <div className="text-xl font-bold">{curHp ?? 0} / {hpMax}</div>
-              <div className="flex items-center gap-2">
-                <button className="h-8 w-8 rounded-md border" onClick={() => saveHp(Math.max(0, (curHp ?? 0) - 1))}>−</button>
-                <button className="h-8 w-8 rounded-md border" onClick={() => saveHp(Math.min(hpMax, (curHp ?? 0) + 1))}>+</button>
-              </div>
-            </div>
+                {/* HEADER */}
+                <div className="flex items-center border-b border-yellow-600 pb-4 mb-6">
+                    {/* Левая часть: аватар */}
+                    <div className="flex flex-col items-center mr-6">
+                        <label htmlFor="avatar-upload" className="cursor-pointer">
+                            {char.avatar ? (
+                                <img
+                                    src={char.avatar}
+                                    alt="Аватар персонажа"
+                                    className="w-28 h-28 rounded-lg object-cover border-2 border-yellow-600 hover:opacity-80 transition"
+                                />
+                            ) : (
+                                <div className="w-28 h-28 rounded-lg bg-neutral-800 border-2 border-dashed border-yellow-600 flex items-center justify-center text-gray-500 hover:opacity-80 transition">
+                                    Загрузить
+                                </div>
+                            )}
+                        </label>
 
-            <div className="mt-4 text-sm">
-              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <div>Класс доспеха (КД)</div>
-                <div className="font-semibold">{ac}</div>
-                <div>Бонус мастерства</div>
-                <div className="font-semibold">+{profBonus}</div>
-                <div>Скорость</div>
-                <div className="font-semibold">{speed} фт</div>
-                <div>Инициатива</div>
-                <div className="font-semibold">{initiative >= 0 ? `+${initiative}` : initiative}</div>
-              </div>
-
-              <div className="mt-3">
-                <div className="text-xs text-muted-foreground">Навыки</div>
-                <div className="mt-2 grid gap-2 text-sm">
-                  {Object.entries(SKILLS).map(([skill, ability]) => {
-                    const prof = skillsState[skill]?.prof || false;
-                    const abilityVal = (finalStats as any)[ability as string] || 0;
-                    const total = Math.floor((abilityVal - 10) / 2) + (prof ? profBonus : 0);
-                    return (
-                      <label key={skill} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={prof}
+                        <input
+                            id="avatar-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
                             onChange={(e) => {
-                              const next = { ...(skillsState || {}) };
-                              next[skill] = { prof: e.target.checked };
-                              setSkillsState(next);
-                              // persist into character
-                              try {
-                                const raw = localStorage.getItem(LIST_KEY) || "[]";
-                                const list = JSON.parse(raw);
-                                const idx = list.findIndex((c: any) => String(c.id) === String(id));
-                                if (idx !== -1) {
-                                  list[idx].skills = next;
-                                  localStorage.setItem(LIST_KEY, JSON.stringify(list));
-                                  setChar(list[idx]);
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                        const url = reader.result as string;
+                                        const updated = { ...char, avatar: url };
+                                        setChar(updated);
+
+                                        // сохраняем в localStorage
+                                        const raw = localStorage.getItem("dnd-ru-characters") || "[]";
+                                        const list = JSON.parse(raw);
+                                        const idx = list.findIndex((c: any) => String(c.id) === String(id));
+                                        if (idx >= 0) {
+                                            list[idx].avatar = url;
+                                            localStorage.setItem("dnd-ru-characters", JSON.stringify(list));
+                                        }
+                                    };
+                                    reader.readAsDataURL(file);
                                 }
-                              } catch {}
                             }}
-                          />
-                          <span>{skill}</span>
-                        </div>
-                        <div className="font-semibold">{total >= 0 ? `+${total}` : total}</div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="mt-3">
-                <div className="text-xs text-muted-foreground">Доп. очки здоровья</div>
-                <div className="mt-2 flex items-center gap-2">
-                  <input type="number" className="w-24 rounded-md border px-2 py-1" value={extraHp} onChange={(e) => setExtraHp(Number(e.target.value))} />
-                  <Button onClick={() => {
-                    const add = Number(extraHp) || 0;
-                    if (add === 0) return;
-                    const next = Math.min(hpMax, (curHp ?? 0) + add);
-                    saveHp(next);
-                    setExtraHp(0);
-                  }}>Добави��ь</Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 text-sm">
-              <div className="text-xs text-muted-foreground">Снаряжение</div>
-              {equipment.length > 0 ? (
-                <ul className="list-disc pl-5">
-                  {equipment.map((it: string, i: number) => <li key={i}>{it}</li>)}
-                </ul>
-              ) : (
-                <div className="text-sm text-muted-foreground">—</div>
-              )}
-            </div>
-          </div>
-
-          <div className="col-span-2 rounded-md border bg-white/60 p-4">
-            <div className="grid grid-cols-3 gap-3">
-              {(["str", "dex", "con", "int", "wis", "cha"] as const).map((k) => {
-                const val = (finalStats as any)[k] || 0;
-                return (
-                  <div key={k} className="rounded-md border p-3 bg-gradient-to-b from-white to-amber-50">
-                    <div className="flex items-baseline justify-between">
-                      <div className="text-sm font-medium">{k.toUpperCase()}</div>
-                      <div className="text-xl font-extrabold">{val}</div>
+                        />
                     </div>
-                    <div className="text-sm text-muted-foreground">{mod(val)}</div>
-                  </div>
-                );
-              })}
-            </div>
 
-            <div className="mt-4">
-              <div className="text-xs text-muted-foreground">Примечание</div>
-              <div className="text-sm text-muted-foreground">Редактируйте персонажа через «Редактировать». Этот экран даёт быстрый интерактивный обзор (HP, статистики, снаряжение).</div>
+                    {/* Правая часть: имя + инфо */}
+                    <div className="flex flex-col items-start">
+                        <h1 className="text-4xl font-serif font-bold text-yellow-400">
+                            {b.name || "Без имени"}
+                        </h1>
+                        <div className="mt-2 text-lg italic text-gray-300">
+                            {RACE_LABELS[b.race] || "Раса?"}
+                            {b.subrace ? ` (${b.subrace})` : ""} {/* TODO: сюда можно русское имя подрасы */}
+                            {" • "}
+                            {CLASS_LABELS[b.class] || "Класс?"}
+                            {b.subclass ? ` (${b.subclass})` : ""} {/* TODO: сюда можно русское имя подкласса */}
+                            {" • ур. "}
+                            {b.level || 1}
+
+                        </div>
+                    </div>
+                </div>
+
+                {/* ROW 1 */}
+                <div className="grid grid-cols-[620px_240px_320px] gap-4 mb-6">
+                    <div>
+                        <AbilityScores
+                            stats={finalStats}
+                            onRoll={addRoll}
+                        />
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                        <ProficiencySpeed proficiencyBonus={proficiencyBonus} speed={speed} />
+                    </div>
+
+                    <div>
+                        <HealthBlock
+                            curHp={curHp}
+                            setCurHp={setCurHp}
+                            tempHp={tempHp}
+                            setTempHp={setTempHp}
+                            hpMax={hpMax}
+                        />
+                    </div>
+                </div>
+
+                {/* ROW 2: SavingThrows + Skills под характеристиками */}
+                <div className="grid grid-cols-[300px_300px_240px] gap-4 mb-6 -mt-4">
+                    {/* Saving Throws (лево) */}
+                    <div className="space-y-4">
+                        <SavingThrows
+                            stats={finalStats}
+                            onRoll={(label, ability, value) => addRoll(label, ability, value)}
+                        />
+                        <PassiveSenses stats={finalStats} />
+                        <Proficiencies profs={char.profs || {}} />
+                    </div>
+
+                    {/* Skills (право от спасбросков) */}
+                    <div className="space-y-4">
+                        <Skills
+                            stats={finalStats}
+                            profs={char.skillProfs}
+                            proficiencyBonus={proficiencyBonus}
+                            onRoll={addRoll}
+                            profs={char.skills}   // ✅ теперь всегда из char
+                            onToggleProf={(skillKey) => {
+                                const updated = char.skills.includes(skillKey)
+                                    ? char.skills.filter((s: string) => s !== skillKey)
+                                    : [...char.skills, skillKey];
+
+                                setChar((prev: any) => {
+                                    const newChar = { ...prev, skills: updated };
+
+                                    // сразу сохраняем изменения
+                                    localStorage.setItem("char", JSON.stringify(newChar));
+
+                                    return newChar;
+                                });
+                            }}
+                        />
+                    </div>
+
+                    {/* Initiative + AC */}
+                    <div className="-mt-4">
+                        <InitiativeAC
+                            initiative={initiative}
+                            ac={b.ac ?? 10}
+                            dex={finalStats.dex}
+                            onRoll={addRoll}
+                        />
+                    </div>
+                </div>
+
+                {/* SAVE button */}
+                <div className="flex justify-end gap-2">
+                    <Button onClick={saveAll} className="bg-amber-500 text-black">Сохранить</Button>
+                    <Button onClick={() => nav(-1)}>Назад</Button>
+                </div>
+
+                {/* ROLL LOG (floating bottom-right) */}
+                <RollLog rolls={rollLog} show={showLog} onToggle={() => setShowLog((s) => !s)} />
+
             </div>
-          </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

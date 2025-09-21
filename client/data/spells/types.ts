@@ -1,0 +1,41 @@
+export interface Damage {
+    dice: string;
+    type: string;
+}
+
+export interface CantripScaling {
+    type: "cantrip";
+    progression: {
+        dice: string;       // базовый куб
+        levels: number[];   // уровни персонажа, на которых добавляется ещё куб
+    };
+}
+
+export interface SlotScaling {
+    type: "slot";
+    progression: {
+        dice?: string;      // куб добавляется при апкасте
+        bonus?: number;     // фикс. бонус (например, +1 цель)
+        special?: string;   // описание особого эффекта (например, "missile", "extra-target")
+    };
+}
+
+export type Scaling = CantripScaling | SlotScaling;
+
+export interface Spell {
+    key: string;
+    name: string;
+    level: number;         // 0 = заговор, 1+ = заклинание
+    school: string;
+    desc: string;
+    isCombat: boolean;
+    castingTime: string;
+    range: string;
+    components: string[];  // В, С, М
+    duration: string;
+    area?: string;
+    damage?: Damage;
+    save?: string;
+    scaling?: Scaling;
+    tags?: string[];
+}

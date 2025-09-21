@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCharacter } from "@/store/character";
 import { Button } from "@/components/ui/button";
+import ExitButton from "@/components/ui/ExitButton";
+import StepArrows from "@/components/ui/StepArrows";
 
 const LIST_KEY = "dnd-ru-characters";
 const EDITING_ID_KEY = "dnd-ru-editing-id";
@@ -108,7 +110,9 @@ export default function Summary() {
 
   return (
     <div className="container mx-auto py-10">
-      <div className="mx-auto max-w-4xl rounded-2xl border bg-gradient-to-b from-amber-50 via-amber-100 to-amber-50 p-6 shadow-2xl">
+          <div className="mx-auto max-w-5xl relative">
+              <StepArrows back="/create/equipment" />   
+              <ExitButton />
         <div className="flex items-center gap-6 mb-6">
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-md border bg-gradient-to-b from-yellow-200 to-yellow-100 flex items-center justify-center text-xl font-bold text-amber-900">✦</div>
@@ -118,8 +122,8 @@ export default function Summary() {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            <Button variant="secondary" onClick={() => nav(-1)}>Назад</Button>
-            <Button onClick={handleSave}>Сохранить</Button>
+            
+            
           </div>
         </div>
 
@@ -190,7 +194,8 @@ export default function Summary() {
               })}
             </div>
 
-            <div className="mt-4 text-sm text-muted-foreground">Примечание: показаны базовые значения и бонусы от расы, предыстории и ASI.</div>
+                      <div className="mt-4 text-sm text-muted-foreground">Примечание: показаны базовые значения и бонусы от расы, предыстории и ASI.</div>
+                      <Button onClick={handleSave}>Сохранить</Button>
           </div>
         </div>
       </div>

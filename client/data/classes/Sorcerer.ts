@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Sorcerer: ClassInfo = {
   key: "sorcerer",
+  name: "Чародей",
   desc: "Врожденная магия и мощные метамагии.",
   hitDice: 6, // d6
   mainStats: ["Харизма"],

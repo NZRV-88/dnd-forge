@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Ranger: ClassInfo = {
   key: "ranger",
+  name: "Следопыт",
   desc: "Искатель приключений, охотник и проводник в дикой местности.",
   hitDice: 10, // d10
   mainStats: ["Ловкость", "Мудрость"],

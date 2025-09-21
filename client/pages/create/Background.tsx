@@ -1,7 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useCharacter } from "@/store/character";
+import StepArrows from "@/components/ui/StepArrows";
+
+import { 
+  BACKGROUND_CATALOG, 
+  BACKGROUND_LABELS, 
+  getBackgroundByKey 
+} from "@/data/backgrounds";
+import type { BackgroundInfo } from "@/data/backgrounds/types";
+import ExitButton from "@/components/ui/ExitButton";
 
 const ABILITIES = [
   { key: "str", label: "Сила" },
@@ -9,149 +18,225 @@ const ABILITIES = [
   { key: "con", label: "Телосложение" },
   { key: "int", label: "Интеллект" },
   { key: "wis", label: "Мудрость" },
-  { key: "cha", label: "Х��ризма" },
-];
-
-const backgrounds = [
-  {
-    key: "Академик",
-    desc: "Учёный, исследователь знаний и древностей.",
-    skills: ["История", "Исследование"],
-    abilityChoices: { count: 2, amount: 1 },
-  },
-  { key: "Беззаконник", desc: "Живёт по своим правилам, опыт улиц.", skills: ["Скрытность", "Атлетика"] },
-  {
-    key: "Гильдейский ремесленник",
-    desc: "Мастер дела, член ремесленной гильдии.",
-    skills: ["Мастерство", "Ремёсла"],
-  },
-  { key: "Воин", desc: "Опыт службы, дисциплина и боевые навыки.", skills: ["Атлетика", "Выживание"] },
-  { key: "Отшельник", desc: "Годы уединения, духовные прозрения.", skills: ["Медицина", "Выживание"] },
-  { key: "Моряк", desc: "Море, корабли и дальние странствия.", skills: ["Навигация", "Манипуляция"] },
-  { key: "Благородный", desc: "Знатное происхождение, связи и обязанности.", skills: ["Убежден��е", "История"] },
-  { key: "Преступник", desc: "Подпо��ье, контакты и скрытность.", skills: ["Скрытность", "Улица"] },
+  { key: "cha", label: "Харизма" },
 ];
 
 export default function BackgroundPick() {
   const nav = useNavigate();
-  const { basics, choose, setBasics, setBackgroundBonuses } = useCharacter();
+  const { basics, setBasics, setBackgroundBonuses, setBackgroundSkills } = useCharacter(); // ← ДОБАВЛЕНО setBackgroundSkills
   const [selected, setSelected] = useState<string | null>(null);
   const selKey = selected || basics.background || null;
-  const b = backgrounds.find((x) => x.key === selKey) || null;
+  const background = getBackgroundByKey(selKey) || null;
 
-  // local picks for ability choices
-  const [abilityPicks, setAbilityPicks] = useState<(keyof any | "")[]>([]);
+  const [abilityPicks, setAbilityPicks] = useState<(string | "")[]>([]);
+
+  // Сортируем предыстории по алфавиту
+  const sortedBackgrounds = [...BACKGROUND_CATALOG].sort((a, b) => 
+    a.name.localeCompare(b.name, 'ru')
+  );
+
+  // Загрузка сохраненных выборов при монтировании
+  useEffect(() => {
+    if (basics.backgroundBonuses) {
+      const picks = Object.entries(basics.backgroundBonuses)
+        .flatMap(([ability, bonus]) => 
+          Array(bonus).fill(ability)
+        );
+      setAbilityPicks(picks);
+    }
+  }, [basics.backgroundBonuses]);
 
   function onPickBackground(key: string) {
-    choose({ background: key });
+    const bg = getBackgroundByKey(key);
+    if (bg) {
+      // Сохраняем предысторию и её навыки ← ОБНОВЛЕНО
+      setBasics({ 
+        ...basics, 
+        background: key,
+        backgroundSkills: bg.skillProficiencies
+      });
+      setBackgroundSkills(bg.skillProficiencies); // ← ДОБАВЛЕНО
+    }
     setSelected(key);
-    // reset local picks when selecting a new background
+    // Сбрасываем выбор характеристик при смене предыстории
     setAbilityPicks([]);
   }
 
   function saveBackgroundChoices() {
-    // build bonus object from picks if any
+    if (!background?.abilityBonuses) return;
+
     const bonus: Record<string, number> = {};
-    const current = b?.abilityChoices;
-    if (current && abilityPicks.length > 0) {
-      abilityPicks.forEach((k) => {
-        if (!k) return;
-        bonus[k as string] = (bonus[k as string] || 0) + current.amount;
-      });
-      // persist bonuses into basics.backgroundBonuses
-      setBackgroundBonuses(bonus as any);
-    } else {
-      // clear previous bonuses if any
-      setBackgroundBonuses({});
-    }
+    abilityPicks.forEach((ability) => {
+      if (ability) {
+        bonus[ability] = (bonus[ability] || 0) + 1;
+      }
+    });
+
+    setBackgroundBonuses(bonus);
   }
+
+  const allAbilitiesPicked = background?.abilityBonuses 
+    ? abilityPicks.filter(pick => pick !== "").length === background.abilityBonuses.count
+    : true;
+
+  const canProceed = basics.background !== null;
 
   return (
     <div className="container mx-auto py-10">
-      <div className="mx-auto max-w-5xl">
+          <div className="mx-auto max-w-5xl relative">
+              <StepArrows back="/create/class" next="/create/race" />   
+              {/* крестик в правом верхнем углу */}
+              <ExitButton />
         <div className="mb-6 flex items-baseline justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Выбор предыстории</h1>
             <p className="text-sm text-muted-foreground">
-              Текущий выбор: {basics.background}
+              Текущий выбор: {basics.background ? BACKGROUND_LABELS[basics.background] || basics.background : "не выбрана"}
             </p>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {backgrounds.map((bg) => (
+          {sortedBackgrounds.map((bg) => (
             <button
               key={bg.key}
               onClick={() => onPickBackground(bg.key)}
-              className={`text-left rounded-xl border p-5 transition hover:shadow ${basics.background === bg.key ? "ring-2 ring-primary" : ""}`}
+              className={`text-left rounded-xl border p-5 transition hover:shadow ${
+                (selected === bg.key || basics.background === bg.key) ? "ring-2 ring-primary" : ""
+              }`}
             >
               <div className="flex items-center justify-between">
-                <h3 className="font-medium">{bg.key}</h3>
-                {basics.background === bg.key && (
-                  <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs text-primary ring-1 ring-primary/20">Выбрано</span>
+                <h3 className="font-medium">{bg.name}</h3>
+                {(selected === bg.key || basics.background === bg.key) && (
+                  <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs text-primary ring-1 ring-primary/20">
+                    Выбрано
+                  </span>
                 )}
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{bg.desc}</p>
+              
+              {/* Показываем бонусы предыстории в карточке выбора */}
+              <div className="mt-3 text-xs text-muted-foreground">
+                {bg.abilityBonuses && (
+                  <div>Бонусы: {bg.abilityBonuses.count} × +{bg.abilityBonuses.amount}</div>
+                )}
+                {bg.skillProficiencies.length > 0 && (
+                  <div>Навыки: {bg.skillProficiencies.join(", ")}</div>
+                )}
+                {bg.toolProficiencies && bg.toolProficiencies.length > 0 && (
+                  <div>Инструменты: {bg.toolProficiencies.join(", ")}</div>
+                )}
+              </div>
             </button>
           ))}
         </div>
 
-        {/* Details panel */}
-        {b && (
+        {/* Подробная информация о выбранной предыстории - показывается когда есть данные */}
+        {background && (
           <div className="mt-6 rounded-xl border bg-card p-6">
-            <h2 className="text-xl font-semibold mb-2">{b.key}</h2>
-            <p className="mb-3 text-sm text-muted-foreground">{b.desc}</p>
-            {b.skills && (
-              <div className="mb-3">
-                <div className="text-sm font-medium">Навыки, даваемые предысторией</div>
+            <h2 className="text-xl font-semibold mb-2">{background.name}</h2>
+            <p className="mb-3 text-sm text-muted-foreground">{background.longDesc || background.desc}</p>
+
+            {/* Навыки */}
+            {background.skillProficiencies.length > 0 && (
+              <div className="mb-4">
+                <div className="text-sm font-medium">Владение навыками</div>
                 <ul className="mt-2 list-disc pl-5 text-sm">
-                  {b.skills.map((s) => (
-                    <li key={s}>{s}</li>
+                  {background.skillProficiencies.map((skill) => (
+                    <li key={skill}>{skill}</li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {b.abilityChoices ? (
-              <div className="mb-3">
-                <div className="text-sm font-medium">Выбор характеристик</div>
-                <div className="text-xs text-muted-foreground mb-2">Выберите {b.abilityChoices.count} характеристик. Каждая даст +{b.abilityChoices.amount}.</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: b.abilityChoices.count }).map((_, i) => (
+            {/* Инструменты */}
+            {background.toolProficiencies && background.toolProficiencies.length > 0 && (
+              <div className="mb-4">
+                <div className="text-sm font-medium">Владение инструментами</div>
+                <ul className="mt-2 list-disc pl-5 text-sm">
+                  {background.toolProficiencies.map((tool) => (
+                    <li key={tool}>{tool}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Языки */}
+            {background.languages && background.languages.length > 0 && (
+              <div className="mb-4">
+                <div className="text-sm font-medium">Языки</div>
+                <ul className="mt-2 list-disc pl-5 text-sm">
+                  {background.languages.map((language) => (
+                    <li key={language}>{language}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Особенность */}
+            <div className="mb-4">
+              <div className="text-sm font-medium">Особенность: {background.feature.name}</div>
+              <p className="mt-1 text-sm text-muted-foreground">{background.feature.desc}</p>
+            </div>
+
+            {/* Снаряжение */}
+            <div className="mb-4">
+              <div className="text-sm font-medium">Снаряжение</div>
+              <ul className="mt-2 list-disc pl-5 text-sm">
+                {background.equipment.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Выбор характеристик */}
+            {background.abilityBonuses && (
+              <div className="mb-4 p-4 bg-secondary/20 rounded-lg">
+                <div className="text-sm font-medium">Бонусы характеристик</div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Выберите {background.abilityBonuses.count} характеристики для увеличения на {background.abilityBonuses.amount}
+                </p>
+                
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {Array.from({ length: background.abilityBonuses.count }).map((_, i) => (
                     <select
                       key={i}
                       className="rounded-md border bg-background px-2 py-1"
                       value={abilityPicks[i] || ""}
                       onChange={(e) => {
-                        const v = e.target.value as any;
-                        setAbilityPicks((prev) => {
-                          const copy = [...prev];
-                          copy[i] = v;
-                          return copy;
+                        const value = e.target.value;
+                        setAbilityPicks(prev => {
+                          const newPicks = [...prev];
+                          newPicks[i] = value;
+                          return newPicks;
                         });
                       }}
                     >
-                      <option value="">—</option>
-                      {ABILITIES.map((a) => (
-                        <option key={a.key} value={a.key}>{a.label}</option>
+                      <option value="">— Выберите —</option>
+                      {ABILITIES.map((ability) => (
+                        <option key={ability.key} value={ability.key}>
+                          {ability.label}
+                        </option>
                       ))}
                     </select>
                   ))}
                 </div>
-                <div className="mt-3">
-                  <Button onClick={saveBackgroundChoices}>Сохранить выбор</Button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">Эта предыстория не даёт выбора характеристик.</div>
-            )}
 
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => nav("/create/class")}>Назад</Button>
-              <Button onClick={() => nav("/create/race")}>Далее</Button>
-            </div>
+                <Button 
+                  onClick={saveBackgroundChoices} 
+                  disabled={!allAbilitiesPicked}
+                  size="sm"
+                >
+                  Сохранить выбор
+                </Button>
+              </div>
+            )}
           </div>
         )}
+
+        {/* Кнопки навигации - ВСЕГДА отображаются */}
+        <div className="mt-6 flex justify-end gap-3">
+        </div>
       </div>
     </div>
   );

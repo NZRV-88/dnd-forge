@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Paladin: ClassInfo = {
   key: "paladin",
+  name: "Паладин",
   desc: "Клятвы и священная сила для борьбы со злом.",
   hitDice: 10, // d10
   mainStats: ["Сила", "Харизма"],

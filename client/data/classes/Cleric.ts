@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Cleric: ClassInfo = {
   key: "cleric",
+  name: "Жрец",
   desc: "Служитель божества, целитель и заклинатель.",
   hitDice: 8, // d8
   mainStats: ["Мудрость"],

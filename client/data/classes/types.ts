@@ -7,11 +7,12 @@ export type SubclassInfo = {
 };
 
 export interface ClassInfo {
-  key: string;
-  desc: string;
-  longDesc?: string; // ����������� ��������
-  hitDice: number;
-  mainStats: string[];
-  subclasses: SubclassInfo[];
+  key: string; // ключ класса на английском
+  name: string; // название класса на русском
+  desc: string; // короткое описание класса
+  longDesc?: string; // расширенное описание
+  hitDice: number; // кость хитов
+  mainStats: string[]; // основные характеристики класса
+  subclasses: SubclassInfo[]; // доступные подклассы
   features: Record<number, Feature[]>;
 }

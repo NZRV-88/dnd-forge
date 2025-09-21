@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Rogue: ClassInfo = {
   key: "rogue",
+  name: "Плут",
   desc: "Ловкий мастер скрытности, ловушек и точных ударов.",
   hitDice: 8, // d8
   mainStats: ["Ловкость"],

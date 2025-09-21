@@ -1,7 +1,8 @@
-﻿import { ClassInfo } from "./types";
+import { ClassInfo } from "./types";
 
 export const Fighter: ClassInfo = {
   key: "fighter",
+  name: "Воин",
   desc: "Мастер оружия и доспехов, универсальный боец.",
   hitDice: 10, // d10
   mainStats: ["Сила", "Телосложение"],
