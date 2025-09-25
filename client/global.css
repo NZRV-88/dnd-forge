@@ -103,3 +103,11 @@
     border-image-repeat: stretch; /* боковины тянутся */
     padding: 0 3px; /* добавляем внутренний отступ */
 }
+
+.prose ul {
+    @apply list-disc pl-5;
+}
+
+.prose ol {
+    @apply list-decimal pl-5;
+}

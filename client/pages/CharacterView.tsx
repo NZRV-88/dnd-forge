@@ -10,10 +10,11 @@ import PassiveSenses from "@/components/characterList/PassiveSenses";
 import Proficiencies from "@/components/characterList/Proficiencies";
 import InitiativeAC from "@/components/characterList/InitiativeAC";
 import RollLog from "@/components/characterList/RollLog";
-import { ALL_FEATS } from "@/data/feats";
+import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
 import { RACE_LABELS } from "@/data/races";
 import { CLASS_LABELS } from "@/data/classes";
+import { getEffectiveSpeed } from "@/data/races"; 
 
 const LIST_KEY = "dnd-ru-characters";
 

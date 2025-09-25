@@ -19,5 +19,29 @@ export {
     Shield,
     Clock,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    ChevronUp,
+    ChevronDown,
+    ArrowUp,
+    ArrowRight,
+    Wind,
 } from "lucide-react";
+
+import * as Icons from "@/components/refs/icons";
+
+export function getDamageIcon(damageType: string) {
+    switch (damageType) {
+        case "Огонь":
+            return Icons.Flame;
+        case "Холод":
+            return Icons.Snowflake;
+        case "Молния":
+            return Icons.Zap;
+        case "Яд":
+            return Icons.Skull;
+        case "Кислота":
+            return Icons.FlaskConical;
+        default:
+            return Icons.Flame;
+    }
+}

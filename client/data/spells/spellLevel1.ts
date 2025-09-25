@@ -280,6 +280,26 @@ export const SpellsLevel1: Spell[] = [
         tags: ["ослепление", "контроль", "массовое"]
     },
     // --- Прорицание (Divination) ---
+
+    {
+        key: "speak-with-animals",
+        name: "Разговор с животными",
+        level: 1,
+        school: "Прорицание",
+        desc: "Пока заклинание активно, вы получаете возможность понимать Зверей и общаться с ними устно. Знание и сознание многих Зверей ограничено их интеллектом, но они как минимум могут дать информацию о ближайших местах и чудовищах, включая тех, кого они видели за последний день. На усмотрение Мастера, вы можете попытаться убедить Зверя оказать вам небольшую помощь.",
+        isCombat: false,
+        isRitual: true,
+        castingTime: "1 действие",
+        range: "На себя",
+        components: ["В", "С"],
+        duration: "10 минут",
+        classes: ["bard", "driud", "ranger"],
+        subclasses: ["life-domain", "oath-of-vengeance"],
+        source: "Basic Rules (2014), pg. 277",
+        isLegacy: true,
+        tags: ["communication", "social"]
+    },
+
     {
         key: "detect-magic",
         name: "Определение магии",

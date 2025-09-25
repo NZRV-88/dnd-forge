@@ -1,5 +1,14 @@
 import { Sword, Star, Heart, Book, Eye, Brain } from "./icons";
 
+export type Abilities = {
+    str: string;
+    dex: string;
+    con: string;
+    int: string;
+    wis: string;
+    cha: string;
+};
+
 // массив с характеристиками и иконками
 export const ABILITIES = [
     { key: "str", label: "Сила", icon: Sword },

@@ -41,17 +41,17 @@ export const CLASS_CATALOG: ClassInfo[] = [
 ];
 
 // Вспомогательная функция для получения русских названий рас
-export const CLASS_LABELS: Record<string, string> = {
-  fighter: "Воин",
-  rogue: "Плут",
-  wizard: "Волшебник",
-  cleric: "Жрец",
-  ranger: "Следопыт",
-  bard: "Бард",
-  barbarian: "Варвар",
-  monk: "Монах",
-  paladin: "Паладин",
-  warlock: "Колдун",
-  sorcerer: "Чародей",
-  druid: "Друид",
-};
+//export const CLASS_LABELS: Record<string, string> = {
+//  fighter: "Воин",
+//  rogue: "Плут",
+//  wizard: "Волшебник",
+//  cleric: "Жрец",
+//  ranger: "Следопыт",
+//  bard: "Бард",
+//  barbarian: "Варвар",
+//  monk: "Монах",
+//  paladin: "Паладин",
+//  warlock: "Колдун",
+//  sorcerer: "Чародей",
+//  druid: "Друид",
+//};

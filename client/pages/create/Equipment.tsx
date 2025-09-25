@@ -4,6 +4,7 @@ import { useCharacter } from "@/store/character";
 import { Button } from "@/components/ui/button";
 import ExitButton from "@/components/ui/ExitButton";
 import StepArrows from "@/components/ui/StepArrows";
+import { useParams } from "react-router-dom";
 
 // Снаряжение по умолчанию для каждого класса (адаптировано по PHB)
 const DEFAULT_EQUIPMENT: Record<string, string[]> = {
@@ -95,6 +96,7 @@ const DEFAULT_GOLD: Record<string, number> = {
 };
 
 export default function EquipmentPick() {
+    const { id } = useParams<{ id: string }>(); 
     const nav = useNavigate();
     const { basics, setBasics } = useCharacter();
     const [mode, setMode] = useState<"equipment" | "gold">("equipment");
@@ -115,7 +117,7 @@ export default function EquipmentPick() {
     return (
         <div className="container mx-auto py-10">
             <div className="mx-auto max-w-5xl relative">
-                <StepArrows back="/create/abilities" next="/create/summary" />   
+                <StepArrows back={`/create/${id}/abilities`} next={`/create/${id}/summary`} />   
                 <ExitButton />
                 <h1 className="text-2xl font-bold mb-6 text-center">
                     Выбор снаряжения

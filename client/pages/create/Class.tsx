@@ -7,6 +7,8 @@ import type { ClassInfo } from "@/data/classes/types";
 import { CLASS_CATALOG } from "@/data/classes";
 import ExitButton from "@/components/ui/ExitButton";
 import StepArrows from "@/components/ui/StepArrows";
+import { useParams } from "react-router-dom";
+import * as Icons from "@/components/refs/icons";
 
 // Словарь с типами хитов для классов
 const HIT_DICE: Record<string, number> = {
@@ -75,32 +77,6 @@ function calcMaxHP(
 function getInfo(cls: string): ClassInfo {
     const found = CLASS_CATALOG.find((c) => c.key === cls);
     if (found) return found;
-    // Generic fallback
-    return {
-        key: cls,
-        desc: "Ключевые особенности класса (упрощённо).",
-        subclasses: [
-            { key: "Архетип А", desc: "Подкласс с защитным уклоном." },
-            { key: "Архетип Б", desc: "Подкласс с атакующим уклоном." },
-            { key: "Архетип В", desc: "Смешанный стиль." },
-        ],
-        features: {
-            1: [{ name: "Основы класса", desc: "Базовые умения и экипировка." }],
-            3: [{ name: "Подкласс", desc: "Доступ к особенностям выбранного пути." }],
-            4: [
-                {
-                    name: "Увеличение характеристик",
-                    desc: "Повышение параметров или талант.",
-                },
-            ],
-            5: [
-                {
-                    name: "Усиление класса",
-                    desc: "Существенное улучшение боевых/магических умений.",
-                },
-            ],
-        },
-    };
 }
 
 function buildFeatureList(
@@ -140,7 +116,7 @@ const ABILITY_OPTIONS = [
     { key: "cha", label: "Харизма" },
 ] as const;
 
-import { ALL_FEATS } from "@/data/feats";
+import { ALL_FEATS } from "@/data/feats/feats";
 
 function AsiConfigurator() {
     const { basics, asi, setAsiMode, setAsiStats, setAsiFeat } = useCharacter();
@@ -251,6 +227,7 @@ function AsiConfigurator() {
 }
 
 export default function ClassPick() {
+    const { id } = useParams<{ id: string }>(); 
     const nav = useNavigate();
     const { basics, choose, setLevel, setSubclass, stats, setBasics } =
         useCharacter();
@@ -278,7 +255,7 @@ export default function ClassPick() {
     return (
         <div className="container mx-auto py-10">
             <div className="mx-auto max-w-5xl relative overflow-visible">
-                <StepArrows back="/create" next="/create/background" />      
+                <StepArrows back={`/create/${id}`} next={`/create/${id}/background`} />      
                 <div className="mb-6 relative">
                     <div>
                         <h1 className="text-2xl font-semibold">Выбор класса</h1>
@@ -286,9 +263,6 @@ export default function ClassPick() {
                             Текущий: {CLASS_LABELS[basics.class] || basics.class} • ур. {basics.level}
                             {basics.subclass ? ` • ${basics.subclass}` : ""}
                         </p>
-                        <div className="mt-2 text-xs text-muted-foreground">
-                            Источник описаний: dnd.su • Редакция: {basics.edition}
-                        </div>
                     </div>
 
                     {/* крестик фиксируется в углу блока */}
@@ -298,6 +272,7 @@ export default function ClassPick() {
                 {/* Class grid */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {ALL_CLASSES.map((k) => {
+                            
                         const c =
                             CLASS_CATALOG.find((x) => x.key === k) ??
                             ({

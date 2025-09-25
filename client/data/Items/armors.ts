@@ -1,7 +1,6 @@
-// src/data/equipment/armors.ts
-// Справочник доспехов 5e SRD / Open5e
+// client/data/items/armors.ts
 
-export type ArmorCategory = "Лёгкий" | "Средний" | "Тяжёлый" | "Щит";
+export type ArmorCategory = "light" | "medium" | "heavy" | "shield";
 
 export interface Armor {
     key: string;              // уникальный ключ (slug)
@@ -22,7 +21,7 @@ export const Armors: Armor[] = [
     {
         key: "padded",
         name: "Стёганый",
-        category: "Лёгкий",
+        category: "light",
         cost: "5 gp",
         baseAC: 11,
         maxDexBonus: Infinity,
@@ -32,7 +31,7 @@ export const Armors: Armor[] = [
     {
         key: "leather",
         name: "Кожаный",
-        category: "Лёгкий",
+        category: "light",
         cost: "10 gp",
         baseAC: 11,
         maxDexBonus: Infinity,
@@ -42,7 +41,7 @@ export const Armors: Armor[] = [
     {
         key: "studded-leather",
         name: "Проклёпанный кожаный",
-        category: "Лёгкий",
+        category: "light",
         cost: "45 gp",
         baseAC: 12,
         maxDexBonus: Infinity,
@@ -56,7 +55,7 @@ export const Armors: Armor[] = [
     {
         key: "hide",
         name: "Шкурный",
-        category: "Средний",
+        category: "medium",
         cost: "10 gp",
         baseAC: 12,
         maxDexBonus: 2,
@@ -66,7 +65,7 @@ export const Armors: Armor[] = [
     {
         key: "chain-shirt",
         name: "Кольчужная рубаха",
-        category: "Средний",
+        category: "medium",
         cost: "50 gp",
         baseAC: 13,
         maxDexBonus: 2,
@@ -76,7 +75,7 @@ export const Armors: Armor[] = [
     {
         key: "scale-mail",
         name: "Чешуйчатый",
-        category: "Средний",
+        category: "medium",
         cost: "50 gp",
         baseAC: 14,
         maxDexBonus: 2,
@@ -86,7 +85,7 @@ export const Armors: Armor[] = [
     {
         key: "breastplate",
         name: "Кираса",
-        category: "Средний",
+        category: "medium",
         cost: "400 gp",
         baseAC: 14,
         maxDexBonus: 2,
@@ -96,7 +95,7 @@ export const Armors: Armor[] = [
     {
         key: "half-plate",
         name: "Полулаты",
-        category: "Средний",
+        category: "medium",
         cost: "750 gp",
         baseAC: 15,
         maxDexBonus: 2,
@@ -110,7 +109,7 @@ export const Armors: Armor[] = [
     {
         key: "ring-mail",
         name: "Кольчужная броня",
-        category: "Тяжёлый",
+        category: "heavy",
         cost: "30 gp",
         baseAC: 14,
         maxDexBonus: 0,
@@ -120,7 +119,7 @@ export const Armors: Armor[] = [
     {
         key: "chain-mail",
         name: "Кольчуга",
-        category: "Тяжёлый",
+        category: "heavy",
         cost: "75 gp",
         baseAC: 16,
         maxDexBonus: 0,
@@ -131,7 +130,7 @@ export const Armors: Armor[] = [
     {
         key: "splint",
         name: "Пластинчатый (сплинт)",
-        category: "Тяжёлый",
+        category: "heavy",
         cost: "200 gp",
         baseAC: 17,
         maxDexBonus: 0,
@@ -142,7 +141,7 @@ export const Armors: Armor[] = [
     {
         key: "plate",
         name: "Латы",
-        category: "Тяжёлый",
+        category: "heavy",
         cost: "1500 gp",
         baseAC: 18,
         maxDexBonus: 0,
@@ -157,7 +156,7 @@ export const Armors: Armor[] = [
     {
         key: "shield",
         name: "Щит",
-        category: "Щит",
+        category: "shield",
         cost: "10 gp",
         baseAC: 2, // добавляется к AC
         weight: 6,
@@ -168,4 +167,8 @@ export const Armors: Armor[] = [
 /* Вспомогательный поиск */
 export function getArmorByKey(key: string): Armor | undefined {
     return Armors.find((a) => a.key === key);
+}
+
+export function getArmorKeysByCategory(category: ArmorCategory): string[] {
+    return Armors.filter((a) => a.category === category).map((a) => a.key);
 }

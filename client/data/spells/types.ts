@@ -29,6 +29,7 @@ export interface Spell {
     school: string;
     desc: string;
     isCombat: boolean;
+    isRitual?: boolean;
     castingTime: string;
     range: string;
     components: string[];  // В, С, М
@@ -38,4 +39,8 @@ export interface Spell {
     save?: string;
     scaling?: Scaling;
     tags?: string[];
+    classes?: string[];
+    subclasses?: string[];
+    isLegacy?: boolean;
+    source?: string;
 }

@@ -1,25 +1,25 @@
 // Экспорт отдельных рас
-export { Human } from "./Human";
+export { Human } from "./Human/Human";
 export { Elf } from "./Elf/Elf";
-export { Dwarf } from "./Dwarf";
-export { Halfling } from "./Halfling";
-export { Gnome } from "./Gnome";
-export { HalfElf } from "./HalfElf";
-export { HalfOrc } from "./HalfOrc";
-export { Tiefling } from "./Tiefling";
-export { Dragonborn } from "./Dragonborn";
+export { Dwarf } from "./Dwarf/Dwarf";
+export { Halfling } from "./Halfling/Halfling";
+export { Gnome } from "./Gnome/Gnome";
+export { HalfElf } from "./HalfElf/HalfElf";
+export { HalfOrc } from "./HalfOrc/HalfOrc";
+export { Tiefling } from "./Tiefling/Tiefling";
+export { Dragonborn } from "./Dragonborn/Dragonborn";
 
 // Импорт типов и конкретных рас
 import type { RaceInfo } from "./types";
-import { Human } from "./Human";
+import { Human } from "./Human/Human";
 import { Elf } from "./Elf/Elf";
-import { Dwarf } from "./Dwarf";
-import { Halfling } from "./Halfling";
-import { Gnome } from "./Gnome";
-import { HalfElf } from "./HalfElf";
-import { HalfOrc } from "./HalfOrc";
-import { Tiefling } from "./Tiefling";
-import { Dragonborn } from "./Dragonborn";
+import { Dwarf } from "./Dwarf/Dwarf";
+import { Halfling } from "./Halfling/Halfling";
+import { Gnome } from "./Gnome/Gnome";
+import { HalfElf } from "./HalfElf/HalfElf";
+import { HalfOrc } from "./HalfOrc/HalfOrc";
+import { Tiefling } from "./Tiefling/Tiefling";
+import { Dragonborn } from "./Dragonborn/Dragonborn";
 
 // Каталог всех доступных рас
 export const RACE_CATALOG: RaceInfo[] = [
@@ -40,14 +40,14 @@ export const getRaceByKey = (key: string): RaceInfo | undefined => {
 };
 
 // Вспомогательная функция для получения русских названий рас
-export const RACE_LABELS: Record<string, string> = {
-  human: "Человек",
-  elf: "Эльф",
-  dwarf: "Дварф",
-  halfling: "Полурослик",
-  gnome: "Гном",
-  halfElf: "Полуэльф",
-  halfOrc: "Полуорк",
-  tiefling: "Тифлинг",
-  dragonborn: "Драконорождённый",
-};
+//export const RACE_LABELS: Record<string, string> = {
+//  human: "Человек",
+//  elf: "Эльф",
+//  dwarf: "Дварф",
+//  halfling: "Полурослик",
+//  gnome: "Гном",
+//  halfElf: "Полуэльф",
+//  halfOrc: "Полуорк",
+//  tiefling: "Тифлинг",
+//  dragonborn: "Драконорождённый",
+//};

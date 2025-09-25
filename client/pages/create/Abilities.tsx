@@ -4,6 +4,7 @@ import { useCharacter } from "@/store/character";
 import { Button } from "@/components/ui/button";
 import ExitButton from "@/components/ui/ExitButton";
 import StepArrows from "@/components/ui/StepArrows";
+import { useParams } from "react-router-dom";
 
 const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
 const ABILITY_KEYS = [
@@ -27,6 +28,7 @@ function rollArray() {
 }
 
 export default function AbilitiesPick() {
+    const { id } = useParams<{ id: string }>(); 
   const nav = useNavigate();
   const { stats, setStat } = useCharacter();
   const [mode, setMode] = useState<"array" | "roll">("array");
@@ -104,7 +106,7 @@ export default function AbilitiesPick() {
   return (
     <div className="container mx-auto py-10">
           <div className="mx-auto max-w-5xl relative">
-              <StepArrows back="/create/race" next="/create/equipment" />   
+              <StepArrows back={`/create/${id}/race`} next={`/create/${id}/equipment`} />   
               <ExitButton />
         <h1 className="text-2xl font-bold mb-6 text-center">Распределение характеристик</h1>
         

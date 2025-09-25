@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useCharacter } from "@/store/character";
 import StepArrows from "@/components/ui/StepArrows";
+import { useParams } from "react-router-dom";
+import * as Icons from "@/components/refs/icons";
 
 import { 
   BACKGROUND_CATALOG, 
@@ -22,6 +24,7 @@ const ABILITIES = [
 ];
 
 export default function BackgroundPick() {
+    const { id } = useParams<{ id: string }>(); 
   const nav = useNavigate();
   const { basics, setBasics, setBackgroundBonuses, setBackgroundSkills } = useCharacter(); // ← ДОБАВЛЕНО setBackgroundSkills
   const [selected, setSelected] = useState<string | null>(null);
@@ -84,7 +87,7 @@ export default function BackgroundPick() {
   return (
     <div className="container mx-auto py-10">
           <div className="mx-auto max-w-5xl relative">
-              <StepArrows back="/create/class" next="/create/race" />   
+              <StepArrows back={`/create/${id}/class`} next={`/create/${id}/race`} />   
               {/* крестик в правом верхнем углу */}
               <ExitButton />
         <div className="mb-6 flex items-baseline justify-between">
@@ -97,38 +100,30 @@ export default function BackgroundPick() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedBackgrounds.map((bg) => (
-            <button
-              key={bg.key}
-              onClick={() => onPickBackground(bg.key)}
-              className={`text-left rounded-xl border p-5 transition hover:shadow ${
-                (selected === bg.key || basics.background === bg.key) ? "ring-2 ring-primary" : ""
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium">{bg.name}</h3>
-                {(selected === bg.key || basics.background === bg.key) && (
-                  <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs text-primary ring-1 ring-primary/20">
-                    Выбрано
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{bg.desc}</p>
-              
-              {/* Показываем бонусы предыстории в карточке выбора */}
-              <div className="mt-3 text-xs text-muted-foreground">
-                {bg.abilityBonuses && (
-                  <div>Бонусы: {bg.abilityBonuses.count} × +{bg.abilityBonuses.amount}</div>
-                )}
-                {bg.skillProficiencies.length > 0 && (
-                  <div>Навыки: {bg.skillProficiencies.join(", ")}</div>
-                )}
-                {bg.toolProficiencies && bg.toolProficiencies.length > 0 && (
-                  <div>Инструменты: {bg.toolProficiencies.join(", ")}</div>
-                )}
-              </div>
-            </button>
-          ))}
+
+                  {sortedBackgrounds.map((bg) => {
+                      const isSelected = selected === bg.key || basics.background === bg.key;
+
+                      return (
+                          <button
+                              key={bg.key}
+                              onClick={() => onPickBackground(bg.key)}
+                              aria-pressed={isSelected}
+                              className={`text-left rounded-lg border p-3 flex flex-col justify-between transition hover:shadow-md hover:scale-[1.01] ${isSelected ? "border-2 border-primary shadow-lg scale-[1.02] bg-gradient-to-b from-primary/5 to-transparent" : ""}`}
+                          >
+                              {/* 👑 Корона */}
+                              {isSelected && (
+                                  <div className="absolute right-2 top-2 text-primary">
+                                      <Icons.Crown className="w-5 h-5" />
+                                  </div>
+                              )}
+                              <div className="flex items-center justify-between">
+                                  <h3 className="font-medium">{bg.name}</h3>
+                              </div>
+                              <p className="mt-2 text-sm text-muted-foreground">{bg.desc}</p>
+                          </button>
+                      );
+          })}
         </div>
 
         {/* Подробная информация о выбранной предыстории - показывается когда есть данные */}

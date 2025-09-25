@@ -1,204 +1,295 @@
-import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useCharacter } from "@/store/character";
-import { Button } from "@/components/ui/button";
-import ExitButton from "@/components/ui/ExitButton";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import StepArrows from "@/components/ui/StepArrows";
-
-const LIST_KEY = "dnd-ru-characters";
-const EDITING_ID_KEY = "dnd-ru-editing-id";
-
-function upsertCharacter(character: any) {
-  const list = JSON.parse(localStorage.getItem(LIST_KEY) || "[]");
-  const editingId = localStorage.getItem(EDITING_ID_KEY);
-  if (editingId) {
-    const idx = list.findIndex((c: any) => String(c.id) === editingId);
-    if (idx !== -1) {
-      const prev = list[idx];
-      list[idx] = { ...character, id: prev.id, created: prev.created };
-    } else {
-      list.push(character);
-    }
-    localStorage.removeItem(EDITING_ID_KEY);
-  } else {
-    list.push(character);
-  }
-  localStorage.setItem(LIST_KEY, JSON.stringify(list));
-}
-
-// Local mapping of class keys to Russian labels (kept small and explicit)
-const CLASS_LABELS: Record<string, string> = {
-  fighter: "Воин",
-  rogue: "Плут",
-  wizard: "Волшебник",
-  cleric: "Жрец",
-  ranger: "Следопыт",
-  bard: "Бард",
-  barbarian: "Варвар",
-  monk: "Монах",
-  paladin: "Паладин",
-  warlock: "Колдун",
-  sorcerer: "Чародей",
-  druid: "Друид",
-};
+import ExitButton from "@/components/ui/ExitButton";
+import { useCharacter } from "@/store/character";
+import { ABILITIES } from "@/components/refs/abilities";
+import { getRaceByKey } from "@/data/races";
+import { getEffectiveSpeed } from "@/data/races/types";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Summary() {
-  const nav = useNavigate();
-  const { basics, stats, asi } = useCharacter();
+    const user = useAuth();
+    const { id: urlId } = useParams<{ id: string }>();
+    const nav = useNavigate();
+    const {
+        asi,
+        basics,
+        stats,
+        totalAbilityBonuses,
+        skills,
+        languages,
+        tools,
+        feats,
+        spells,
+        //equipment,
+    } = useCharacter();
 
-  // Compute final stats including race/background/ASI bonuses
-  const { finalStats, breakdown } = useMemo(() => {
-    const keys = ["str", "dex", "con", "int", "wis", "cha"] as const;
-    const f: Record<string, number> = {};
-    const bdown: Record<string, string[]> = {};
+    const race = getRaceByKey(basics.race);
+    const subrace = race?.subraces?.find((s) => s.key === basics.subrace) || null;
+    const speed = getEffectiveSpeed(race, subrace);
 
-    const raceBonuses = (basics as any).raceBonuses || {};
-    const backgroundBonuses = (basics as any).backgroundBonuses || {};
+    const handleSave = async () => {
+        try {
+            const { data, error } = await supabase
+                .from("characters")
+                .upsert(
+                    {
+                        id: urlId,
+                        user_id: user.id,
+                        data: {
+                            basics,
+                            stats,
+                            asi,
+                            totalAbilityBonuses,
+                            skills,
+                            languages,
+                            tools,
+                            feats,
+                            spells,
+                        },
+                        updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: "id" }
+                )
+                .select()
+                .single();
 
-    // Pre-calc ASI bonuses per ability
-    const asiBonuses: Record<string, number> = {};
-    Object.values(asi || {}).forEach((s: any) => {
-      if (!s) return;
-      if (s.mode === "asi") {
-        if (s.s1) asiBonuses[s.s1] = (asiBonuses[s.s1] || 0) + 1;
-        if (s.s2) asiBonuses[s.s2] = (asiBonuses[s.s2] || 0) + 1;
-      }
-    });
+            if (error) {
+                console.error("Ошибка при сохранении персонажа:", error);
+                alert("Не удалось сохранить персонажа");
+                return;
+            } else {
+                nav("/characters");
+            }
 
-    keys.forEach((k) => {
-      const base = (stats as any)[k] || 0;
-      const r = raceBonuses[k] || 0;
-      const bg = backgroundBonuses[k] || 0;
-      const a = asiBonuses[k] || 0;
-      f[k] = base + r + bg + a;
-      const parts: string[] = [`${base} (баз.)`];
-      if (r) parts.push(`${r > 0 ? "+" : ""}${r} (раса)`);
-      if (bg) parts.push(`${bg > 0 ? "+" : ""}${bg} (предыстория)`);
-      if (a) parts.push(`${a > 0 ? "+" : ""}${a} (ASI)`);
-      bdown[k] = parts;
-    });
-
-    return { finalStats: f, breakdown: bdown };
-  }, [stats, basics, asi]);
-
-  const equipment = (basics as any).equipment || [];
-  const gold = (basics as any).gold || 0;
-
-  // Utility to format modifier
-  const mod = (v: number) => {
-    const m = Math.floor((v - 10) / 2);
-    return `${m >= 0 ? "+" : ""}${m}`;
-  };
-
-  const handleSave = () => {
-    const editingId = localStorage.getItem(EDITING_ID_KEY);
-    const character = {
-      basics,
-      stats: finalStats,
-      asi,
-      equipment,
-      gold,
-      created: new Date().toISOString(),
-      id: editingId ? Number(editingId) : Date.now(),
+            console.log("Персонаж сохранён:", data);
+        } catch (err) {
+            console.error("Ошибка при сохранении персонажа:", err);
+            alert("Ошибка при сохранении персонажа");
+        }
     };
-    upsertCharacter(character);
-    nav("/characters");
-  };
 
-  const classLabel = CLASS_LABELS[(basics as any).class] || (basics as any).class || "—";
-  const subclassLabel = (basics as any).subclass ? ` / ${(basics as any).subclass}` : "";
+    return (
+        <div className="container mx-auto py-10">
+            <div className="mx-auto max-w-5xl relative">
+                <StepArrows back={`/create/${urlId}/equipment`} next={null} />
+                <ExitButton />
 
-  return (
-    <div className="container mx-auto py-10">
-          <div className="mx-auto max-w-5xl relative">
-              <StepArrows back="/create/equipment" />   
-              <ExitButton />
-        <div className="flex items-center gap-6 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-md border bg-gradient-to-b from-yellow-200 to-yellow-100 flex items-center justify-center text-xl font-bold text-amber-900">✦</div>
-            <div>
-              <h1 className="text-3xl font-extrabold">Лист персонажа</h1>
-              <div className="text-sm text-muted-foreground">Подробная сводка — стиль Dungeons & Dragons</div>
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-3">
-            
-            
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column: basics & equipment */}
-          <div className="col-span-1 rounded-lg border bg-white/60 p-4 shadow-inner">
-            <div className="mb-4">
-              <div className="text-xs text-muted-foreground">Имя</div>
-              <div className="text-lg font-semibold">{(basics as any).name || "—"}</div>
-            </div>
-            <div className="mb-4">
-              <div className="text-xs text-muted-foreground">Класс / Подкласс</div>
-              <div className="text-lg font-semibold">{classLabel}{subclassLabel}</div>
-            </div>
-            <div className="mb-4">
-              <div className="text-xs text-muted-foreground">Раса</div>
-              <div className="text-lg">{(basics as any).race || "—"}</div>
-            </div>
-            <div className="mb-4">
-              <div className="text-xs text-muted-foreground">Уровень</div>
-              <div className="text-lg">{(basics as any).level || 1}</div>
-            </div>
-            <div className="mb-4">
-              <div className="text-xs text-muted-foreground">Предыстория</div>
-              <div className="text-lg">{(basics as any).background || "—"}</div>
-            </div>
-
-            <div className="mt-4">
-              <div className="text-xs text-muted-foreground mb-2">Снаряжение</div>
-              {equipment.length > 0 ? (
-                <ul className="list-disc pl-5 text-sm">
-                  {equipment.map((it: string, i: number) => (
-                    <li key={i}>{it}</li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="text-sm text-muted-foreground">—</div>
-              )}
-              {gold > 0 && (
-                <div className="mt-2 text-sm">
-                  <span className="font-semibold">Золото:</span> {gold} зм
+                {/* Заголовок */}
+                <div className="mb-6 flex items-baseline justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold">
+                            {basics.name || "Безымянный герой"}
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            {basics.race} {basics.subrace && `(${basics.subrace})`} •{" "}
+                            {basics.class} {basics.subclass && `(${basics.subclass})`}
+                        </p>
+                    </div>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Middle + right: stats */}
-          <div className="col-span-2 rounded-lg border bg-white/60 p-4">
-            <div className="grid grid-cols-3 gap-3">
-              {(["str", "dex", "con", "int", "wis", "cha"] as const).map((k) => {
-                const label = k.toUpperCase();
-                const value = (finalStats as any)[k] ?? 0;
-                const parts = (breakdown as any)[k] || [];
-                return (
-                  <div key={k} className="rounded-md border p-3 bg-gradient-to-b from-white to-amber-50">
-                    <div className="flex items-baseline justify-between">
-                      <div className="text-sm font-medium">{label}</div>
-                      <div className="text-xl font-extrabold">{value}</div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">{mod(value)}</div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      {parts.map((p: string, i: number) => (
-                        <div key={i}>{p}</div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                {/* Основное */}
+                <Card className="mb-6">
+                    <CardHeader>
+                        <CardTitle className="border-l-2 border-primary pl-2 uppercase tracking-wide">
+                            Основное
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <div className="text-muted-foreground">Имя</div>
+                            <div className="font-medium">{basics.name}</div>
+                        </div>
+                        <div>
+                            <div className="text-muted-foreground">Раса</div>
+                            <div className="font-medium">{basics.race}</div>
+                        </div>
+                        {basics.subrace && (
+                            <div>
+                                <div className="text-muted-foreground">Подраса</div>
+                                <div className="font-medium">{basics.subrace}</div>
+                            </div>
+                        )}
+                        <div>
+                            <div className="text-muted-foreground">Класс</div>
+                            <div className="font-medium">{basics.class}</div>
+                        </div>
+                        {basics.subclass && (
+                            <div>
+                                <div className="text-muted-foreground">Подкласс</div>
+                                <div className="font-medium">{basics.subclass}</div>
+                            </div>
+                        )}
+                        <div>
+                            <div className="text-muted-foreground">Скорость</div>
+                            <div className="font-medium">{speed} футов</div>
+                        </div>
+                        {basics.background && (
+                            <div>
+                                <div className="text-muted-foreground">Предыстория</div>
+                                <div className="font-medium">{basics.background}</div>
+                            </div>
+                        )}
 
-                      <div className="mt-4 text-sm text-muted-foreground">Примечание: показаны базовые значения и бонусы от расы, предыстории и ASI.</div>
-                      <Button onClick={handleSave}>Сохранить</Button>
-          </div>
+                        {basics.alignment && (
+                            <div>
+                                <div className="text-muted-foreground">Мировоззрение</div>
+                                <div className="font-medium">{basics.alignment}</div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Характеристики */}
+                <Card className="mb-6">
+                    <CardHeader>
+                        <CardTitle className="border-l-2 border-primary pl-2 uppercase tracking-wide">
+                            Характеристики
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {ABILITIES.map((a) => {
+                            const base = stats[a.key] || 0;
+                            const bonus = totalAbilityBonuses[a.key] || 0;
+                            const total = Math.min(base + bonus, 20);
+                            const modifier = Math.floor((total - 10) / 2);
+
+                            return (
+                                <div
+                                    key={a.key}
+                                    className="rounded border p-3 text-center shadow-sm"
+                                >
+                                    <div className="font-bold">{a.label}</div>
+                                    <div className="text-2xl">{total}</div>
+                                    <div className="text-muted-foreground text-sm">
+                                        Модификатор: {modifier >= 0 ? `+${modifier}` : modifier}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </CardContent>
+                </Card>
+
+                {/* Языки */}
+                {languages?.length > 0 && (
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle className="border-l-2 border-primary pl-2 uppercase tracking-wide">
+                                Языки
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="list-disc list-inside text-sm">
+                                {languages.map((l, i) => (
+                                    <li key={i}>{l}</li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Навыки */}
+                {skills?.length > 0 && (
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle className="border-l-2 border-primary pl-2 uppercase tracking-wide">
+                                Навыки
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="list-disc list-inside text-sm">
+                                {skills.map((s, i) => (
+                                    <li key={i}>{s}</li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Инструменты */}
+                {tools?.length > 0 && (
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle className="border-l-2 border-primary pl-2 uppercase tracking-wide">
+                                Инструменты
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="list-disc list-inside text-sm">
+                                {tools.map((t, i) => (
+                                    <li key={i}>{t}</li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Черты */}
+                {feats?.length > 0 && (
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle className="border-l-2 border-primary pl-2 uppercase tracking-wide">
+                                Черты
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="list-disc list-inside text-sm">
+                                {feats.map((f, i) => (
+                                    <li key={i}>{f}</li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Заклинания */}
+                {spells?.length > 0 && (
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle className="border-l-2 border-primary pl-2 uppercase tracking-wide">
+                                Заклинания
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="list-disc list-inside text-sm">
+                                {spells.map((sp, i) => (
+                                    <li key={i}>{sp}</li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Снаряжение */}
+                {/*{equipment?.length > 0 && (*/}
+                {/*    <Card className="mb-6">*/}
+                {/*        <CardHeader>*/}
+                {/*            <CardTitle className="border-l-2 border-primary pl-2 uppercase tracking-wide">*/}
+                {/*                Снаряжение*/}
+                {/*            </CardTitle>*/}
+                {/*        </CardHeader>*/}
+                {/*        <CardContent>*/}
+                {/*            <ul className="list-disc list-inside text-sm">*/}
+                {/*                {equipment.map((e, i) => (*/}
+                {/*                    <li key={i}>{e}</li>*/}
+                {/*                ))}*/}
+                {/*            </ul>*/}
+                {/*        </CardContent>*/}
+                {/*    </Card>*/}
+                {/*)}*/}
+
+                {/* Кнопки */}
+                <div className="flex justify-between">
+                    <button
+                        onClick={handleSave}
+                        className="rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
+                    >
+                        Сохранить персонажа
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

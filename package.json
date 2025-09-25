@@ -24,9 +24,14 @@
     "clean:full": "rimraf node_modules && rimraf package-lock.json && npm install"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "semver": "^7.7.2",
+    "use-debounce": "^10.0.6",
+    "uuid": "^13.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
