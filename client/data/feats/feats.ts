@@ -320,7 +320,6 @@ export const ALL_FEATS: Feat[] = [
         name: "Знаток тяжёлых доспехов",
         nameEn: "Heavily Armored",
         isLegacy: true,
-        desc: "Вы обучены ношению тяжёлой брони и получаете +1 к Силе.",
         desc: "Ваши руки возвращают надежду там, где смерть уже протянула свои когти. Вы умеете быстро перевязывать раны и поднимать союзников, когда каждый миг решает исход битвы.",
         effect: [
             {
@@ -332,7 +331,7 @@ export const ALL_FEATS: Feat[] = [
                 desc: `Вы можете действием потратить одно использование комплекта целителя, чтобы позаботиться о существе и восстановить ему 1к6 + 4 хита, а также дополнительные хиты, равные его максимальному количеству Костей Хитов. Это существо не сможет повторно восстанавливать хиты от этой черты, пока не закончит короткий или продолжительный отдых.`,
             },
         ],  
-        prerequisites: { proficiencies: getArmorKeysByCategory("heavy"), oneOfAbilities: { str: 13 }, level: 4 },
+        //prerequisites: { proficiencies: getArmorKeysByCategory("heavy"), oneOfAbilities: { str: 13 }, level: 4 },
     },
     //{
     //    key: "heavy_armor_master",

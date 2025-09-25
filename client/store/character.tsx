@@ -76,18 +76,32 @@ function isValidDraft(obj: any): obj is CharacterDraft {
 
 export type CharacterDraft = {
     id: string;
+
+    // Базовая информация
     basics: Basics;
     stats: Abilities;
     asi: Record<number, AsiSelection>;
-    spells: string[];
-    languages: string[];
-    skills: string[];
-    feats: string[];
-    tools: string[];
-    speed?: number;
-    initiativeBonus?: number;
-    raceAbilityChoice?: Record<string, keyof Abilities>;
-    featAbilityChoice?: Record<string, keyof Abilities>;
+
+    //spells: string[];
+    //languages: string[];
+    //skills: string[];
+    //feats: string[];
+    //tools: string[];
+    //speed?: number;
+    //initiativeBonus?: number;
+    //raceAbilityChoice?: Record<string, keyof Abilities>;
+    //featAbilityChoice?: Record<string, keyof Abilities>;
+
+
+    // Выборы игрока
+    chosen: {
+        abilities: Record<string, keyof Abilities[]>; // featKey/raceKey -> выбранные характеристики
+        skills: Record<string, string[]>;             // источник -> выбранные навыки
+        tools: Record<string, string[]>;
+        languages: Record<string, string[]>;
+        feats: string[];                              // выбранные фиты (по ключу)
+        spells: Record<string, string[]>;             // источник -> выбранные спеллы
+    };
 };
 
 export type CharacterContextType = {

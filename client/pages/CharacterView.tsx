@@ -12,7 +12,7 @@ import InitiativeAC from "@/components/characterList/InitiativeAC";
 import RollLog from "@/components/characterList/RollLog";
 import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
-import { RACE_LABELS } from "@/data/races";
+import { RACE_CATALOG } from "@/data/races";
 import { CLASS_LABELS } from "@/data/classes";
 import { getEffectiveSpeed } from "@/data/races"; 
 
@@ -93,21 +93,28 @@ export default function CharacterView() {
                 if (s.s2) asiBonuses[s.s2] = (asiBonuses[s.s2] || 0) + 1;
             } else if (s.mode === "feat" && s.feat) {
                 const feat = ALL_FEATS.find((f) => f.key === s.feat);
-                if (!feat?.effects) return;
-                if (feat.effects.abilities) {
-                    for (const [k, v] of Object.entries(feat.effects.abilities)) {
-                        featBonuses[k] = (featBonuses[k] || 0) + (v as number);
+                if (!feat?.effect) return;
+                for (const bonus of feat.effect) {
+                    // статичное увеличение характеристик
+                    if (bonus.abilities) {
+                        for (const [k, v] of Object.entries(bonus.abilities)) {
+                            featBonuses[k] = (featBonuses[k] || 0) + (v as number);
+                        }
                     }
-                }
-                if (feat.effects.abilityChoice && s.choice) {
-                    const chosen = s.choice as string;
-                    if (feat.effects.abilityChoice.includes(chosen)) {
-                        featBonuses[chosen] = (featBonuses[chosen] || 0) + 1;
+
+                    // выбор характеристики
+                    if (bonus.abilityChoice && s.choice) {
+                        const chosen = s.choice as string;
+                        if (bonus.abilityChoice.includes(chosen as any)) {
+                            featBonuses[chosen] = (featBonuses[chosen] || 0) + 1;
+                        }
                     }
+
+                    // другие бонусы
+                    if (bonus.initiative) extraInitiative += bonus.initiative;
+                    if (bonus.speed) extraSpeed += bonus.speed;
+                    if (bonus.hp) extraHp += bonus.hp;
                 }
-                if (feat.effects.initiative) extraInitiative += feat.effects.initiative;
-                if (feat.effects.speed) extraSpeed += feat.effects.speed;
-                if (feat.effects.hp) extraHp += feat.effects.hp;
             }
         });
 
@@ -213,6 +220,10 @@ export default function CharacterView() {
         return m >= 0 ? `+${m}` : `${m}`;
     };
 
+    const raceInfo = RACE_CATALOG.find(
+        (c) => c.key.toLowerCase() === b.race.toLowerCase()
+    );
+
     return (
         <div className="bg-neutral-900 text-gray-200 min-h-screen p-6 font-sans flex justify-center">
             <div className="w-[1200px]">
@@ -270,10 +281,10 @@ export default function CharacterView() {
                             {b.name || "Без имени"}
                         </h1>
                         <div className="mt-2 text-lg italic text-gray-300">
-                            {RACE_LABELS[b.race] || "Раса?"}
+                            {raceInfo[b.name] || "Раса?"}
                             {b.subrace ? ` (${b.subrace})` : ""} {/* TODO: сюда можно русское имя подрасы */}
                             {" • "}
-                            {CLASS_LABELS[b.class] || "Класс?"}
+                            {raceInfo[b.name] || "Класс?"}
                             {b.subclass ? ` (${b.subclass})` : ""} {/* TODO: сюда можно русское имя подкласса */}
                             {" • ур. "}
                             {b.level || 1}

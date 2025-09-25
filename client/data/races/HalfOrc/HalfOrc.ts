@@ -30,7 +30,9 @@ export const HalfOrc: RaceInfo = {
         {
             name: "Угрожающий вид",
             desc: "Вы получаете владение навыком Запугивание.",
-            skills: ["intimidation"],
+            proficiencies: [
+                { type: "skill", key: "intimidation" }
+            ],
         },
         {
             name: "Непоколебимая стойкость",

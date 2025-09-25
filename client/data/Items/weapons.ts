@@ -458,6 +458,10 @@ export const Weapons: Weapon[] = [
 ];
 
 /* Вспомогательный поиск */
+
+export function getWeaponKeysByCategory(category: WeaponCategory): string[] {
+    return Weapons.filter((a) => a.category === category).map((a) => a.key);
+}
 export function getWeaponByKey(key: string): Weapon | undefined {
     return Weapons.find((w) => w.key === key);
 }
@@ -482,4 +486,10 @@ export function getDamageTypeRu(damage: DamageType): string {
         case "slashing": return "Рубящий";
         case "piercing": return "Колющий";
     }
+}
+
+export function getWeaponName(key: string, lang: "ru" | "en" = "ru"): string {
+    const weapon = getWeaponByKey(key);
+    if (!weapon) return key;
+    return lang === "en" ? key : weapon.name;
 }

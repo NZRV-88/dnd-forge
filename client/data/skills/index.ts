@@ -17,3 +17,10 @@ export function getSkillByKey(key: string): Skill | undefined {
 }
 
 export { SKILLS };
+
+export function getSkillName(key: string, lang: "ru" | "en" = "ru"): string {
+    const skill = SKILLS.find((s) => s.key === key);
+    if (!skill) return key;
+    return lang === "en" ? skill.nameEn : skill.name;
+}
+

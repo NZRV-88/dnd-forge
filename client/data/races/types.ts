@@ -1,5 +1,6 @@
 import { DraconicAncestry } from "./Dragonborn/traits/DraconicAncestry";
 import type { SOURCES } from "@/data/sources";
+import type { Proficiency } from "@/data/proficiencies";
 // types.ts — описания типов для рас и подрас
 export type SourceKey = keyof typeof SOURCES;
 
@@ -20,12 +21,13 @@ export type RacialTrait = {
     desc: string;            // Подробное описание эффекта/правила
     speed?: number;                          // Изменение базовой скорости (например: 35)
     abilityBonuses?: Record<string, number>; // Бонусы к характеристикам (например: { int: 1 })
-    armors?: string[];               // Владение бронёй (например: ["Лёгкая броня", "Средняя броня"])
-    weapons?: string[];              // Владение оружием (например: ["Длинный меч", "Короткий лук"])
+    proficiencies?: Proficiency[];   // Владение (например: [{ type: "skill", name: "Атлетика" }])
+    //armors?: string[];               // Владение бронёй (например: ["Лёгкая броня", "Средняя броня"])
+    //weapons?: string[];              // Владение оружием (например: ["Длинный меч", "Короткий лук"])
+    //tools?: string[];                // Владение инструментами (например: ["Воровские инструменты"])
+    //skills?: string[];               // Владение навыками (например: ["Восприятие", "Атлетика"])
+    //savingThrows?: string[];         // Владение спасбросками (например: ["con", "dex"])
     hpPerLevel?: number;             // Добавление 
-    tools?: string[];                // Владение инструментами (например: ["Воровские инструменты"])
-    skills?: string[];               // Владение навыками (например: ["Восприятие", "Атлетика"])
-    savingThrows?: string[];         // Владение спасбросками (например: ["con", "dex"])
     vision?: VisionProficiency[];    // Владение зрением (например: ["Ночное зрение"])
     choices?: ChoiceOption[];        // Если необходимо добавить выбор владением
     spells?: RacialSpell[];          // Заклинания от подрасы на выбор

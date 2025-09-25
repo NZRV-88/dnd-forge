@@ -1,6 +1,7 @@
 import * as EQUIPMENT from "@/data/items";
 import type { Item } from "@/data/items/";
 
+export type ToolCategory = "artisan" | "musical" | "gaming" | "kit";
 export interface Tool {
     key: string;
     name: string;
@@ -13,23 +14,23 @@ export interface Tool {
     ability: string;
     utilize: string;
     craft: string[];
-    group: string;
+    category: string;
 }
 
 export const Tools: Tool[] = [
     // Обычные инструменты
-    //{ key: "thieves-tools", name: "Воровские инструменты", nameEn: "Thieves' Tools", group: "common" },
-    //{ key: "navigator", name: "Набор навигатора", nameEn: "Navigator's Tools", group: "common" },
+    //{ key: "thieves-tools", name: "Воровские инструменты", nameEn: "Thieves' Tools", category: "kit" },
+    //{ key: "navigator", name: "Набор навигатора", nameEn: "Navigator's Tools", category: "kit" },
 
     //// Музыкальные инструменты
-    //{ key: "flute", name: "Флейта", nameEn: "Flute", group: "musical" },
-    //{ key: "drum", name: "Барабан", nameEn: "Drum", group: "musical" },
-    //{ key: "lute", name: "Лютня", nameEn: "Lute", group: "musical" },
+    //{ key: "flute", name: "Флейта", nameEn: "Flute", category: "musical" },
+    //{ key: "drum", name: "Барабан", nameEn: "Drum", category: "musical" },
+    //{ key: "lute", name: "Лютня", nameEn: "Lute", category: "musical" },
 
     //// Ремесленные инструменты
-    //{ key: "alchemist", name: "Инструменты алхимика", nameEn: "Alchemist's Supplies", group: "artisan" },
-    //{ key: "potter", name: "Набор гончара", nameEn: "Potter's Tools", group: "artisan" },
-    //{ key: "calligrapher", name: "Набор каллиграфа", nameEn: "Calligrapher's Supplies", group: "artisan" },
+    //{ key: "alchemist", name: "Инструменты алхимика", nameEn: "Alchemist's Supplies", category: "artisan" },
+    //{ key: "potter", name: "Набор гончара", nameEn: "Potter's Tools", category: "artisan" },
+    //{ key: "calligrapher", name: "Набор каллиграфа", nameEn: "Calligrapher's Supplies", category: "artisan" },
     {
         key: "mason",
         name: "Инструменты каменщика",
@@ -41,10 +42,10 @@ export const Tools: Tool[] = [
         ability: "str",
         utilize: "Высеките символ или отверстие в камне (СЛ 10)",
         craft: ["block-and-tile"],
-        group: "artisan"
+        category: "artisan"
     },
-    //{ key: "cartographer", name: "Набор картографа", nameEn: "Cartographer's Tools", group: "artisan" },
-    //{ key: "leatherworker", name: "Набор кожевника", nameEn: "Leatherworker's Tools", group: "artisan" },
+    //{ key: "cartographer", name: "Набор картографа", nameEn: "Cartographer's Tools", category: "artisan" },
+    //{ key: "leatherworker", name: "Набор кожевника", nameEn: "Leatherworker's Tools", category: "artisan" },
     {
         key: "smith",
         name: "Инструменты кузнеца",
@@ -56,7 +57,7 @@ export const Tools: Tool[] = [
         ability: "str",
         utilize: "Поддеть и открыть дверь или контейнер (СЛ 20)",
         craft: ["club", "greatclub", "quarterstaff", "barrel", "chest", "ladder", "pole", "portable-ram", "torch"], // исправить! сделать реализацию исключений.
-        group: "artisan"
+        category: "artisan"
     },
     {
         key: "brewer",
@@ -69,7 +70,7 @@ export const Tools: Tool[] = [
         ability: "int",
         utilize: "Обнаружение отравленного напитка (СЛ 15) или идентификация алкоголя (СЛ 10)",
         craft: ["antitoxin"], 
-        group: "artisan"
+        category: "artisan"
     },
     {
         key: "carpenter",
@@ -82,10 +83,10 @@ export const Tools: Tool[] = [
         ability: "str",
         utilize: "Запечатать или вскрыть дверь или контейнер (СЛ 20)",
         craft: ["club", "greatclub", "quarterstaff", "barrel", "chest", "ladder", "pole", "portable-ram", "torch"],
-        group: "artisan",
+        category: "artisan",
     },
-    //{ key: "cook", name: "Набор повара", nameEn: "Cook's Utensils", group: "artisan" },
-    //{ key: "woodcarver", name: "Набор деревообработчика", nameEn: "Woodcarver's Tools", group: "artisan" },
+    //{ key: "cook", name: "Набор повара", nameEn: "Cook's Utensils", category: "artisan" },
+    //{ key: "woodcarver", name: "Набор деревообработчика", nameEn: "Woodcarver's Tools", category: "artisan" },
     {
         key: "tinker",
         name: "Инструменты жестянщика",
@@ -97,23 +98,28 @@ export const Tools: Tool[] = [
         ability: "dex",
         utilize: "Соберите крошечный предмет из подручных материалов, который развалится через 1 минуту (СЛ 20)",
         craft: ["musket", "pistol", "bell", "bullseye-lantern", "flask", "hooded-lantern", "hunting-trap", "lock", "manacles", "mirror", "shovel", "signal-whistle", "tinderbox"],
-        group: "artisan",
+        category: "artisan",
     },
-    //{ key: ",", name: "Набор ремонтника", nameEn: ",'s Tools", group: "artisan" },
-    //{ key: ",", name: "Набор сапожника", nameEn: ",'s Tools", group: "artisan" },
-    //{ key: "glassblower", name: "Набор стеклодува", nameEn: "Glassblower's Tools", group: "artisan" },
-    //{ key: "weaver", name: "Набор ткача", nameEn: "Weaver's Tools", group: "artisan" },
-    //{ key: "painter", name: "Набор художника", nameEn: "Painter's Supplies", group: "artisan" },
-    //{ key: "jeweler", name: "Набор ювелира", nameEn: "Jeweler's Tools", group: "artisan" },
-
-    
-    
+    //{ key: ",", name: "Набор ремонтника", nameEn: ",'s Tools", category: "artisan" },
+    //{ key: ",", name: "Набор сапожника", nameEn: ",'s Tools", category: "artisan" },
+    //{ key: "glassblower", name: "Набор стеклодува", nameEn: "Glassblower's Tools", category: "artisan" },
+    //{ key: "weaver", name: "Набор ткача", nameEn: "Weaver's Tools", category: "artisan" },
+    //{ key: "painter", name: "Набор художника", nameEn: "Painter's Supplies", category: "artisan" },
+    //{ key: "jeweler", name: "Набор ювелира", nameEn: "Jeweler's Tools", category: "artisan" },
 
 
-
-    
-    
-
-    
-    
 ];
+
+export function getToolKeysByCategory(category: ToolCategory): string[] {
+    return Tools.filter((a) => a.category === category).map((a) => a.key);
+}
+
+export function getToolByKey(key: string): Tool | undefined {
+    return Tools.find((t) => t.key === key);
+}
+
+export function getToolName(key: string, lang: "ru" | "en" = "ru"): string {
+    const tool = getToolByKey(key);
+    if (!tool) return key;
+    return lang === "en" ? tool.nameEn : tool.name;
+}

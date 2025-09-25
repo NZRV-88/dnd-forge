@@ -33,7 +33,11 @@ export const Gnome: RaceInfo = {
         {
             name: "Гномья хитрость",
             desc: "Вы получаете преимущество на спасброски Интеллекта, Мудрости и Харизмы против магии",
-            savingThrows: [ "int", "wis", "cha"],
+            proficiencies: [
+                { type: "savingThrow", key: "int" },
+                { type: "savingThrow", key: "wis" },
+                { type: "savingThrow", key: "cha" },
+            ],
         },
         {
             name: "Языки",

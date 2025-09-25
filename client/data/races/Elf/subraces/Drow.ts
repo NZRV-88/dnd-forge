@@ -34,7 +34,11 @@ export const Drow: SubraceInfo = {
         {
             name: "Владение оружием дроу",
             desc: "Вы владеете рапирой, коротким мечом и ручным арбалетом.",
-            weapons: ["shortsword", "rapier", "hand-crossbow"],
+            proficiencies: [
+                { type: "weapon", key: "shortsword" },
+                { type: "weapon", key: "rapier" },
+                { type: "weapon", key: "hand-crossbow" },
+            ],
         },
     ],
     spells: [

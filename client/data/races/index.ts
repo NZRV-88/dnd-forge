@@ -8,6 +8,8 @@ export { HalfElf } from "./HalfElf/HalfElf";
 export { HalfOrc } from "./HalfOrc/HalfOrc";
 export { Tiefling } from "./Tiefling/Tiefling";
 export { Dragonborn } from "./Dragonborn/Dragonborn";
+export type { Proficiency } from "@/data/proficiencies";
+
 
 // Импорт типов и конкретных рас
 import type { RaceInfo } from "./types";

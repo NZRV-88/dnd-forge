@@ -1,6 +1,6 @@
 import { RaceInfo } from "../types";
 import { DwarfSubraces } from "./subraces";
-import { getArmorKeysByCategory } from "@/data/equipment/armors";
+import { getArmorKeysByCategory } from "@/data/items/armors";
 
 export const Dwarf: RaceInfo = {
     avatar: "/assets/race-avatars/dwarf.png",
@@ -38,7 +38,12 @@ export const Dwarf: RaceInfo = {
         {
             name: "Дварфийская боевая тренировка",
             desc: "Вы владеете боевым топором, ручным топором, лёгким и боевым молотом.",
-            weapons: ["battleaxe", "handaxe", "light-hammer", "warhammer"],
+            proficiencies: [
+                { type: "weapon", key: "battleaxe" },
+                { type: "weapon", key: "handaxe" },
+                { type: "weapon", key: "light-hammer" },
+                { type: "weapon", key: "warhammer" },
+            ],
         },
         {
             name: "Владение инструментами",

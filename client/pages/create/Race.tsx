@@ -10,7 +10,7 @@ import type { RaceInfo, SubraceInfo } from "@/data/races/types";
 import { getAllAbilityBonuses, getSubraceAbilityBonuses, getRaceAbilityBonuses, getEffectiveSpeed } from "@/data/races/types";
 import { LANGUAGES, getLanguageName } from "@/data/languages/languages";
 import { Tools } from "@/data/items/tools";
-import { ABILITIES } from "@/components/refs/abilities";
+import { ABILITIES } from "@/data/abilities";
 import ExitButton from "@/components/ui/ExitButton";
 import StepArrows from "@/components/ui/StepArrows";
 import ReactMarkdown from "react-markdown";
@@ -225,7 +225,7 @@ export default function Race() {
                     <div>
                         <h1 className="text-2xl font-semibold">Выбор расы</h1>
                         <p className="text-sm text-muted-foreground">
-                            Текущий выбор: {basics.race ? [basics.race] || basics.race : "не выбрана"}
+                            Текущий выбор: {raceInfo?.name || "не выбрана"}
                             {basics.subrace ? ` • ${basics.subrace}` : ""}
                         </p>
                     </div>
@@ -234,8 +234,8 @@ export default function Race() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {[...RACE_CATALOG]
                         .sort((a, b) =>
-                            String(raceInfo[a.name] || a.key).localeCompare(
-                                String(raceInfo[b.name] || b.key)
+                            String(a.name || a.key).localeCompare(
+                                String(b.name || b.key)
                             )
                         )
                         .map((race) => {
@@ -253,7 +253,7 @@ export default function Race() {
                                         {race.avatar && (
                                             <img
                                                 src={race.avatar}
-                                                alt={raceInfo[race.name] || race.key}
+                                                alt={race.name || race.key}
                                                 className="ml-2 h-24 w-24 object-cover rounded-md flex-shrink-0"
                                             />
                                         )}
@@ -264,7 +264,7 @@ export default function Race() {
                                                     className={`font-medium tracking-wide ${isSelected ? "text-primary font-bold" : ""
                                                         }`}
                                                 >
-                                                    {raceInfo[race.name] || race.key}
+                                                    {race.name || race.key}
                                                 </h3>
                                                 {/* 👑 Корона */}
                                                 {isSelected && (
@@ -284,7 +284,7 @@ export default function Race() {
                 {r && (
                     <Card className="mt-6 overflow-hidden border bg-card shadow-md">
                         <CardHeader className="border-b pb-3">
-                            <CardTitle className="text-xl font-bold tracking-wide">{raceInfo[r.name] || r.key}</CardTitle>
+                            <CardTitle className="text-xl font-bold tracking-wide">{r.name || r.key}</CardTitle>
 
                             {r.longDesc ? (
                                 <div className="mt-1 text-sm text-muted-foreground italic leading-relaxed [&>p]:mb-4">

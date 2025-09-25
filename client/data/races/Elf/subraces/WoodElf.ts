@@ -15,7 +15,12 @@ export const WoodElf: SubraceInfo = {
         {
             name: "Эльфийское оружие",
             desc: "Вы владеете коротким и длинным мечом, коротким и длинным луком",
-            weapons: ["shortsword", "longsword", "shortbow", "longbow"],
+            proficiencies: [
+                { type: "weapon", key: "shortsword" },
+                { type: "weapon", key: "longsword" },
+                { type: "weapon", key: "shortbow" },
+                { type: "weapon", key: "longbow" },
+            ],
         },
         {
             name: "Быстрые ноги",

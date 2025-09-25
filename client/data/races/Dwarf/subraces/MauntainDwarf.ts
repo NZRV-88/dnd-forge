@@ -15,7 +15,10 @@ export const MauntainDwarf: SubraceInfo = {
         {
             name: "Доспехи дварфов",
             desc: "Вы владеете лёгкими и средними доспехами.",
-            armors: ["light", "medium"],
+            proficiencies: [
+                { type: "armor", category: "light" },
+                { type: "armor", category: "medium" }, 
+            ]
         }
     ]
 }

@@ -30,7 +30,9 @@ export const Elf: RaceInfo = {
         {
             name: "Обострённые чувства",
             desc: "Вы владеете навыком Восприятие.",
-            skills: ["perception"],
+            proficiencies: [
+                { type: "skill", key: "perception" }
+            ],
         },
         {
             name: "Наследие фей",

@@ -172,3 +172,9 @@ export function getArmorByKey(key: string): Armor | undefined {
 export function getArmorKeysByCategory(category: ArmorCategory): string[] {
     return Armors.filter((a) => a.category === category).map((a) => a.key);
 }
+
+export function getArmorName(key: string, lang: "ru" | "en" = "ru"): string {
+    const armor = getArmorByKey(key);
+    if (!armor) return key;
+    return lang === "en" ? key : armor.name;
+}

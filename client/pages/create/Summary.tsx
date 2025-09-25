@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import StepArrows from "@/components/ui/StepArrows";
 import ExitButton from "@/components/ui/ExitButton";
 import { useCharacter } from "@/store/character";
-import { ABILITIES } from "@/components/refs/abilities";
+import { ABILITIES } from "@/data/abilities";
 import { getRaceByKey } from "@/data/races";
 import { getEffectiveSpeed } from "@/data/races/types";
 import { useParams, useNavigate } from "react-router-dom";
