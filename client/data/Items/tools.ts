@@ -17,6 +17,13 @@ export interface Tool {
     category: string;
 }
 
+export const TOOL_CATEGORY_LABELS: Record<string, string> = {
+    artisan: "Ремесленные инструменты",
+    gaming: "Игральные наборы",
+    musical: "Музыкальные инструменты",
+    other: "Прочие",
+};
+
 export const Tools: Tool[] = [
     // Обычные инструменты
     //{ key: "thieves-tools", name: "Воровские инструменты", nameEn: "Thieves' Tools", category: "kit" },

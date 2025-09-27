@@ -1,6 +1,7 @@
 import { ClassInfo } from "./types";
 
 export const Paladin: ClassInfo = {
+    bg: "/assets/class-bgs/paladin-bg.png",
     key: "paladin",
     name: "Паладин",
     desc: "Клятвы и священная сила для борьбы со злом.",

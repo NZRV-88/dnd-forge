@@ -5,8 +5,8 @@ export const Sage: BackgroundInfo = {
   name: "Мудрец",
   desc: "Учёный, исследователь знаний и древностей.",
   longDesc: "Вы провели годы в библиотеках и университетах, погружаясь в изучение древних текстов, магии или науки. Ваш ум остёр, а знания обширны.",
-  skillProficiencies: ["История", "Расследование"],
-  toolProficiencies: [],
+  //skillProficiencies: ["История", "Расследование"],
+  //toolProficiencies: [],
   languages: ["Два на выбор"],
   equipment: [
     "Чернильница, перо",

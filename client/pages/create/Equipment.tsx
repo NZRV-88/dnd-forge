@@ -98,14 +98,14 @@ const DEFAULT_GOLD: Record<string, number> = {
 export default function EquipmentPick() {
     const { id } = useParams<{ id: string }>(); 
     const nav = useNavigate();
-    const { basics, setBasics } = useCharacter();
+    const { draft, setBasics } = useCharacter();
     const [mode, setMode] = useState<"equipment" | "gold">("equipment");
-    const [gold, setGold] = useState(DEFAULT_GOLD[basics.class] || 50);
+    const [gold, setGold] = useState(DEFAULT_GOLD[draft.basics.class] || 50);
 
     // Сохраняем выбор и переходим далее
     const handleNext = () => {
         if (mode === "equipment") {
-            setBasics({ equipment: DEFAULT_EQUIPMENT[basics.class] || [] });
+            setBasics({ equipment: DEFAULT_EQUIPMENT[draft.basics.class] || [] });
             setBasics({ gold: 0 });
         } else {
             setBasics({ equipment: [] });
@@ -129,7 +129,7 @@ export default function EquipmentPick() {
                             checked={mode === "equipment"}
                             onChange={() => setMode("equipment")}
                         />
-                        Снаряжение по умолчанию ({basics.class})
+                        Снаряжение по умолчанию ({draft.basics.class})
                     </label>
                     <label className="flex items-center gap-2">
                         <input
@@ -144,7 +144,7 @@ export default function EquipmentPick() {
                     <div className="mb-4">
                         <div className="font-medium mb-2">Вы получите:</div>
                         <ul className="list-disc pl-6 text-sm">
-                            {(DEFAULT_EQUIPMENT[basics.class] || []).map((item) => (
+                            {(DEFAULT_EQUIPMENT[draft.basics.class] || []).map((item) => (
                                 <li key={item}>{item}</li>
                             ))}
                         </ul>

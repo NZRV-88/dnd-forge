@@ -8,66 +8,39 @@ import { getEffectiveSpeed } from "@/data/races/types";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
+import { getAllCharacterData } from "@/utils/getAllCharacterData";
 
 export default function Summary() {
     const user = useAuth();
     const { id: urlId } = useParams<{ id: string }>();
     const nav = useNavigate();
     const {
-        asi,
-        basics,
-        stats,
-        totalAbilityBonuses,
+        //asi,
+        draft,
+        //stats,
+        //totalAbilityBonuses,
         skills,
         languages,
         tools,
         feats,
         spells,
+        saveToSupabase
         //equipment,
     } = useCharacter();
 
-    const race = getRaceByKey(basics.race);
-    const subrace = race?.subraces?.find((s) => s.key === basics.subrace) || null;
+    const race = getRaceByKey(draft.basics.race);
+    const subrace = race?.subraces?.find((s) => s.key === draft.basics.subrace) || null;
     const speed = getEffectiveSpeed(race, subrace);
+    const { abilityBonuses } = getAllCharacterData(draft);
 
     const handleSave = async () => {
         try {
-            const { data, error } = await supabase
-                .from("characters")
-                .upsert(
-                    {
-                        id: urlId,
-                        user_id: user.id,
-                        data: {
-                            basics,
-                            stats,
-                            asi,
-                            totalAbilityBonuses,
-                            skills,
-                            languages,
-                            tools,
-                            feats,
-                            spells,
-                        },
-                        updated_at: new Date().toISOString(),
-                    },
-                    { onConflict: "id" }
-                )
-                .select()
-                .single();
-
-            if (error) {
-                console.error("Ошибка при сохранении персонажа:", error);
-                alert("Не удалось сохранить персонажа");
-                return;
-            } else {
-                nav("/characters");
-            }
-
-            console.log("Персонаж сохранён:", data);
-        } catch (err) {
-            console.error("Ошибка при сохранении персонажа:", err);
-            alert("Ошибка при сохранении персонажа");
+            await saveToSupabase();
+            alert("Персонаж сохранён!");
+            nav("/characters");
+        } catch (e) {
+            console.error("Ошибка при сохранении персонажа:", e);
+            alert("Ошибка при сохранении");
         }
     };
 
@@ -81,11 +54,11 @@ export default function Summary() {
                 <div className="mb-6 flex items-baseline justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold">
-                            {basics.name || "Безымянный герой"}
+                            {draft.basics.name || "Безымянный герой"}
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {basics.race} {basics.subrace && `(${basics.subrace})`} •{" "}
-                            {basics.class} {basics.subclass && `(${basics.subclass})`}
+                            {draft.basics.race} {draft.basics.subrace && `(${draft.basics.subrace})`} •{" "}
+                            {draft.basics.class} {draft.basics.subclass && `(${draft.basics.subclass})`}
                         </p>
                     </div>
                 </div>
@@ -100,43 +73,43 @@ export default function Summary() {
                     <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                         <div>
                             <div className="text-muted-foreground">Имя</div>
-                            <div className="font-medium">{basics.name}</div>
+                            <div className="font-medium">{draft.basics.name}</div>
                         </div>
                         <div>
                             <div className="text-muted-foreground">Раса</div>
-                            <div className="font-medium">{basics.race}</div>
+                            <div className="font-medium">{draft.basics.race}</div>
                         </div>
-                        {basics.subrace && (
+                        {draft.basics.subrace && (
                             <div>
                                 <div className="text-muted-foreground">Подраса</div>
-                                <div className="font-medium">{basics.subrace}</div>
+                                <div className="font-medium">{draft.basics.subrace}</div>
                             </div>
                         )}
                         <div>
                             <div className="text-muted-foreground">Класс</div>
-                            <div className="font-medium">{basics.class}</div>
+                            <div className="font-medium">{draft.basics.class}</div>
                         </div>
-                        {basics.subclass && (
+                        {draft.basics.subclass && (
                             <div>
                                 <div className="text-muted-foreground">Подкласс</div>
-                                <div className="font-medium">{basics.subclass}</div>
+                                <div className="font-medium">{draft.basics.subclass}</div>
                             </div>
                         )}
                         <div>
                             <div className="text-muted-foreground">Скорость</div>
                             <div className="font-medium">{speed} футов</div>
                         </div>
-                        {basics.background && (
+                        {draft.basics.background && (
                             <div>
                                 <div className="text-muted-foreground">Предыстория</div>
-                                <div className="font-medium">{basics.background}</div>
+                                <div className="font-medium">{draft.basics.background}</div>
                             </div>
                         )}
 
-                        {basics.alignment && (
+                        {draft.basics.alignment && (
                             <div>
                                 <div className="text-muted-foreground">Мировоззрение</div>
-                                <div className="font-medium">{basics.alignment}</div>
+                                <div className="font-medium">{draft.basics.alignment}</div>
                             </div>
                         )}
                     </CardContent>
@@ -151,8 +124,8 @@ export default function Summary() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                         {ABILITIES.map((a) => {
-                            const base = stats[a.key] || 0;
-                            const bonus = totalAbilityBonuses[a.key] || 0;
+                            const base = draft.stats[a.key] || 0;
+                            const bonus = abilityBonuses[a.key] || 0;
                             const total = Math.min(base + bonus, 20);
                             const modifier = Math.floor((total - 10) / 2);
 
@@ -166,6 +139,9 @@ export default function Summary() {
                                     <div className="text-muted-foreground text-sm">
                                         Модификатор: {modifier >= 0 ? `+${modifier}` : modifier}
                                     </div>
+                                    {bonus > 0 && (
+                                        <div className="text-xs text-green-600">+{bonus} от бонусов</div>
+                                    )}
                                 </div>
                             );
                         })}

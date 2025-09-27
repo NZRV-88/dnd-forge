@@ -8,19 +8,17 @@ import ExitButton from "@/components/ui/ExitButton";
 
 export default function Start() {
     const { id } = useParams<{ id: string }>();
-
     const nav = useNavigate();
 
     const {
-        basics,
-        setName,
-        setHpMode,
-        resetCharacter,
+        draft,
+        setDraft,
         loadFromSupabase,
+        resetCharacter,
     } = useCharacter();
-
-    const [localName, setLocalName] = useState(basics.name || "");
-    const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(basics.hpMode || "fixed");
+    const name = draft?.basics?.name ?? "";
+    const [localName, setLocalName] = useState(draft?.basics?.name ?? "");
+    const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
 
     // если id есть в url — грузим персонажа
     useEffect(() => {
@@ -35,13 +33,20 @@ export default function Start() {
 
     // синхронизируем локальные поля, если basics обновились (например, после загрузки из базы)
     useEffect(() => {
-        setLocalName(basics.name || "");
-        setLocalHpMode(basics.hpMode || "fixed");
-    }, [basics.name, basics.hpMode]);
+        setLocalName(draft.basics.name || "");
+        setLocalHpMode(draft.basics.hpMode || "fixed");
+    }, [draft.basics.name, draft.basics.hpMode]);
 
     const handleNext = () => {
-        setName(localName);
-        setHpMode(localHpMode)
+        setDraft(d => ({
+            ...d,
+            basics: {
+                ...d.basics,
+                name: localName,
+                hpMode: localHpMode,
+            },
+        }));
+
         if (id) {
             nav(`/create/${id}/class`);
         } else {
@@ -51,8 +56,14 @@ export default function Start() {
 
     const handleExit = () => {
         if (localName.trim()) {
-            setName(localName);
-            setHpMode(localHpMode);
+            setDraft(d => ({
+                ...d,
+                basics: {
+                    ...d.basics,
+                    name: localName,
+                    hpMode: localHpMode,
+                },
+            }));
         }
         nav("/characters");
     };

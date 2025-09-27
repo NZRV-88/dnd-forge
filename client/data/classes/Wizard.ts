@@ -1,6 +1,7 @@
 import { ClassInfo } from "./types";
 
 export const Wizard: ClassInfo = {
+    bg: "/assets/class-bgs/wizard-bg.png",
   key: "wizard",
   name: "Волшебник",
   desc: "Ученый маг, владеющий множеством заклинаний.",

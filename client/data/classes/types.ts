@@ -1,3 +1,5 @@
+import type { Proficiency } from "@/data/proficiencies";
+
 export type Feature = { name: string; desc: string; source?: string };
 
 export type SubclassInfo = {
@@ -16,6 +18,7 @@ export interface ClassInfo {
     longDesc?: string; // расширенное описание
     hitDice: number; // кость хитов
     mainStats: string[]; // основные характеристики класса
+    proficiencies?: Proficiency[];   // Владение (например: [{ type: "skill", name: "Атлетика" }])
     subclasses: SubclassInfo[]; // доступные подклассы
     features: Record<number, Feature[]>;
 }

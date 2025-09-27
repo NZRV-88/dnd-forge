@@ -12,7 +12,7 @@ export type { Proficiency } from "@/data/proficiencies";
 
 
 // Импорт типов и конкретных рас
-import type { RaceInfo } from "./types";
+import type { RaceInfo, SubraceInfo } from "./types";
 import { Human } from "./Human/Human";
 import { Elf } from "./Elf/Elf";
 import { Dwarf } from "./Dwarf/Dwarf";
@@ -40,6 +40,23 @@ export const RACE_CATALOG: RaceInfo[] = [
 export const getRaceByKey = (key: string): RaceInfo | undefined => {
   return RACE_CATALOG.find(race => race.key === key);
 };
+
+/** Находит подрасу по ключу */
+export function getSubraceByKey(raceKey: string, subraceKey: string): SubraceInfo | undefined {
+    const race = getRaceByKey(raceKey);
+    if (!race || !race.subraces) return undefined;
+    return race.subraces.find(s => s.key === subraceKey);
+}
+
+/** Возвращает сразу и расу, и подрасу */
+export function getRaceAndSubrace(
+    raceKey: string,
+    subraceKey?: string
+): { race?: RaceInfo; subrace?: SubraceInfo } {
+    const race = getRaceByKey(raceKey);
+    const subrace = race && subraceKey ? race.subraces?.find(s => s.key === subraceKey) : undefined;
+    return { race, subrace };
+}
 
 // Вспомогательная функция для получения русских названий рас
 //export const RACE_LABELS: Record<string, string> = {

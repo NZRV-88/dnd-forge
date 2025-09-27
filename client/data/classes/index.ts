@@ -55,3 +55,7 @@ export const CLASS_LABELS: Record<string, string> = {
   sorcerer: "Чародей",
   druid: "Друид",
 };
+
+export function getClassByKey(key: string): ClassInfo | undefined {
+    return CLASS_CATALOG.find((a) => a.key === key);
+}

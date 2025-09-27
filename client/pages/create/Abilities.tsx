@@ -1,240 +1,382 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useCharacter } from "@/store/character";
-import { Button } from "@/components/ui/button";
-import ExitButton from "@/components/ui/ExitButton";
+import { getAllCharacterData } from "@/utils/getAllCharacterData";
+import { Abilities, ABILITIES } from "@/data/abilities";
 import StepArrows from "@/components/ui/StepArrows";
-import { useParams } from "react-router-dom";
+import ExitButton from "@/components/ui/ExitButton";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
 
 const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
-const ABILITY_KEYS = [
-  { key: "str", label: "Сила" },
-  { key: "dex", label: "Ловкость" },
-  { key: "con", label: "Телосложение" },
-  { key: "int", label: "Интеллект" },
-  { key: "wis", label: "Мудрость" },
-  { key: "cha", label: "Харизма" },
-];
+const POINT_BUY_LIMIT = 27;
 
-function rollStat() {
-  // 4d6 drop lowest
-  const rolls = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1);
-  rolls.sort((a, b) => a - b);
-  return rolls[1] + rolls[2] + rolls[3];
+
+export type RollResult = {
+    dice: number[];
+    total?: number;
+    assigned?: string;
+};
+
+function rollStat(): RollResult {
+    const dice = Array.from({ length: 4 }, () => 1 + Math.floor(Math.random() * 6));
+    const sorted = [...dice].sort((a, b) => b - a);
+    const total = sorted[0] + sorted[1] + sorted[2];
+    return { dice, total };
 }
 
-function rollArray() {
-  return Array.from({ length: 6 }, rollStat);
+function pointBuyCost(score: number) {
+    if (score <= 13) return score - 8;
+    if (score === 14) return 7;
+    if (score === 15) return 9;
+    return 0;
 }
 
 export default function AbilitiesPick() {
-    const { id } = useParams<{ id: string }>(); 
-  const nav = useNavigate();
-  const { stats, setStat } = useCharacter();
-  const [mode, setMode] = useState<"array" | "roll">("array");
-  const [pool, setPool] = useState<number[]>(STANDARD_ARRAY);
-  const [rolled, setRolled] = useState<number[]>([]);
-  const [assign, setAssign] = useState<{ [k: string]: number }>({});
+    const { id } = useParams<{ id: string }>();
+    const nav = useNavigate();
+    const { draft, setDraft } = useCharacter();
+    const draftRolls = draft.rolls || [];
+    const setDraftRolls = (newRolls: RollResult[]) => {
+        setDraft(d => ({ ...d, rolls: newRolls }));
+    };
 
-  // Инициализация значений из сохраненных характеристик
-  useEffect(() => {
-    // Проверяем, есть ли уже распределенные значения
-    const hasAssignedValues = Object.values(stats).some(val => val !== 10); // 10 - значение по умолчанию
-    
-    if (hasAssignedValues) {
-      // Если значения уже были распределены, используем их
-      setAssign({ ...stats });
-      
-      // Определяем, какой массив был использован (стандартный или брошенный)
-      const currentValues = Object.values(stats);
-      const isStandardArray = JSON.stringify([...currentValues].sort((a, b) => b - a)) === 
-                             JSON.stringify([...STANDARD_ARRAY].sort((a, b) => b - a));
-      
-      setMode(isStandardArray ? "array" : "roll");
-      if (!isStandardArray) {
-        setPool(currentValues);
-        setRolled(currentValues);
-      }
-    }
-  }, [stats]);
+    const stats = draft.stats;
+    const mode = draft.abilitiesMode;
+    const setMode = (newMode: "array" | "roll" | "point-buy") => {
+        setDraft(d => {
+            let newStats: Abilities;
 
-  // Roll new stats
-  const handleRoll = () => {
-    const arr = rollArray();
-    setRolled(arr);
-    setPool(arr);
-    setAssign({}); // Сбрасываем распределение при новом броске
-  };
+            if (newMode === "point-buy") {
+                // Для point-buy все характеристики начинаются с 8
+                newStats = Object.keys(d.stats).reduce((acc, key) => {
+                    acc[key as keyof Abilities] = 8;
+                    return acc;
+                }, {} as Abilities);
+            } else {
+                // Для остальных режимов — пустые
+                newStats = Object.keys(d.stats).reduce((acc, key) => {
+                    acc[key as keyof Abilities] = undefined as any;
+                    return acc;
+                }, {} as Abilities);
+            }
 
-  // Assign stat to ability
-  const handleAssign = (ability: string, value: number) => {
-    setAssign((prev) => {
-      const updated = { ...prev };
-      updated[ability] = value;
-      return updated;
-    });
-  };
+            return {
+                ...d,
+                abilitiesMode: newMode,
+                stats: newStats,
+                rolls: d.rolls, // броски сохраняем
+            };
+        });
+    };
+    const rolls: RollResult[] = draft.rolls?.length
+        ? draft.rolls
+        : Array.from({ length: 6 }, () => ({ dice: [], total: undefined, assigned: undefined } as RollResult));
 
-  // Проверка, все ли значения распределены
-  const allAssigned = (() => {
-    const assignedValues = Object.values(assign).filter((v) => typeof v === "number") as number[];
-    if (assignedValues.length !== pool.length) return false;
-    
-    // Создаем копии массивов для сравнения
-    const sortedAssigned = [...assignedValues].sort((a, b) => a - b);
-    const sortedPool = [...pool].sort((a, b) => a - b);
-    
-    return JSON.stringify(sortedAssigned) === JSON.stringify(sortedPool);
-  })();
+    const setRolls = (
+        newRolls: RollResult[] | ((prev: RollResult[]) => RollResult[])
+    ) => {
+        if (typeof newRolls === "function") {
+            setDraft((d) => {
+                const base = d.rolls?.length
+                    ? d.rolls
+                    : Array.from({ length: 6 }, () => ({ dice: [] }));
+                const computed = newRolls(base);
+                return { ...d, rolls: computed };
+            });
+        } else {
+            setDraft((d) => ({ ...d, rolls: newRolls }));
+        }
+    };
 
-  // Сохранить и перейти далее
-  const handleNext = () => {
-    // Сохраняем выбранные значения
-    ABILITY_KEYS.forEach(({ key }) => {
-      if (assign[key] !== undefined) {
-        setStat(key as keyof typeof stats, assign[key]);
-      }
-    });
-      nav("/create/equipment");
-  };
+    const { abilityBonuses } = getAllCharacterData(draft);
 
-  // Сброс распределения
-  const handleReset = () => {
-    setAssign({});
-  };
+    const setStat = (ability: keyof Abilities, value: number | undefined) => {
+        setDraft((d) => ({
+            ...d,
+            stats: { ...d.stats, [ability]: value },
+        }));
+    };
 
-  return (
-    <div className="container mx-auto py-10">
-          <div className="mx-auto max-w-5xl relative">
-              <StepArrows back={`/create/${id}/race`} next={`/create/${id}/equipment`} />   
-              <ExitButton />
-        <h1 className="text-2xl font-bold mb-6 text-center">Распределение характеристик</h1>
-        
-        <div className="mb-6 flex gap-4 justify-center">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              checked={mode === "array"}
-              onChange={() => {
-                setMode("array");
-                setPool(STANDARD_ARRAY);
-                setAssign({});
-              }}
-            />
-            Стандартный массив
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              checked={mode === "roll"}
-              onChange={() => {
-                setMode("roll");
-                handleRoll();
-              }}
-            />
-            Бросок кубиков
-          </label>
-        </div>
+    // === Point Buy ===
+    const totalCost = ABILITIES.reduce((sum, { key }) => {
+        const val = stats[key] ?? 8;
+        return sum + pointBuyCost(val);
+    }, 0);
+    const remaining = POINT_BUY_LIMIT - totalCost;
 
-        {mode === "roll" && (
-          <div className="mb-4 text-center">
-            <Button size="sm" variant="outline" onClick={handleRoll}>
-              Бросить заново
-            </Button>
-            {rolled.length > 0 && (
-              <div className="mt-2 text-sm text-muted-foreground">
-                Ваши значения:{" "}
-                <span className="font-mono">{rolled.join(", ")}</span>
-              </div>
-            )}
-          </div>
-        )}
+    const handlePointBuyChange = (key: keyof Abilities, value: number) => {
+        if (value < 8 || value > 15) return;
+        const newCost = totalCost - pointBuyCost(stats[key] ?? 8) + pointBuyCost(value);
+        if (newCost <= POINT_BUY_LIMIT) {
+            setStat(key, value);
+        }
+    };
 
-        <div className="mb-4">
-          <div className="text-sm font-medium mb-2">Доступные значения:</div>
-          <div className="flex gap-2 flex-wrap">
-            {pool.map((value, index) => {
-              const assignedCount = Object.values(assign).filter(v => v === value).length;
-              const totalCount = pool.filter(v => v === value).length;
-              const available = totalCount - assignedCount;
-              
-              return (
-                <span
-                  key={index}
-                  className={`px-2 py-1 rounded text-xs ${
-                    available > 0 
-                      ? "bg-green-100 text-green-800" 
-                      : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  {value} {available > 0 ? `(${available})` : ''}
-                </span>
-              );
-            })}
-          </div>
-        </div>
+    // === Array mode ===
+    const usedValues = Object.values(stats).filter(
+        (v): v is number => v !== undefined
+    );
+    const freeValues = (current?: number) =>
+        STANDARD_ARRAY.filter((v) => !usedValues.includes(v) || v === current);
 
-        <div className="grid gap-3 mb-4">
-          {ABILITY_KEYS.map(({ key, label }) => (
-            <div key={key} className="flex items-center gap-3">
-              <span className="w-28 font-medium">{label}</span>
-              <select
-                className="rounded-md border bg-background px-2 py-1 flex-1"
-                value={assign[key] ?? ""}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "") {
-                    setAssign((prev) => {
-                      const updated = { ...prev };
-                      delete updated[key];
-                      return updated;
-                    });
-                  } else {
-                    handleAssign(key, Number(val));
-                  }
-                }}
-              >
-                <option value="">— Не выбрано —</option>
-                {Array.from(new Set(pool)).map((value) => {
-                  const assignedCount = Object.values(assign).filter(v => v === value).length;
-                  const totalCount = pool.filter(v => v === value).length;
-                  const isAvailable = assignedCount < totalCount || assign[key] === value;
-                  
-                  return (
-                    <option
-                      key={value}
-                      value={value}
-                      disabled={!isAvailable && assign[key] !== value}
+    // === Roll mode ===
+    const rollStatAt = (index: number) => {
+        setRolls((prev) => {
+            const next = [...prev];
+            next[index] = rollStat();
+            return next;
+        });
+    };
+    const resetRolls = () =>
+        setRolls(Array.from({ length: 6 }, () => ({ dice: [], total: undefined, assigned: undefined } as RollResult)));
+
+    const assignRoll = (index: number, ability: string) => {
+        setRolls((prev) => {
+            const next = [...prev];
+            next[index] = { ...next[index], assigned: ability || undefined };
+            return next;
+        });
+    };
+
+    const applyRolls = () => {
+        setDraft((d) => {
+            const newStats: Abilities = { ...d.stats }; // гарантируем полный объект
+            rolls.forEach((roll) => {
+                if (roll.assigned && roll.total) {
+                    newStats[roll.assigned as keyof Abilities] = roll.total;
+                }
+            });
+            return { ...d, stats: newStats };
+        });
+    };
+    const anyRolled = rolls.some(r => r.total !== undefined);
+    const anyAssigned = rolls.some(r => r.assigned);
+
+    const allAssigned = ABILITIES.every((a) => stats[a.key] !== undefined);
+
+    const handleNext = () => {
+        if (!allAssigned) return;
+        nav(`/create/${id}/equipment`);
+    };
+
+    return (
+        <div className="container mx-auto py-10">
+            <div className="mx-auto max-w-5xl relative">
+                <StepArrows back={`/create/${id}/race`} next={`/create/${id}/equipment`} />
+                <ExitButton />
+                {/*<div className="max-w-4xl mx-auto px-4 space-y-6">*/}
+                <div className="mb-6 flex items-baseline justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold"> Распределение характеристик</h1>
+                    </div>
+                </div>
+                {/* Заголовок */}
+
+
+                {/* Режимы */}
+                <div className="flex gap-2">
+                    <Button
+                        variant={mode === "array" ? "default" : "outline"}
+                        onClick={() => setMode("array")}
                     >
-                      {value}
-                      {assign[key] === value ? " (выбрано)" : ""}
-                      {!isAvailable && assign[key] !== value ? " (использовано)" : ""}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          ))}
-        </div>
+                        Стандартный набор
+                    </Button>
+                    <Button
+                        variant={mode === "roll" ? "default" : "outline"}
+                        onClick={() => setMode("roll")}
+                    >
+                        Бросок кубиков
+                    </Button>
+                    <Button
+                        variant={mode === "point-buy" ? "default" : "outline"}
+                        onClick={() => setMode("point-buy")}
+                    >
+                        Point Buy
+                    </Button>
+                </div>
 
-        {allAssigned && (
-          <div className="mb-4 p-3 bg-green-50 rounded-lg">
-            <div className="text-sm text-green-800 text-center">
-              Все характеристики распределены! Можно переходить дальше.
-            </div>
-          </div>
-        )}
+                {/* Характеристики */}
+                <div className="grid grid-cols-6 gap-2 mt-3">
+                    {ABILITIES.map(({ key, label, keyRu, icon: Icon }) => {
+                        const selected = stats[key] ?? null;
+                        const total = (stats[key] ?? 0) + (abilityBonuses[key] ?? 0);
 
-        <div className="flex gap-2 justify-between items-center">
-          <div>
-            <Button variant="outline" size="sm" onClick={handleReset}>
-              Сбросить
-            </Button>
-          </div>
-          <div className="flex gap-3">
-          </div>
+                        return (
+                            <div key={key} className="flex flex-col items-center">
+                                <Card className="shadow-sm w-full">
+                                    <CardHeader className="flex flex-row items-center justify-center pb-1 gap-1">
+                                        <Icon className="w-4 h-4 text-stone-500 shrink-0" /> {label}
+                                    </CardHeader>
+                                    <CardContent className="flex justify-center">
+                                        {mode === "array" && (
+                                            <select
+                                                className="w-full border p-1 text-sm"
+                                                value={selected ?? ""}
+                                                onChange={(e) =>
+                                                    setStat(
+                                                        key,
+                                                        e.target.value ? Number(e.target.value) : undefined
+                                                    )
+                                                }
+                                            >
+                                                <option value="">—</option>
+                                                {freeValues(selected).map((val) => (
+                                                    <option key={val} value={val}>
+                                                        {val}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+
+                                        {mode === "roll" && (
+                                            <CardContent className="flex justify-center text-sm p-[1px]">
+                                                <input
+                                                    type="number"
+                                                    max={18}
+                                                    className="w-16 text-center border"
+                                                    value={selected ?? ""}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value ? Number(e.target.value) : undefined;
+                                                        setStat(key, val);
+                                                    }}
+                                                />
+                                            </CardContent>
+                                        )}
+
+                                        {mode === "point-buy" && (
+                                            <input
+                                                type="number"
+                                                min={8}
+                                                max={15}
+                                                className="border p-[1px] text-sm"
+                                                value={selected ?? 8}
+                                                onChange={(e) =>
+                                                    handlePointBuyChange(
+                                                        key,
+                                                        Number(e.target.value) || 8
+                                                    )
+                                                }
+                                            />
+                                        )}
+                                    </CardContent>
+                                </Card>
+                                <p className="text-xs text-stone-600 mt-1">
+                                    ИТОГ: <span className="font-semibold">{total}</span>
+                                </p>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Point Buy очки */}
+                {mode === "point-buy" && (
+                    <div className="flex flex-col items-center mt-6">
+                        <p className="text-base font-medium text-stone-700">
+                            ОЧКОВ ОСТАЛОСЬ:
+                        </p>
+                        <span
+                            className={`text-2xl font-bold ${remaining < 0 ? "text-red-600" : "text-stone-800"
+                                }`}
+                        >
+                            {remaining} / {POINT_BUY_LIMIT}
+                        </span>
+                    </div>
+                )}
+
+                {/* Roll mode */}
+                {mode === "roll" && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-6 gap-4">
+                            {rolls.map((roll, idx) => (
+                                <div key={idx} className="p-3 rounded-md flex flex-col items-center justify-end gap-2 h-[130px]">
+
+
+                                    {/* Итог (фиксированное место) */}
+                                    <div className="font-bold text-lg">
+                                        {roll.total ?? "--"}
+                                    </div>
+                                    {/* Кубики (появляются только после броска) */}
+                                    <div className="flex flex-wrap justify-center gap-[3px]">
+                                        {roll.total &&
+                                            roll.dice.map((d, i) => {
+                                                const min = Math.min(...roll.dice);
+                                                const dropped =
+                                                    d === min && roll.dice.indexOf(d) === i;
+                                                return (
+                                                    <span
+                                                        key={i}
+                                                        className={`w-6 h-6 flex justify-center rounded border text-sm
+              ${dropped
+                                                                ? "bg-stone-200 text-stone-500"
+                                                                : "bg-blue-100 text-blue-800"
+                                                            }`}
+                                                    >
+                                                        {d}
+                                                    </span>
+                                                );
+                                            })}
+                                    </div>
+
+                                    {/* Управление */}
+                                    {!roll.total ? (
+                                        <Button
+                                            size="sm"
+                                            onClick={() => rollStatAt(idx)}
+                                            className="w-full uppercase"
+                                        >
+                                            БРОСИТЬ
+                                        </Button>
+                                    ) : (
+                                        <select
+                                            className="w-full rounded-md border p-1 text-sm"
+                                            value={roll.assigned ?? ""}
+                                            onChange={(e) => assignRoll(idx, e.target.value)}
+                                        >
+                                            <option value="">—</option>
+                                            {ABILITIES.filter(
+                                                (a) => !rolls.some(r => r.assigned === a.key) || roll.assigned === a.key
+                                            ).map((a) => (
+                                                <option key={a.key} value={a.key}>
+                                                    {a.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button
+                                variant="default"
+                                size="xs"
+                                onClick={applyRolls}
+                                disabled={!anyAssigned}
+                                className={`uppercase text-[10px] ${!anyAssigned
+                                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                    : "bg-green-700/80 text-white hover:bg-green-700"
+                                    }`}
+                            >
+                                ПРИМЕНИТЬ
+                            </Button>
+
+                            <Button
+                                size="xs"
+                                onClick={resetRolls}
+                                disabled={!anyRolled}
+                                className={`uppercase text-[10px] ${!anyRolled
+                                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                    : "bg-red-500/80 text-white hover:bg-red-700"
+                                    }`}
+                            >
+                                СБРОСИТЬ
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
