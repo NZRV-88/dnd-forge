@@ -1,7 +1,7 @@
 
-import { ArmorCategory, getArmorKeysByCategory, getArmorName } from "@/data/items/armors";
-import { WeaponCategory, getWeaponKeysByCategory, getWeaponName } from "@/data/items/weapons";
-import { ToolCategory, getToolKeysByCategory, getToolName } from "@/data/items/tools";
+import { ArmorCategory, getArmorKeysByCategory, getArmorName } from "@/data/items/armors.ts";
+import { WeaponCategory, getWeaponKeysByCategory, getWeaponName } from "@/data/items/weapons.ts";
+import { ToolCategory, getToolKeysByCategory, getToolName } from "@/data/items/tools.ts";
 import { SKILLS, getSkillName } from "@/data/skills";
 import { Abilities, ABILITIES } from "@/data/abilities";
 
