@@ -356,12 +356,12 @@ export default function CharacterView() {
 
                     {/* Initiative + AC */}
                     <div className="-mt-4">
-                        {/*<InitiativeAC*/}
-                  //          initiative={initiative}
-                  //          ac={b.ac ?? 10}
-                       //     {/*dex={finalStats.dex}*/}
-                    //        onRoll={addRoll}
-                        {/*/>*/}
+                        <InitiativeAC
+                            initiative={initiative}
+                            ac={b.ac ?? 10}
+                            dex={(finalStats as any).dex ?? 0}
+                            onRoll={addRoll}
+                        />
                     </div>
                 </div>
 
