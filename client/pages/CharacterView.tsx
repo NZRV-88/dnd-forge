@@ -14,7 +14,7 @@ import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
 import { RACE_CATALOG } from "@/data/races";
 import { CLASS_LABELS } from "@/data/classes";
-import { getEffectiveSpeed } from "@/data/races"; 
+import { getEffectiveSpeed } from "@/data/races/types"; 
 
 const LIST_KEY = "dnd-ru-characters";
 
@@ -303,7 +303,7 @@ export default function CharacterView() {
                     </div>
 
                     <div className="flex flex-col items-center justify-center space-y-3">
-                        <ProficiencySpeed proficiencyBonus={proficiencyBonus} speed={speed} />
+                        {/*<ProficiencySpeed proficiencyBonus={proficiencyBonus} speed={speed} />*/}
                     </div>
 
                     <div>
@@ -326,7 +326,7 @@ export default function CharacterView() {
                             onRoll={(label, ability, value) => addRoll(label, ability, value)}
                         />
                         <PassiveSenses stats={finalStats} />
-                        <Proficiencies profs={char.profs || {}} />
+                        {/*<Proficiencies profs={char.profs || {}} />*/}
                     </div>
 
                     {/* Skills (право от спасбросков) */}
@@ -336,7 +336,7 @@ export default function CharacterView() {
                             profs={char.skillProfs}
                             proficiencyBonus={proficiencyBonus}
                             onRoll={addRoll}
-                            profs={char.skills}   // ✅ теперь всегда из char
+                      //      {/*profs={char.skills}   // ✅ теперь всегда из char*/}
                             onToggleProf={(skillKey) => {
                                 const updated = char.skills.includes(skillKey)
                                     ? char.skills.filter((s: string) => s !== skillKey)
@@ -356,12 +356,12 @@ export default function CharacterView() {
 
                     {/* Initiative + AC */}
                     <div className="-mt-4">
-                        <InitiativeAC
-                            initiative={initiative}
-                            ac={b.ac ?? 10}
-                            dex={finalStats.dex}
-                            onRoll={addRoll}
-                        />
+                        {/*<InitiativeAC*/}
+                  //          initiative={initiative}
+                  //          ac={b.ac ?? 10}
+                       //     {/*dex={finalStats.dex}*/}
+                    //        onRoll={addRoll}
+                        {/*/>*/}
                     </div>
                 </div>
 
