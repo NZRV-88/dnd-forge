@@ -25,7 +25,8 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./client"),
       "@src": path.resolve(__dirname, "./src"),
       "@shared": path.resolve(__dirname, "./shared"),
-    },
+      },
+      extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json"],
   },
 }));
 
