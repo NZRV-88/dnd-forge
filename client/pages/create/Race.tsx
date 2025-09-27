@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Abilities, useCharacter } from "@/store/character";
+import { useCharacter } from "@/store/character";
+import { Abilities as AbilityType, ABILITIES as AbilityList } from "@/data/abilities";
 import { RACE_CATALOG, getRaceByKey } from "@/data/races";
 import { Spells } from "@/data/spells";
 import { SKILLS } from "@/data/skills";
@@ -19,7 +20,7 @@ import SpellMeta from "@/components/ui/SpellMeta";
 import * as Icons from "@/components/refs/icons";
 import { getDamageIcon } from "@/components/refs/icons";
 import { useParams } from "react-router-dom";
-
+import ChoiceRenderer from "@/components/ui/ChoiceRenderer";
 interface RaceProps {
     r: RaceInfo;
 }
@@ -87,91 +88,96 @@ export default function Race() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
     const {
-        basics,
-        setRace, setSubrace, save,
-        spells, setSpells,
-        setSkills, skills,
-        feats, setFeats, setFeatAbilityChoice, clearFeatAbilityChoices, featAbilityChoice,
-        tools, setTools,
-        setRaceAbilityChoice, clearRaceAbilityChoices, removeRaceAbilityChoice, raceAbilityChoice
+        draft, setDraft, spells, skills, feats, tools,
+        setBasics, setChosenSkills, setChosenTools, setChosenLanguages, setChosenSpells, setChosenFeats, setChosenAbilities
+
     } = useCharacter();
     const [selected, setSelected] = useState<string>(
-        basics.race || RACE_CATALOG[0].key
+        draft.basics.race || RACE_CATALOG[0].key
     );
     const sel = selected;
     const r = getRaceByKey(sel)!;
-    const [subrace, setSubraceState] = useState<string | null>(basics.subrace || null);
+    const [subrace, setSubraceState] = useState<string | null>(draft.basics.subrace || null);
     const [selectedSubraceKey, setSelectedSubraceKey] = useState<string | null>(null);
 
     const selectedSubrace = r.subraces?.find(
-        (s) => s.name === subrace
+        (s) => s.key === subrace
     );
 
     const speed = getEffectiveSpeed(r, selectedSubrace);
     const bonuses = getAllAbilityBonuses(r, selectedSubrace);
     const traits = getEffectiveTraits(r, selectedSubrace);
 
+    useEffect(() => {
+        if (draft.basics.race && draft.basics.race !== selected) {
+            setSelected(draft.basics.race);
+        }
+    }, [draft.basics.race]);
     function pickRace(key: string) {
-        if (key !== basics.race) {
-            setRace(key, undefined, getRaceByKey(key)?.abilityBonuses);
-            setFeats([]); // сбрасываем только при смене расы!
-            clearFeatAbilityChoices();
-            clearRaceAbilityChoices();
+        if (key !== draft.basics.race) {
+            setBasics({ race: key, subrace: undefined });
+
+            // сбрасываем локальное состояние подрасы
+            setSubraceState(undefined);
+
+            // очищаем выборы для расы
+            setChosenAbilities("race", []);
+            setChosenSkills("race", []);
+            setChosenTools("race", []);
+            setChosenLanguages("race", []);
+            setChosenSpells("race", []);
+
+            // очищаем выборы для подрасы
+            setChosenAbilities("subrace", []);
+            setChosenSkills("subrace", []);
+            setChosenTools("subrace", []);
+            setChosenLanguages("subrace", []);
+            setChosenSpells("subrace", []);
+
+            // очищаем фиты (и их вложенные выборы тоже)
+            setChosenFeats([]);
+
+            Object.keys(draft.chosen.abilities).forEach((key) => {
+                if (key.startsWith("feat:")) setChosenAbilities(key, []);
+            });
+            Object.keys(draft.chosen.skills).forEach((key) => {
+                if (key.startsWith("feat:")) setChosenSkills(key, []);
+            });
+            Object.keys(draft.chosen.tools).forEach((key) => {
+                if (key.startsWith("feat:")) setChosenTools(key, []);
+            });
+            Object.keys(draft.chosen.languages).forEach((key) => {
+                if (key.startsWith("feat:")) setChosenLanguages(key, []);
+            });
+            Object.keys(draft.chosen.spells).forEach((key) => {
+                if (key.startsWith("feat:")) setChosenSpells(key, []);
+            });
         }
         setSelected(key);
-        setSubraceState(null);
-        setSpells([]);
-        setLanguages([]);
-        setSkills([]);
-        setTools([]);
-
     }
 
-    function handleSubraceSelect(subraceKey: string) {
+    function pickSubrace(subraceKey: string) {
         if (!r) return;
 
-        // сброс при смене подрасы
-        setSpells([]);
-        setLanguages([]);
-        setSkills([]);
+        // локальный UI-стейт (чтобы карточка подсветилась и т.п.)
+        setSubraceState(subraceKey);
 
-        const selectedSubrace = r.subraces?.find((s) => s.name === subraceKey);
-        if (selectedSubrace) {
-            const bonuses = getSubraceAbilityBonuses(selectedSubrace);
+        // сохраняем только ключ подрасы в basics — все фиксированные эффекты берем
+        // напрямую из r / r.subraces при рендере
+        setBasics({ subrace: subraceKey });
 
-            setSubrace(subraceKey, bonuses);
-            setSubraceState(subraceKey);
+        // --- очищаем выборные опции, связанные с подрасой/расой ---
+        // используем optional chaining, чтобы не ломать, если какого-то сеттера нет
+        // предполагаем, что у тебя есть "chosen"-сеттеры вида setChosenSkills(source, arr)
+        setChosenSkills?.("subrace", []);
+        setChosenTools?.("subrace", []);
+        setChosenLanguages?.("subrace", []);
+        setChosenSpells?.("subrace", []);
 
-            // обрабатываем черты подрасы
-            selectedSubrace.traits?.forEach((trait) => {
-                if (trait.tools) {
-                    setTools([...new Set([...tools, ...trait.tools])]);
-                }
-                if (r.languages) {
-                    setLanguages([...new Set([...languages, ...r.languages])]);
-                }
-                if (trait.spells) {
-                    trait.spells.forEach((sp) => {
-                        if (sp.type === "innate" && sp.spells) {
-                            setSpells([...new Set([...spells, ...sp.spells])]);
-                        }
-                    });
-                }
-                if (trait.skills) {
-                    setSkills([...new Set([...skills, ...trait.skills])]);
-                }
-            });
+        // при смене подрасы логично тоже сбросить общерасовые выборы (если они существуют)
 
-            return;
-        }
-
-        const selectedAncestry = r.ancestries?.find((a) => a.name === subraceKey);
-        if (selectedAncestry) {
-            setSubrace(subraceKey, undefined);
-            setSubraceState(subraceKey);
-            return;
-        }
     }
+
     const shapeIcon = (shape?: string) =>
         shape === "Конус" ? <Icons.Wind className="w-4 h-4" /> : <Icons.ArrowRight className="w-4 h-4" />;
 
@@ -192,26 +198,35 @@ export default function Race() {
         nav("/create/background");
     }
 
-    function exitToCharacters() {
-        if (basics.name) {
-            save();
-        }
-        nav("/characters");
-    }
-
-    function getLanguages(race: RaceInfo) {
-        const langs = [
-            ...(race.languages ?? []),
-        ];
-        return Array.from(new Set(langs));
-    }
-
-    const { languages, setLanguages } = useCharacter();
-    const knownLangs = [...getLanguages(r), ...languages];
+    //function exitToCharacters() {
+    //    if (basics.name) {
+    //        save();
+    //    }
+    //    nav("/characters");
+    //}
 
     const raceInfo = RACE_CATALOG.find(
-        (c) => c.key.toLowerCase() === basics.race.toLowerCase()
+        (c) => c.key.toLowerCase() === draft.basics.race.toLowerCase()
     );
+
+    const subraceObj = r.subraces?.find((s) => s.name === subrace);
+
+    const subraceLangs =
+        subraceObj?.traits
+            ?.flatMap((t) =>
+                t.choices
+                    ?.filter((c) => c.type === "language")
+                    .flatMap((c) => c.options || [])
+            )
+            .filter((lang): lang is string => !!lang && lang.trim() !== "") // фильтруем пустые
+        || [];
+
+    const knownLangs = [
+        ...(r.languages || []),
+        ...subraceLangs,
+        ...(draft.chosen.languages?.race || []),
+        ...(draft.chosen.languages?.subrace || []),
+    ].filter((v, i, arr) => !!v && arr.indexOf(v) === i);
 
 
     return (
@@ -226,7 +241,7 @@ export default function Race() {
                         <h1 className="text-2xl font-semibold">Выбор расы</h1>
                         <p className="text-sm text-muted-foreground">
                             Текущий выбор: {raceInfo?.name || "не выбрана"}
-                            {basics.subrace ? ` • ${basics.subrace}` : ""}
+                            {draft.basics.subrace ? ` • ${draft.basics.subrace}` : ""}
                         </p>
                     </div>
                 </div>
@@ -239,7 +254,7 @@ export default function Race() {
                             )
                         )
                         .map((race) => {
-                            const isSelected = basics.race === race.key;
+                            const isSelected = draft.basics.race === race.key;
                             return (
                                 <button
                                     key={race.key}
@@ -316,7 +331,9 @@ export default function Race() {
                                     </div>
                                     <div className="flex items-center gap-2 rounded border p-2">
                                         <Icons.Languages className="h-4 w-4 text-muted-foreground" />
-                                        <span><span className="font-medium">Языки:</span>  {knownLangs.map((key) => getLanguageName(key)).join(", ")} </span>
+                                        <span><span className="font-medium">Языки: </span>
+                                            {knownLangs.map((key) => getLanguageName(key)).join(", ")}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -324,186 +341,30 @@ export default function Race() {
                             {/* Черты */}
                             {r.traits.length > 0 && (
                                 <div>
-                                    <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">Черты</h3>
-                                    <ul className="space-y-2">
-                                        {r.traits.map((trait, index) => (
-                                            <li key={index} className="rounded border p-2 text-sm leading-snug bg-muted/20">
+                                    <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
+                                        Черты
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {r.traits?.map((trait, ti) => (
+                                            <div key={ti} className="relative flex flex-col rounded border p-2 bg-muted/20">
                                                 <span className="font-medium">{trait.name}</span>
                                                 <div className="text-xs text-muted-foreground mt-1 [&>p]:mb-4">
-                                                    <ReactMarkdown>{trait.desc}</ReactMarkdown></div>
-                                                {/* --- ВЫБОРЫ --- */}
-                                                {trait.choices?.map((choice, ci) => (
+                                                    <ReactMarkdown>{trait.desc}</ReactMarkdown>
+                                                </div>
 
-                                                    <div key={ci} className="mt-2">
-                                                        {choice.type === "language" && (
-                                                            // ВЫБОР ЯЗЫКА
-                                                            <div className="mt-2 space-y-2">
-                                                                {Array.from({ length: choice.count ?? 1 }).map((_, i) => (
-                                                                    <select
-                                                                        key={i}
-                                                                        className="w-full rounded border p-2 text-sm"
-                                                                        value={languages[i] ?? ""}
-                                                                        onChange={(e) => {
-                                                                            const updated = [...languages];
-                                                                            updated[i] = e.target.value;
-                                                                            // фильтруем пустые значения
-                                                                            setLanguages(updated.filter(Boolean));
-                                                                        }}
-                                                                    >
-                                                                        <option value="">Выберите язык</option>
-                                                                        {LANGUAGES.filter(
-                                                                            (lang) =>
-                                                                                !getLanguages(r).includes(lang.key) || languages[i] === lang.key
-                                                                        ).map((lang) => (
-                                                                            <option key={lang.key} value={lang.key}>
-                                                                                {lang.name}
-                                                                            </option>
-                                                                        ))}
-                                                                    </select>
-                                                                ))}
-                                                            </div>
-                                                        )}
-
-                                                        {choice.type === "tool" && (
-                                                            <select className="w-full rounded border p-2 text-sm"
-                                                                value={tools[0] ?? ""}
-                                                                onChange={(e) => setTools([e.target.value])}
-                                                            >
-                                                                <option value="">Выберите инструмент</option>
-                                                                {(choice.options ?? Tools.map(t => t.key)).map(key => {
-                                                                    const tool = Tools.find(t => t.key === key)!;
-                                                                    return <option key={tool.key} value={tool.key}>{tool.name}</option>;
-                                                                })}
-                                                            </select>
-                                                        )}
-
-                                                        {choice.type === "skill" &&
-                                                            // ВЫБОР НАВЫКА
-                                                            Array.from({ length: choice.count ?? 1 }).map((_, idx) => (
-                                                                <select
-                                                                    key={idx}
-                                                                    className="w-full rounded border p-2 text-sm mt-2"
-                                                                    value={skills[idx] ?? ""}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        if (val) {
-                                                                            const updated = [...skills];
-                                                                            updated[idx] = val;
-                                                                            setSkills(updated);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <option value="">Выберите навык</option>
-                                                                    {SKILLS.filter(
-                                                                        (s) => !skills.includes(s.key) || s.key === skills[idx]
-                                                                    ).map((skill) => (
-                                                                        <option key={skill.key} value={skill.key}>
-                                                                            {skill.name}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                            ))}
-                                                        {choice.type === "ability" &&
-                                                            Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
-                                                                const choiceKey = `race:${r.key}:${ci}:${idx}`;
-
-                                                                // уже занятые характеристики (чтобы не выбрать одинаковые)
-                                                                const taken = Object.entries(raceAbilityChoice || {})
-                                                                    .filter(([key]) => key !== choiceKey)
-                                                                    .map(([_, val]) => val);
-
-                                                                return (
-                                                                    <select
-                                                                        key={choiceKey}
-                                                                        className="w-full rounded border p-2 text-sm"
-                                                                        value={raceAbilityChoice?.[choiceKey] ?? ""}
-                                                                        onChange={(e) => {
-                                                                            const value = e.target.value;
-                                                                            if (!value) {
-                                                                                // если вернули на "Выберите характеристику" → удаляем конкретный выбор
-                                                                                removeRaceAbilityChoice(choiceKey);
-                                                                            } else {
-                                                                                // иначе сохраняем выбранное значение
-                                                                                setRaceAbilityChoice(choiceKey, value as keyof Abilities);
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        <option value="">Выберите характеристику</option>
-                                                                        {ABILITIES.filter((ability) => !taken.includes(ability.key)).map(
-                                                                            (ability) => (
-                                                                                <option key={ability.key} value={ability.key}>
-                                                                                    {ability.label}
-                                                                                </option>
-                                                                            )
-                                                                        )}
-                                                                    </select>
-                                                                );
-                                                            })}
-                                                        {/* ЧЕРТЫ (Feats) */}
-                                                        {choice.type === "feat" && (
-                                                            <div className="space-y-2">
-                                                                <select
-                                                                    className="w-full rounded border p-2 text-sm"
-                                                                    value={feats[0] ?? ""}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        if (val) {
-                                                                            setFeats([val]);
-                                                                        } else {
-                                                                            setFeats([]);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <option value="">Выберите черту</option>
-                                                                    {Feats.map((feat) => (
-                                                                        <option key={feat.key} value={feat.key}>
-                                                                            {feat.name}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-
-                                                                {/* описание выбранной черты */}
-                                                                {feats[0] && (
-                                                                    <div className="mt-2 space-y-2">
-                                                                        <div className="rounded border p-2 bg-muted/10 text-xs text-muted-foreground leading-snug">
-                                                                            {Feats.find((f) => f.key === feats[0])?.desc}
-                                                                        </div>
-
-                                                                        {/* если feat имеет выбор характеристик */}
-                                                                        {Feats.find((f) => f.key === feats[0])?.effect?.some(e => e.abilityChoice) && (
-                                                                            <select
-                                                                                className="w-full rounded border p-2 text-sm"
-                                                                                value={featAbilityChoice?.[feats[0]] ?? ""}   // 🔹 подставляем текущее сохранённое значение
-                                                                                onChange={(e) => {
-                                                                                    const ability = e.target.value as keyof Abilities;
-                                                                                    if (ability) {
-                                                                                        setFeatAbilityChoice(feats[0], ability);
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                <option value="">Выберите характеристику</option>
-                                                                                {Feats.find((f) => f.key === feats[0])?.effect?.flatMap(e => e.abilityChoice ?? []).map((opt) => (
-                                                                                    <option key={opt} value={opt}>
-                                                                                        {opt === "str" ? "Сила" :
-                                                                                            opt === "dex" ? "Ловкость" :
-                                                                                                opt === "con" ? "Телосложение" :
-                                                                                                    opt === "int" ? "Интеллект" :
-                                                                                                        opt === "wis" ? "Мудрость" :
-                                                                                                            opt === "cha" ? "Харизма" : opt}
-                                                                                    </option>
-                                                                                ))}
-                                                                            </select>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                    </div>
-                                                ))}
-                                            </li>
+                                                <div className="mt-auto">
+                                                    {trait.choices?.map((choice, ci) => (
+                                                        <ChoiceRenderer
+                                                            key={`race:${r.key}:trait-${ti}-${ci}`}
+                                                            ci={ci}
+                                                            source="race"
+                                                            choices={[choice]}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
                                         ))}
-                                    </ul>
+                                    </div>
                                 </div>
                             )}
 
@@ -538,7 +399,7 @@ export default function Race() {
                                 <div>
                                     <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">Расовые заклинания</h3>
                                     <div className="space-y-2 text-sm">
-                                        {getAvailableSpells(r.spells, basics.level).map((rs, idx) => {
+                                        {getAvailableSpells(r.spells, draft.basics.level).map((rs, idx) => {
                                             if (rs.type === "innate") {
                                                 return rs.spells?.map((key) => {
                                                     const spell = Spells.find((s) => s.key === key);
@@ -586,17 +447,19 @@ export default function Race() {
                                                 return (
                                                     <div key={idx} className="space-y-2">
                                                         <p className="text-xs text-muted-foreground">{rs.desc}</p>
+
                                                         <select
                                                             className="w-full rounded border p-2 text-sm"
                                                             value={chosenKey || ""}
                                                             onChange={(e) => {
                                                                 const value = e.target.value;
-                                                                const others = spells.filter((s) => !available.some((spell) => spell.key === s));
-                                                                if (!value) {
-                                                                    setSpells(others);
-                                                                } else {
-                                                                    setSpells([...others, value]);
-                                                                }
+
+                                                                // оставшиеся выбранные, не относящиеся к этому available-набору
+
+
+                                                                // выбрали — others + новый
+                                                                setChosenSpells("race", [value]);
+
                                                             }}
                                                         >
                                                             <option value="">Выберите заговор</option>
@@ -630,11 +493,11 @@ export default function Race() {
                                         {[...r.subraces]
                                             .sort((a, b) => String(a.name).localeCompare(String(b.name)))
                                             .map((subraceInfo) => {
-                                                const isSubraceSelected = subrace === subraceInfo.name;
+                                                const isSubraceSelected = subrace === subraceInfo.key;
                                                 return (
                                                     <button
                                                         key={subraceInfo.key}
-                                                        onClick={() => handleSubraceSelect(subraceInfo.name)}
+                                                        onClick={() => pickSubrace(subraceInfo.key)}
                                                         className={`text-left rounded-lg border p-3 flex flex-col justify-between transition hover:shadow-md hover:scale-[1.01] ${isSubraceSelected ? "border-2 border-primary shadow-lg scale-[1.02] bg-gradient-to-b from-primary/5 to-transparent" : ""}`}
                                                     >
                                                         {/* 👑 Корона */}
@@ -672,14 +535,14 @@ export default function Race() {
                             )}
 
                             {/* Черты подрасы */}
-                            {subrace && r.subraces?.some((s) => s.name === subrace) && (
+                            {subrace && r.subraces?.some((s) => s.key === subrace) && (
                                 <div>
                                     <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
                                         Черты подрасы
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {r.subraces.find((s) => s.name === subrace)?.traits?.map((trait, index) => (
-                                            <div key={index} className="relative flex flex-col rounded border p-2 bg-muted/20">
+                                        {r.subraces.find((s) => s.key === subrace)?.traits?.map((trait, ti) => (
+                                            <div key={ti} className="relative flex flex-col rounded border p-2 bg-muted/20">
                                                 <span className="font-medium">{trait.name}</span>
                                                 <div className="text-xs text-muted-foreground mt-1 [&>p]:mb-4">
                                                     <ReactMarkdown>{trait.desc}</ReactMarkdown>
@@ -687,117 +550,18 @@ export default function Race() {
                                                 {/*<p className="text-xs text-muted-foreground mt-1">{trait.desc}</p>*/}
 
                                                 {/* --- ВЫБОРЫ --- */}
+
+                                                <div className="mt-auto">
+                                                {/* если у трейта есть выборы */}
                                                 {trait.choices?.map((choice, ci) => (
-                                                    <div key={ci} className="mt-auto">
-                                                        {choice.type === "language" && (
-                                                            <select
-                                                                className="w-full rounded border p-2 text-sm"
-                                                                value={languages[0] ?? ""} // показываем текущий выбор (если есть)
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value;
-                                                                    if (val) {
-                                                                        // заменяем массив только одним языком
-                                                                        setLanguages([val]);
-                                                                    } else {
-                                                                        // если выбрано пусто — очищаем
-                                                                        setLanguages([]);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <option value="">Выберите язык</option>
-                                                                {LANGUAGES
-                                                                    .filter((lang) => !getLanguages(r).includes(lang.key))
-                                                                    .map((lang) => (
-                                                                        <option key={lang.key} value={lang.key}>
-                                                                            {lang.name}
-                                                                        </option>
-                                                                    ))}
-                                                            </select>
-                                                        )}
-
-                                                        {choice.type === "tool" && (
-                                                            <select className="w-full rounded border p-2 text-sm"
-                                                                value={tools[0] ?? ""}
-                                                                onChange={(e) => setTools([e.target.value])}
-                                                            >
-                                                                <option value="">Выберите инструмент</option>
-                                                                {(choice.options ?? Tools.map(t => t.key)).map(key => {
-                                                                    const tool = Tools.find(t => t.key === key)!;
-                                                                    return <option key={tool.key} value={tool.key}>{tool.name}</option>;
-                                                                })}
-                                                            </select>
-                                                        )}
-
-                                                        {choice.type === "skill" && (
-                                                            <select className="w-full rounded border p-2 text-sm">
-                                                                <option value="">Выберите навык</option>
-                                                                {SKILLS.map((skill) => (
-                                                                    <option key={skill.key} value={skill.key}>{skill.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        )}
-                                                    </div>
+                                                    <ChoiceRenderer
+                                                        key={`subrace:${r.key}:trait-${ti}-${ci}`}
+                                                        ci={ci}
+                                                        source={`subrace`}
+                                                        choices={[choice]}
+                                                    />
                                                 ))}
-
-                                                {/* --- ЗАКЛИНАНИЯ ЧЕРТЫ --- */}
-                                                {trait.spells && trait.spells.length > 0 && (
-                                                    <div className="space-y-2 mt-2">
-                                                        {getAvailableSpells(trait.spells, basics.level).map((rs, idx) => {
-                                                            if (rs.type === "innate") {
-                                                                return rs.spells?.map((key) => {
-                                                                    const spell = Spells.find((s) => s.key === key);
-                                                                    return (
-                                                                        <div key={key} className="rounded border p-2 bg-muted/20">
-                                                                            <span className="font-medium">{spell?.name || key}</span>
-                                                                            {spell?.desc && (
-                                                                                <p className="text-xs text-muted-foreground mt-2">{spell.desc}</p>
-                                                                            )}
-                                                                            <div className="mt-2"><SpellMeta spell={spell} /></div>
-                                                                            {rs.desc && (
-                                                                                <p className="text-xs text-muted-foreground mt-2 italic">{rs.desc}</p>
-                                                                            )}
-                                                                        </div>
-                                                                    );
-                                                                });
-                                                            }
-
-                                                            if (rs.type === "choice") {
-                                                                const available = Spells.filter((s) => s.level === 0);
-                                                                const chosenKey = spells.find((s) =>
-                                                                    available.some((spell) => spell.key === s)
-                                                                );
-
-                                                                return (
-                                                                    <div key={idx} className="space-y-2">
-                                                                        <p className="text-xs text-muted-foreground">{rs.desc}</p>
-                                                                        <select
-                                                                            className="w-full rounded border p-2 text-sm"
-                                                                            value={chosenKey || ""}
-                                                                            onChange={(e) => {
-                                                                                const value = e.target.value;
-                                                                                const others = spells.filter((s) => !available.some((spell) => spell.key === s));
-                                                                                if (!value) {
-                                                                                    setSpells(others);
-                                                                                } else {
-                                                                                    setSpells([...others, value]);
-                                                                                }
-                                                                            }}
-                                                                        >
-                                                                            <option value="">Выберите заклинание</option>
-                                                                            {available.map((spell) => (
-                                                                                <option key={spell.key} value={spell.key}>
-                                                                                    {spell.name}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </div>
-                                                                );
-                                                            }
-
-                                                            return null;
-                                                        })}
-                                                    </div>
-                                                )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -805,11 +569,11 @@ export default function Race() {
                             )}
 
                             {/* Заклинания подрасы */}
-                            {subrace && r.subraces?.find((s) => s.name === subrace)?.spells && (
+                            {subrace && r.subraces?.find((s) => s.key === subrace)?.spells && (
                                 <div>
                                     <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">Заклинания подрасы</h3>
                                     <div className="space-y-2 text-sm">
-                                        {getAvailableSpells(r.subraces.find((s) => s.name === subrace)!.spells!, basics.level).map((rs, idx) => {
+                                        {getAvailableSpells(r.subraces.find((s) => s.key === subrace)!.spells!, draft.basics.level).map((rs, idx) => {
                                             if (rs.type === "innate") {
                                                 return rs.spells?.map((key) => {
                                                     const spell = Spells.find((s) => s.key === key);
@@ -820,7 +584,7 @@ export default function Race() {
                                                             )}
                                                             {/* бейдж — верхний правый угол */}
                                                             {!rs.available && (
-                                                                <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full border border-amber-900/20 bg-gradient-to-b from-amber-50 via-stone-100 to-amber-100 px-2.5 py-0.5 text-[10px] font-medium text-stone-700 shadow-sm">
+                                                                <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-muted/20">
                                                                     <Icons.ChevronUp className="h-3 w-3 text-stone-600" />
                                                                     <span>Доступно с {rs.level} уровня</span>
                                                                 </span>
@@ -848,17 +612,19 @@ export default function Race() {
                                                 return (
                                                     <div key={idx} className="space-y-2">
                                                         <p className="text-xs text-muted-foreground">{rs.desc}</p>
+
                                                         <select
                                                             className="w-full rounded border p-2 text-sm"
                                                             value={chosenKey || ""}
                                                             onChange={(e) => {
                                                                 const value = e.target.value;
-                                                                const others = spells.filter((s) => !available.some((spell) => spell.key === s));
-                                                                if (!value) {
-                                                                    setSpells(others);
-                                                                } else {
-                                                                    setSpells([...others, value]);
-                                                                }
+
+                                                                // оставшиеся выбранные, не относящиеся к этому available-набору
+
+
+                                                                // выбрали — others + новый
+                                                                setChosenSpells("race", [value]);
+
                                                             }}
                                                         >
                                                             <option value="">Выберите заговор</option>
@@ -885,13 +651,13 @@ export default function Race() {
                             )}
 
                             {/* Выбранные заклинания */}
-                            {spells.length > 0 && (
+                            {(draft.chosen.spells["race"]?.length || 0) + (draft.chosen.spells["subrace"]?.length || 0) > 0 && (
                                 <div>
                                     <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
                                         Выбранные заклинания
                                     </h3>
                                     <div className="space-y-2 text-sm">
-                                        {spells.map((key) => {
+                                        {[...(draft.chosen.spells["race"] || []), ...(draft.chosen.spells["subrace"] || [])].map((key) => {
                                             const spell = Spells.find((s) => s.key === key);
                                             if (!spell) return null;
                                             return (
@@ -918,12 +684,12 @@ export default function Race() {
                                             .map((ancestry) => {
                                                 const isSelected = subrace === ancestry.name;
                                                 const DamageIcon = ancestry.breathWeapon ? getDamageIcon(ancestry.breathWeapon.damageType) : null;
-                                                const damageText = getDamageForLevel(ancestry.breathWeapon?.damageByLevel, basics.level || 1);
+                                                const damageText = getDamageForLevel(ancestry.breathWeapon?.damageByLevel, draft.basics.level || 1);
 
                                                 return (
                                                     <button
                                                         key={ancestry.name}
-                                                        onClick={() => handleSubraceSelect(ancestry.name)}
+                                                        onClick={() => pickSubrace(ancestry.key)}
                                                         aria-pressed={isSelected}
                                                         className={`text-left rounded-lg border p-3 flex flex-col justify-between transition hover:shadow-md hover:scale-[1.01] ${isSelected ? "border-2 border-primary shadow-lg scale-[1.02] bg-gradient-to-b from-primary/5 to-transparent" : ""}`}
 

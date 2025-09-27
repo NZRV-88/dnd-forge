@@ -9,17 +9,20 @@ import type { Tool } from "./tools";
 
 import { Weapons } from "./weapons";
 import { Armors } from "@/data/items";
+import { Tools } from "./tools";
 
 
 // общий тип
 export type Item =
     | Weapon
-    | Armor;
+    | Armor
+    | Tool;
 
 // общий каталог
 export const ITEMS_CATALOG: Item[] = [
     ...Weapons.map((w): Item => ({ ...w })),
-    ...Armors.map((a): Item => ({  ...a })),
+    ...Armors.map((a): Item => ({ ...a })),
+    ...Tools.map((t): Item => ({ ...t }))
 ];
 
 // поиск по ключу

@@ -1,5 +1,6 @@
-import type { Abilities } from "@/store/character";
+import type { Abilities } from "@/data/abilities";
 import type { SOURCES } from "@/data/sources";
+import type { ChoiceOption } from "@/data/shared/choices"; 
 
 
 export type SourceKey = keyof typeof SOURCES;
@@ -20,13 +21,6 @@ export interface Feat {
         level?: number;
         armor?
     };
-}
-
-export interface ChoiceOption {
-    type: "ability" | "skill" | "tool" | "language" | "feat" | "spell";
-    count: number;
-    value?: number;
-    options?: string[];
 }
 
 export type FeatBonus = {
@@ -101,7 +95,13 @@ export const ALL_FEATS: Feat[] = [
             {
                 name: "Увеличение характеристик",
                 desc: "Увеличьте значение Силы или Ловкости на 1 при максимуме 20.",
-                abilityChoice: ["str", "dex"]
+                choices: [
+                    {
+                        type: "ability",
+                        count: 1,
+                        options: ["str", "dex"],
+                    }
+                ],
             },
             {
                 name: "Лёгкий подъём",

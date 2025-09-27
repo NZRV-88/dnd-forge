@@ -1,6 +1,7 @@
 import { DraconicAncestry } from "./Dragonborn/traits/DraconicAncestry";
 import type { SOURCES } from "@/data/sources";
 import type { Proficiency } from "@/data/proficiencies";
+import type { ChoiceOption } from "@/data/shared/choices"; 
 // types.ts — описания типов для рас и подрас
 export type SourceKey = keyof typeof SOURCES;
 
@@ -73,13 +74,6 @@ export interface VisionProficiency {
     type: "Ночное зрение" | "Слепое зрение" | "Чувство вибраций" | "Истинное зрение";
     distance: number;
     source: string;
-}
-
-export interface ChoiceOption {
-    type: "ability" | "skill" | "tool" | "language" | "feat" | "spell";
-    count: number;
-    value?: number; 
-    options?: string[];
 }
 
 // Возвращает все бонусы характеристик расы + подрасы

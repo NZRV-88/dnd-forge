@@ -1,12 +1,12 @@
 import { Sword, Star, Heart, Book, Eye, Brain } from "@/components/refs/icons";
 
 export type Abilities = {
-    str: string;
-    dex: string;
-    con: string;
-    int: string;
-    wis: string;
-    cha: string;
+    str: number;
+    dex: number;
+    con: number;
+    int: number;
+    wis: number;
+    cha: number;
 };
 
 // массив с характеристиками и иконками

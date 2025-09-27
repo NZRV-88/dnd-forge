@@ -31,77 +31,75 @@ function SpellMeta({ spell }: { spell: any }) {
     }, [spell.components]);
 
     return (
-        <Card className="bg-gradient-to-b from-muted/20 to-background shadow-md">
-            <CardHeader className="pb-2 bg-muted/30 rounded-t-lg">
+        <Card className="bg-gradient-to-b from-gray-50 to-gray-100 shadow-sm border-stone-500">
+            <CardHeader className="pb-2">
+                <h3 className="text-xl font-bold text-stone-900">{spell.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                    {spell.school && (
+                        <span className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-muted/20">
+                            <Icons.Star className="h-3 w-3 text-stone-400" />    {spell.level === 0 ? "Заговор" : `${spell.level}-й уровень`}
+                        </span>
+                    )}
+                    {spell.school && (
+                        <span className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-muted/20">
+                            <Icons.Book className="h-3 w-3 text-stone-400" />  {spell.school}
+                        </span>
 
-                <h3 className="text-lg font-bold">{spell.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                    {spell.level === 0 ? "Заговор" : `${spell.level} уровень`}
-                </p>
+                    )}
+                </div>
             </CardHeader>
 
-            <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                    {spell.school && (
-                        <div className="flex items-center gap-2 rounded border p-2">
-                            <Icons.Book className="h-4 w-4 text-muted-foreground" />
-                            <span><span className="font-medium">Школа:</span> {spell.school}</span>
-                        </div>
-                    )}
+            <CardContent className="space-y-4 mt-2">
+                {/* Мета-информация */}
+                <div className="flex flex-wrap gap-2 text-xs">
                     {spell.castingTime && (
-                        <div className="flex items-center gap-2 rounded border p-2">
-                            <Icons.Hourglass className="h-4 w-4 text-muted-foreground" />
-                            <span><span className="font-medium">Время:</span> {spell.castingTime}</span>
-                        </div>
-                    )}
-                    {spell.duration && (
-                        <div className="flex items-center gap-2 rounded border p-2">
-                            <Icons.Clock className="h-4 w-4 text-muted-foreground" />
-                            <span><span className="font-medium">Длительность:</span> {spell.duration}</span>
-                        </div>
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-stone-200">
+                            <Icons.Hourglass className="h-3 w-3 text-stone-400" /> {spell.castingTime}
+                        </span>
                     )}
                     {spell.range && (
-                        <div className="flex items-center gap-2 rounded border p-2">
-                            <Icons.Ruler className="h-4 w-4 text-muted-foreground" />
-                            <span><span className="font-medium">Дальность:</span> {spell.range}</span>
-                        </div>
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-stone-200">
+                            <Icons.Ruler className="h-3 w-3 text-stone-400" /> {spell.range}
+                        </span>
                     )}
-                    {spell.area && (
-                        <div className="flex items-center gap-2 rounded border p-2">
-                            <Icons.Footprints className="h-4 w-4 text-muted-foreground" />
-                            <span><span className="font-medium">Область:</span> {spell.area}</span>
-                        </div>
+                    {spell.duration && (
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-stone-200">
+                            <Icons.Clock className="h-3 w-3 text-stone-400" /> {spell.duration}
+                        </span>
                     )}
                     {componentsText && (
-                        <div className="flex items-center gap-2 rounded border p-2">
-                            <Icons.FlaskConical className="h-4 w-4 text-muted-foreground" />
-                            <span><span className="font-medium">Компоненты:</span> {componentsText}</span>
-                        </div>
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-stone-200">
+                            <Icons.FlaskConical className="h-3 w-3 text-stone-400" /> {componentsText}
+                        </span>
                     )}
+                </div>
+
+                {/* Описание */}
+                {spell.desc && (
+                    <div className="rounded-md border border-stone-200 bg-gray-100 p-3 text-sm leading-relaxed text-stone-800">
+                        <ReactMarkdown>{spell.desc}</ReactMarkdown>
+                    </div>
+                )}
+
+                {/* Доп. инфа */}
+                <div className="flex flex-wrap gap-2 text-xs">
                     {spell.save && (
-                        <div className="flex items-center gap-2 rounded border p-2">
-                            <Icons.Shield className="h-4 w-4 text-muted-foreground" />
-                            <span><span className="font-medium">Спасбросок:</span> {spell.save}</span>
-                        </div>
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-stone-200">
+                            <Icons.Shield className="h-3 w-3 text-stone-400" /> Спасбросок: {spell.save}
+                        </span>
                     )}
                     {damageText && (
-                        <div className="flex items-center gap-2 rounded border p-2">
+                        <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-stone-200">
                             {(() => {
                                 const Icon = Icons.getDamageIcon(
                                     typeof spell.damage === "object" ? spell.damage.type : spell.damage
                                 );
-                                return <Icon className="h-4 w-4 text-muted-foreground" />;
-                            })()}
-                            <span><span className="font-medium">Урон:</span> {damageText}</span>
-                        </div>
+                                return <Icon className="h-3 w-3 text-stone-400" />;
+                            })()}{" "}
+                            Урон: {damageText}
+                        </span>
                     )}
                 </div>
-
-                {spell.desc && (
-                    <div className="rounded border bg-muted/10 p-2">
-                        <ReactMarkdown>{spell.desc}</ReactMarkdown>
-                    </div>
-                )}
             </CardContent>
         </Card>
     );

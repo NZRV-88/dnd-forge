@@ -25,6 +25,7 @@ export {
     ArrowUp,
     ArrowRight,
     Wind,
+    Award,
 } from "lucide-react";
 
 import * as Icons from "@/components/refs/icons";

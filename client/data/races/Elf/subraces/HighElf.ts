@@ -33,6 +33,13 @@ export const HighElf: SubraceInfo = {
         {
             name: "Заговор",
             desc: "Выберите один заговор из списка заклинаний волшебника. Интеллект — ваша базовая характеристика для него",
+            choices: [
+                {
+                    type: "spell",
+                    count: 1,
+                    spellLevel: 0,
+                },
+            ],
             spells: [
                 {
                     type: "choice",
