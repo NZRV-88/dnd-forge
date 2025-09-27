@@ -6,7 +6,7 @@ import { Spells } from "@/data/spells";
 import type { Spell } from "@/data/spells/types";
 import { LANGUAGES } from "@/data/languages/languages";
 import { ALL_FEATS } from "@/data/feats/feats"; 
-import { Tools, TOOL_CATEGORY_LABELS } from "@/data/items/tools";
+import { Tools, TOOL_CATEGORY_LABELS } from "@/data/items/tools.ts";
 import { Feats } from "@/data/feats";
 import { getAllCharacterData } from "@//utils/getAllCharacterData";
 import * as Icons from "@/components/refs/icons";
