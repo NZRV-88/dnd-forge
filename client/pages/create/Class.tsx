@@ -9,6 +9,7 @@ import ExitButton from "@/components/ui/ExitButton";
 import StepArrows from "@/components/ui/StepArrows";
 import * as Icons from "@/components/refs/icons";
 import { Slider } from "@/components/ui/slider";
+import FeatureBlock from "@/components/ui/FeatureBlock";
 
 const ALL_CLASSES = [
     "fighter",
@@ -62,6 +63,29 @@ export default function ClassPick() {
         (draft.basics.hpMode === "fixed"
             ? Math.floor(hitDie / 2) + 1 + conMod
             : 1 + conMod);
+    const feats = useMemo(() => {
+        if (!info) return [];
+
+        const classFeats: { name: string; desc: string; choices?: any[]; featureLevel: number }[] = [];
+
+        // Фичи класса
+        Object.entries(info.features).forEach(([lvl, featsArr]) => {
+            featsArr.forEach(f => classFeats.push({ ...f, featureLevel: Number(lvl) }));
+        });
+
+        // Фичи подклассов, если выбрана
+        const subclass = info.subclasses.find(sc => sc.key === draft.basics.subclass);
+        if (subclass) {
+            Object.entries(subclass.features || {}).forEach(([lvl, featsArr]) => {
+                featsArr.forEach(f => classFeats.push({ ...f, featureLevel: Number(lvl) }));
+            });
+        }
+
+        // Можно отсортировать по уровню
+        classFeats.sort((a, b) => a.featureLevel - b.featureLevel);
+
+        return classFeats;
+    }, [info, draft.basics.subclass]);
 
 
     return (
@@ -189,40 +213,56 @@ export default function ClassPick() {
                                 </div>
                             </div>
 
+                            <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
+                                Особенности
+                            </h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                {feats.map((f, idx) => (
+                                    <FeatureBlock
+                                        key={idx}
+                                        name={f.name}
+                                        desc={f.desc}
+                                        featureLevel={f.featureLevel}
+                                        source="class"
+                                        idx={idx}
+                                        choices={f.choices}
+                                    />
+                                ))}
+                            </div>
 
                             {/* Подклассы */}
-                            {info.subclasses && info.subclasses.length > 0 && (
-                                <div>
-                                    <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
-                                        Подклассы
-                                    </h3>
-                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                        {info.subclasses.map((sc) => {
-                                            const isSelected = draft.basics.subclass === sc.key;
-                                            return (
-                                                <button
-                                                    key={sc.key}
-                                                    onClick={() => setSubclass(sc.key)}
-                                                    className={`text-left rounded-lg border p-3 transition hover:shadow-md hover:scale-[1.01] ${isSelected
-                                                            ? "border-2 border-primary shadow-lg scale-[1.02] bg-gradient-to-b from-primary/5 to-transparent"
-                                                            : ""
-                                                        }`}
-                                                >
-                                                    <div
-                                                        className={`font-medium tracking-wide ${isSelected ? "text-primary font-bold" : ""
-                                                            }`}
-                                                    >
-                                                        {sc.key}
-                                                    </div>
-                                                    <p className="mt-1 text-xs text-muted-foreground leading-snug">
-                                                        {sc.desc}
-                                                    </p>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
+                            {/*{info.subclasses && info.subclasses.length > 0 && (*/}
+                            {/*    <div>*/}
+                            {/*        <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">*/}
+                            {/*            Подклассы*/}
+                            {/*        </h3>*/}
+                            {/*        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">*/}
+                            {/*            {info.subclasses.map((sc) => {*/}
+                            {/*                const isSelected = draft.basics.subclass === sc.key;*/}
+                            {/*                return (*/}
+                            {/*                    <button*/}
+                            {/*                        key={sc.key}*/}
+                            {/*                        onClick={() => setSubclass(sc.key)}*/}
+                            {/*                        className={`text-left rounded-lg border p-3 transition hover:shadow-md hover:scale-[1.01] ${isSelected*/}
+                            {/*                                ? "border-2 border-primary shadow-lg scale-[1.02] bg-gradient-to-b from-primary/5 to-transparent"*/}
+                            {/*                                : ""*/}
+                            {/*                            }`}*/}
+                            {/*                    >*/}
+                            {/*                        <div*/}
+                            {/*                            className={`font-medium tracking-wide ${isSelected ? "text-primary font-bold" : ""*/}
+                            {/*                                }`}*/}
+                            {/*                        >*/}
+                            {/*                            {sc.key}*/}
+                            {/*                        </div>*/}
+                            {/*                        <p className="mt-1 text-xs text-muted-foreground leading-snug">*/}
+                            {/*                            {sc.desc}*/}
+                            {/*                        </p>*/}
+                            {/*                    </button>*/}
+                            {/*                );*/}
+                            {/*            })}*/}
+                            {/*        </div>*/}
+                            {/*    </div>*/}
+                            {/*)}*/}
                         </CardContent>
                     </Card>
                 )}

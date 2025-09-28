@@ -10,6 +10,7 @@ import { Tools, TOOL_CATEGORY_LABELS } from "@/data/items/tools.ts";
 import { Feats } from "@/data/feats";
 import { getAllCharacterData } from "@//utils/getAllCharacterData";
 import * as Icons from "@/components/refs/icons";
+import { CLASS_CATALOG } from "@/data/classes/"; 
 interface ChoiceRendererProps {
     source: string; //"race" | "subrace" | "class" | "subclass" | "background"
     choices: ChoiceOption[];
@@ -36,13 +37,46 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
         setChosenFeats,
         removeChosenFeat,
 
+        setSubclass, 
+
         draft,
+        setDraft,
     } = useCharacter();
 
     return (
         <div className="space-y-4">
             {choices.map((choice, ci) => {
                 switch (choice.type) {
+                    case "subclass":
+                        // Получаем текущий выбранный класс
+                        const currentClass = draft.basics.class;
+
+                        // Все возможные подклассы для выбранного класса
+                        const availableSubclasses = currentClass
+                            ? (CLASS_CATALOG.find(c => c.key === currentClass)?.subclasses || [])
+                            : [];
+
+                        const selectedSubclass = draft.basics.subclass || "";
+
+                        return (
+                            <select
+                                key={`${source}:subclass:${ci}`}
+                                className="w-full rounded border p-2 text-sm"
+                                value={selectedSubclass}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setSubclass(value);
+                                }}
+                            >
+                                <option value="">Выберите подкласс</option>
+                                {availableSubclasses.map(sc => (
+                                    <option key={sc.key} value={sc.key}>
+                                        {sc.name || sc.key}
+                                    </option>
+                                ))}
+                            </select>
+                        );
+
                     case "ability":
                         return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
                             const choiceKey = `${source}:ability:${ci}:${idx}`;

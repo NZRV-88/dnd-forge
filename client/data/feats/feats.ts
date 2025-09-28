@@ -24,8 +24,8 @@ export interface Feat {
 }
 
 export type FeatBonus = {
-    name: string;            // Название бонуса
-    desc: string;            // Описание бонуса
+    name?: string;            // Название бонуса
+    desc?: string;            // Описание бонуса
     abilities?: Partial<Record<keyof Abilities, number>>;
     abilityChoice?: (keyof Abilities)[];
     skills?: string[];
@@ -41,6 +41,24 @@ export type FeatBonus = {
 
 
 export const ALL_FEATS: Feat[] = [
+    {
+        key: "ability-score-improvement",
+        source: "PH24",
+        name: "Увеличение характеристик",
+        nameEn: "Ability Score Improvement",
+        desc: "Увеличьте значение одной из ваших характеристик на 2 или двух из ваших характеристик на 1. Эта черта не может увеличить значение характеристики выше 20.",
+        effect: [
+            {
+                choices: [
+                    {
+                        type: "ability",
+                        count: 2,
+                    }
+                ],
+            },
+        ],
+        prerequisites: { level: 4 },
+    },
     {
         key: "actor",
         source: "PH14",

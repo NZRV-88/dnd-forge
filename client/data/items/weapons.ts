@@ -4,12 +4,14 @@
 export type WeaponCategory = "simple" | "martial";
 export type WeaponType = "melee" | "ranged";
 export type DamageType = "bludgeoning" | "slashing" | "piercing";
+export type WeaponMastery = "sap" | "slow" | "topple" | "vex" | "nick" | "graze" | "cleave" | "push"; // дописать описания
 
 export interface Weapon {
     key: string;                // уникальный ключ (slug)
     name: string;               // отображаемое название
     category: WeaponCategory;   // simple / martial
     type: WeaponType;           // melee / ranged
+    mastery?: WeaponMastery;    // если оружие связано с мастерством владения оружием
     cost: string;               // стоимость (строкой, напр. "1 sp", "25 gp")
     damage: string;             // урон (напр. "1d6", "2d6")
     damageType: DamageType;     // тип урона
@@ -28,6 +30,7 @@ export const Weapons: Weapon[] = [
         name: "Дубинка",
         category: "simple",
         type: "melee",
+        mastery: "slow",
         cost: "1 sp",
         damage: "1d4",
         damageType: "bludgeoning",

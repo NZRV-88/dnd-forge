@@ -73,7 +73,7 @@ export const SKILLS: Skill[] = [
     // Мудрость
     {
         key: "insight",
-        name: "Внимание",
+        name: "Проницательность",
         nameEn: "Insight",
         ability: "WIS",
         desc: "Понимание эмоций и намерений других существ."

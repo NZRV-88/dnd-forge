@@ -83,6 +83,22 @@ export const SpellsLevel1: Spell[] = [
         scaling: { type: "slot", progression: { dice: "1d8" } },
         tags: ["урон", "звук", "площадь", "отталкивание"]
     },
+    {
+        key: "divine-smite",
+        name: "Божественная кара",
+        level: 1,
+        school: "Воплощение",
+        desc: "Цель получает от этой атаки 2к8 дополнительного урона Излучением или 3к8 дополнительного урона Излучением, если цель — Нежить или Исчадие.",
+        isCombat: true,
+        castingTime: "Бонусное действие, совершаемое вами немедленно после попадания по цели Рукопашным оружием или Безоружным ударом",
+        range: "На себя",
+        components: ["В"],
+        duration: "Мгновенно",
+        damage: { dice: "2d8", type: "Излучение" },
+        scaling: { type: "slot", progression: { dice: "1d8" } },
+        tags: ["урон"]
+    },
+
 
     // --- Очарование (Enchantment) ---
     {
