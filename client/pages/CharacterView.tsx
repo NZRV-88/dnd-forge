@@ -244,22 +244,22 @@ export default function CharacterView() {
     );
 
     return (
-        <div className="bg-neutral-900 text-gray-200 min-h-screen p-6 font-sans flex justify-center">
-            <div className="w-[1200px]">
+        <div className="bg-neutral-900 text-gray-200 min-h-screen p-4 sm:p-6 font-sans flex justify-center">
+            <div className="w-full max-w-[1200px] px-1 sm:px-0">
 
                 {/* HEADER */}
-                <div className="flex items-center border-b border-yellow-600 pb-4 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center border-b border-yellow-600 pb-4 mb-6 gap-4">
                     {/* Левая часть: аватар */}
-                    <div className="flex flex-col items-center mr-6">
+                    <div className="flex flex-col items-center sm:items-start sm:mr-6">
                         <label htmlFor="avatar-upload" className="cursor-pointer">
                             {char.avatar ? (
                                 <img
                                     src={char.avatar}
                                     alt="Аватар персонажа"
-                                    className="w-28 h-28 rounded-lg object-cover border-2 border-yellow-600 hover:opacity-80 transition"
+                                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg object-cover border-2 border-yellow-600 hover:opacity-80 transition"
                                 />
                             ) : (
-                                <div className="w-28 h-28 rounded-lg bg-neutral-800 border-2 border-dashed border-yellow-600 flex items-center justify-center text-gray-500 hover:opacity-80 transition">
+                                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg bg-neutral-800 border-2 border-dashed border-yellow-600 flex items-center justify-center text-gray-500 hover:opacity-80 transition">
                                     Загрузить
                                 </div>
                             )}
@@ -296,10 +296,10 @@ export default function CharacterView() {
 
                     {/* Правая часть: имя + инфо */}
                     <div className="flex flex-col items-start">
-                        <h1 className="text-4xl font-serif font-bold text-yellow-400">
+                        <h1 className="text-3xl sm:text-4xl font-serif font-bold text-yellow-400">
                             {b.name || "Без имени"}
                         </h1>
-                        <div className="mt-2 text-lg italic text-gray-300">
+                        <div className="mt-2 text-base sm:text-lg italic text-gray-300">
                             {raceInfo[b.name] || "Раса?"}
                             {b.subrace ? ` (${b.subrace})` : ""} {/* TODO: сюда можно русское имя подрасы */}
                             {" • "}
@@ -313,7 +313,7 @@ export default function CharacterView() {
                 </div>
 
                 {/* ROW 1 */}
-                <div className="grid grid-cols-[620px_240px_320px] gap-4 mb-6">
+                <div className="grid gap-4 mb-6 grid-cols-1 lg:grid-cols-[620px_240px_320px]">
                     <div>
                         <AbilityScores
                             stats={finalStats}
@@ -337,7 +337,7 @@ export default function CharacterView() {
                 </div>
 
                 {/* ROW 2: SavingThrows + Skills под характеристиками */}
-                <div className="grid grid-cols-[300px_300px_240px] gap-4 mb-6 -mt-4">
+                <div className="grid gap-4 mb-6 -mt-4 grid-cols-1 lg:grid-cols-[300px_300px_240px]">
                     {/* Saving Throws (лево) */}
                     <div className="space-y-4">
                         <SavingThrows
@@ -378,7 +378,7 @@ export default function CharacterView() {
                 </div>
 
                 {/* SAVE button */}
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-col sm:flex-row justify-end gap-2">
                     <Button onClick={saveAll} className="bg-amber-500 text-black">Сохранить</Button>
                     <Button onClick={() => nav(-1)}>Назад</Button>
                 </div>
