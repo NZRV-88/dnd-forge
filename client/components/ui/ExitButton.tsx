@@ -1,61 +1,21 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { X } from "@/components/refs/icons";
 import { useCharacter } from "@/store/character";
 import { motion } from "framer-motion";
-import { supabase } from "@/lib/supabaseClient";
-import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 
 type ExitButtonProps = {
     onClick?: () => void;
 };
 export default function ExitButton({ onClick }: ExitButtonProps) {
     const nav = useNavigate();
-    const user = useAuth();
-    const { id: urlId } = useParams<{ id: string }>();
-
-    const {
-        basics,
-        stats,
-        asi,
-        totalAbilityBonuses,
-        skills,
-        languages,
-        tools,
-        feats,
-        spells,
-    } = useCharacter();
+    const { draft, saveToSupabase } = useCharacter();
 
     const handleExit = async () => {
         try {
-            if (basics.name) {
-                const { error } = await supabase
-                    .from("characters")
-                    .upsert(
-                        {
-                            id: urlId,
-                            user_id: user.id,
-                            data: {
-                                basics,
-                                stats,
-                                asi,
-                                totalAbilityBonuses,
-                                skills,
-                                languages,
-                                tools,
-                                feats,
-                                spells,
-                            },
-                            updated_at: new Date().toISOString(),
-                        },
-                        { onConflict: "id" }
-                    );
-
-                if (error) {
-                    console.error("Ошибка при сохранении персонажа:", error);
-                    alert("Не удалось сохранить персонажа");
-                    return;
-                }
-            }
+            const t = toast({ title: "Сохранение...", description: "Секунду, сохраняем персонажа" });
+            await saveToSupabase();
+            t.update({ title: "Готово", description: "Персонаж сохранён", duration: 2000 });
 
             if (onClick) {
                 onClick(); // вызов внешнего обработчика, если передан
@@ -64,7 +24,7 @@ export default function ExitButton({ onClick }: ExitButtonProps) {
             nav("/characters");
         } catch (err) {
             console.error("Ошибка при сохранении персонажа:", err);
-            alert("Ошибка при сохранении персонажа");
+            toast({ title: "Ошибка", description: "Не удалось сохранить персонажа", variant: "destructive" });
         }
     };
 
