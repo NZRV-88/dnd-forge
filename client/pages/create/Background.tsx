@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useCharacter } from "@/store/character";
 import StepArrows from "@/components/ui/StepArrows";
+import CharacterHeader from "@/components/ui/CharacterHeader";
 import { useParams } from "react-router-dom";
 import * as Icons from "@/components/refs/icons";
 import { getProficiencyName } from "@/data/proficiencies";
@@ -57,6 +58,9 @@ export default function BackgroundPick() {
             <div className="mx-auto max-w-5xl relative">
                 <StepArrows back={`/create/${id}/class`} next={`/create/${id}/race`} />
                 <ExitButton />
+
+                {/* Шапка с именем и аватаркой */}
+                <CharacterHeader />
 
                 <div className="mb-6 flex items-baseline justify-between">
                     <div>

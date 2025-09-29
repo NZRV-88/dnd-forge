@@ -13,9 +13,10 @@ import RollLog from "@/components/characterList/RollLog";
 import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
 import { RACE_CATALOG } from "@/data/races";
-import { CLASS_LABELS } from "@/data/classes";
+import { CLASS_CATALOG } from "@/data/classes";
 import { getEffectiveSpeed } from "@/data/races/types"; 
 import { supabase } from "@/lib/supabaseClient";
+import AvatarUpload from "@/components/ui/AvatarUpload";
 
 const LIST_KEY = "dnd-ru-characters";
 
@@ -233,6 +234,26 @@ export default function CharacterView() {
         }
     };
 
+    // Handle avatar change
+    const handleAvatarChange = async (avatarUrl: string | null) => {
+        if (!char) return;
+        const updated = { ...char, avatar: avatarUrl };
+        setChar(updated);
+        
+        // Save to Supabase
+        try {
+            const { error } = await supabase
+                .from("characters")
+                .update({ data: updated, updated_at: new Date() })
+                .eq("id", id);
+            if (error) {
+                console.error("Ошибка сохранения аватарки:", error);
+            }
+        } catch (error) {
+            console.error("Ошибка сохранения аватарки:", error);
+        }
+    };
+
     // small helper to format ability mods
     const formatMod = (v: number) => {
         const m = Math.floor((v - 10) / 2);
@@ -241,6 +262,12 @@ export default function CharacterView() {
 
     const raceInfo = RACE_CATALOG.find(
         (c) => c.key.toLowerCase() === b.race.toLowerCase()
+    );
+    const classInfo = CLASS_CATALOG.find(
+        (c) => c.key.toLowerCase() === b.class.toLowerCase()
+    );
+    const subclassInfo = classInfo?.subclasses.find(
+        (s) => s.key.toLowerCase() === b.subclass.toLowerCase()
     );
 
     return (
@@ -251,46 +278,10 @@ export default function CharacterView() {
                 <div className="flex flex-col sm:flex-row sm:items-center border-b border-yellow-600 pb-4 mb-6 gap-4">
                     {/* Левая часть: аватар */}
                     <div className="flex flex-col items-center sm:items-start sm:mr-6">
-                        <label htmlFor="avatar-upload" className="cursor-pointer">
-                            {char.avatar ? (
-                                <img
-                                    src={char.avatar}
-                                    alt="Аватар персонажа"
-                                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg object-cover border-2 border-yellow-600 hover:opacity-80 transition"
-                                />
-                            ) : (
-                                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg bg-neutral-800 border-2 border-dashed border-yellow-600 flex items-center justify-center text-gray-500 hover:opacity-80 transition">
-                                    Загрузить
-                                </div>
-                            )}
-                        </label>
-
-                        <input
-                            id="avatar-upload"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                    const reader = new FileReader();
-                                    reader.onload = () => {
-                                        const url = reader.result as string;
-                                        const updated = { ...char, avatar: url };
-                                        setChar(updated);
-
-                                        // сохраняем в localStorage
-                                        const raw = localStorage.getItem("dnd-ru-characters") || "[]";
-                                        const list = JSON.parse(raw);
-                                        const idx = list.findIndex((c: any) => String(c.id) === String(id));
-                                        if (idx >= 0) {
-                                            list[idx].avatar = url;
-                                            localStorage.setItem("dnd-ru-characters", JSON.stringify(list));
-                                        }
-                                    };
-                                    reader.readAsDataURL(file);
-                                }
-                            }}
+                        <AvatarUpload
+                            currentAvatar={char.avatar}
+                            onAvatarChange={handleAvatarChange}
+                            className="text-yellow-400"
                         />
                     </div>
 
@@ -300,11 +291,11 @@ export default function CharacterView() {
                             {b.name || "Без имени"}
                         </h1>
                         <div className="mt-2 text-base sm:text-lg italic text-gray-300">
-                            {raceInfo[b.name] || "Раса?"}
+                            {raceInfo?.name || b.race}
                             {b.subrace ? ` (${b.subrace})` : ""} {/* TODO: сюда можно русское имя подрасы */}
                             {" • "}
-                            {raceInfo[b.name] || "Класс?"}
-                            {b.subclass ? ` (${b.subclass})` : ""} {/* TODO: сюда можно русское имя подкласса */}
+                            {classInfo?.name || b.class}
+                            {subclassInfo?.name ? ` (${subclassInfo.name})` : ""}
                             {" • ур. "}
                             {b.level || 1}
 

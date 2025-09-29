@@ -1,6 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import StepArrows from "@/components/ui/StepArrows";
 import ExitButton from "@/components/ui/ExitButton";
+import CharacterHeader from "@/components/ui/CharacterHeader";
 import { useCharacter } from "@/store/character";
 import { ABILITIES } from "@/data/abilities";
 import { getRaceByKey } from "@/data/races";
@@ -49,6 +50,9 @@ export default function Summary() {
             <div className="mx-auto max-w-5xl relative">
                 <StepArrows back={`/create/${urlId}/equipment`} next={null} />
                 <ExitButton />
+
+                {/* Шапка с именем и аватаркой */}
+                <CharacterHeader />
 
                 {/* Заголовок */}
                 <div className="mb-6 flex items-baseline justify-between">

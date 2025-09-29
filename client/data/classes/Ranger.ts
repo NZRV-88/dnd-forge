@@ -1,6 +1,8 @@
 import { ClassInfo } from "./types";
 
 export const Ranger: ClassInfo = {
+  bg: "/assets/class-bgs/ranger-bg.png",
+  source: "PH24",
   key: "ranger",
   name: "Следопыт",
   desc: "Искатель приключений, охотник и проводник в дикой местности.",

@@ -13,6 +13,7 @@ import { LANGUAGES, getLanguageName } from "@/data/languages/languages";
 import { Tools } from "@/data/items/tools";
 import { ABILITIES } from "@/data/abilities";
 import ExitButton from "@/components/ui/ExitButton";
+import CharacterHeader from "@/components/ui/CharacterHeader";
 import StepArrows from "@/components/ui/StepArrows";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -237,6 +238,9 @@ export default function Race() {
                 {/* крестик в правом верхнем углу */}
                 <ExitButton />
 
+                {/* Шапка с именем и аватаркой */}
+                <CharacterHeader />
+
                 <div className="mb-6 flex items-baseline justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold">Выбор расы</h1>
@@ -351,7 +355,6 @@ export default function Race() {
                                                 key={`race-trait-${ti}`}
                                                 name={trait.name}
                                                 desc={trait.desc}
-                                                featureLevel={1}
                                                 source="race"
                                                 idx={ti}
                                                 choices={trait.choices}
@@ -540,7 +543,7 @@ export default function Race() {
                                                 key={`subrace-trait-${ti}`}
                                                 name={trait.name}
                                                 desc={trait.desc}
-                                                featureLevel={1}
+
                                                 source="subrace"
                                                 idx={ti}
                                                 choices={trait.choices}

@@ -5,6 +5,7 @@ import { getAllCharacterData } from "@/utils/getAllCharacterData";
 import { Abilities, ABILITIES } from "@/data/abilities";
 import StepArrows from "@/components/ui/StepArrows";
 import ExitButton from "@/components/ui/ExitButton";
+import CharacterHeader from "@/components/ui/CharacterHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -167,6 +168,9 @@ export default function AbilitiesPick() {
             <div className="mx-auto max-w-5xl relative">
                 <StepArrows back={`/create/${id}/race`} next={`/create/${id}/equipment`} />
                 <ExitButton />
+
+                {/* Шапка с именем и аватаркой */}
+                <CharacterHeader />
                 {/*<div className="max-w-4xl mx-auto px-4 space-y-6">*/}
                 <div className="mb-6 flex items-baseline justify-between">
                     <div>

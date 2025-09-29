@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useCharacter } from "@/store/character";
 import StepArrows from "@/components/ui/StepArrows";
 import ExitButton from "@/components/ui/ExitButton";
+import CharacterHeader from "@/components/ui/CharacterHeader";
 
 export default function Start() {
     const { id } = useParams<{ id: string }>();
@@ -16,8 +17,6 @@ export default function Start() {
         loadFromSupabase,
         resetCharacter,
     } = useCharacter();
-    const name = draft?.basics?.name ?? "";
-    const [localName, setLocalName] = useState(draft?.basics?.name ?? "");
     const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
 
     // если id есть в url — грузим персонажа
@@ -33,16 +32,14 @@ export default function Start() {
 
     // синхронизируем локальные поля, если basics обновились (например, после загрузки из базы)
     useEffect(() => {
-        setLocalName(draft.basics.name || "");
         setLocalHpMode(draft.basics.hpMode || "fixed");
-    }, [draft.basics.name, draft.basics.hpMode]);
+    }, [draft.basics.hpMode]);
 
     const handleNext = () => {
         setDraft(d => ({
             ...d,
             basics: {
                 ...d.basics,
-                name: localName,
                 hpMode: localHpMode,
             },
         }));
@@ -55,16 +52,13 @@ export default function Start() {
     };
 
     const handleExit = () => {
-        if (localName.trim()) {
-            setDraft(d => ({
-                ...d,
-                basics: {
-                    ...d.basics,
-                    name: localName,
-                    hpMode: localHpMode,
-                },
-            }));
-        }
+        setDraft(d => ({
+            ...d,
+            basics: {
+                ...d.basics,
+                hpMode: localHpMode,
+            },
+        }));
         nav("/characters");
     };
     const newId = uuidv4();
@@ -77,17 +71,10 @@ export default function Start() {
                 />
                 <ExitButton onClick={handleExit} />
 
-                <h1 className="text-2xl font-bold mb-6 text-center">Создание персонажа</h1>
+                {/* Шапка с именем и аватаркой */}
+                <CharacterHeader />
 
-                <div className="mb-6">
-                    <label className="block mb-2 font-medium">Имя персонажа</label>
-                    <input
-                        className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:border-primary"
-                        value={localName}
-                        onChange={(e) => setLocalName(e.target.value)}
-                        placeholder="Введите имя"
-                    />
-                </div>
+                <h1 className="text-2xl font-bold mb-6 text-center">Создание персонажа</h1>
 
                 <div className="mb-6">
                     <label className="block mb-2 font-medium">Рост хит-поинтов</label>

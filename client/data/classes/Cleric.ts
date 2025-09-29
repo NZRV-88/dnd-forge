@@ -1,6 +1,8 @@
 import { ClassInfo } from "./types";
 
 export const Cleric: ClassInfo = {
+  bg: "/assets/class-bgs/cleric-bg.png",
+  source: "PH24",
   key: "cleric",
   name: "Жрец",
   desc: "Служитель божества, целитель и заклинатель.",

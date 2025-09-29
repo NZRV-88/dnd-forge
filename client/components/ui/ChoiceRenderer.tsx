@@ -27,6 +27,7 @@ import { Tools, TOOL_CATEGORY_LABELS } from "@/data/items/tools";
 import { CLASS_CATALOG } from "@/data/classes/";
 import { FEATURES } from "@/data/classes/features/features";
 import { FIGHTING_STYLES } from "@/data/classes/features/fightingStyles";
+import { SKILLS, SKILL_LABELS } from "@/data/skills"; 
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
 import * as Icons from "@/components/refs/icons";
 import SpellMeta from "@/components/ui/SpellMeta";
@@ -413,6 +414,7 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                     case "feature": {
                         const availableFeatures = FEATURES;
                         const selected = draft.chosen.features?.[source] || [];
+                        console.log(`ChoiceRenderer: Getting features for source "${source}":`, selected);
                         const selectedFeature = selected[0] 
                             ? availableFeatures.find(f => f.key === selected[0]) 
                             : null;
@@ -449,6 +451,8 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                     onChange={(e) => {
                                         const value = e.target.value;
                                         const prevFeature = selected[0];
+                                        
+                                        console.log(`ChoiceRenderer: Setting feature for source "${source}" to:`, value);
                                         
                                         // Очищаем вложенные выборы предыдущей особенности
                                         if (prevFeature) {
@@ -492,7 +496,10 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                     case "feat": {
                         return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
                             const choiceKey = `${source}:feat:${ci}:${idx}`;
-                            const selected = draft.chosen.feats[idx] || "";
+                            // Используем source-specific ключ для талантов вместо глобального массива
+                            const sourceFeats = draft.chosen.feats || [];
+                            const featKey = `${source}-${idx}`;
+                            const selected = sourceFeats.find(f => f.startsWith(featKey + ':'))?.split(':')[1] || "";
 
                             return (
                                 <div key={choiceKey} className="space-y-2">
@@ -502,19 +509,22 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                         onChange={(e) => {
                                             const value = e.target.value;
                                             const prevFeat = selected;
+                                            const featKey = `${source}-${idx}`;
 
                                             if (!value) {
                                                 // Удаляем фит и очищаем связанные выборы
                                                 if (prevFeat) {
-                                                    removeChosenFeat(prevFeat);
+                                                    const newFeats = draft.chosen.feats.filter(f => !f.startsWith(featKey + ':'));
+                                                    setChosenFeats(newFeats);
                                                     cleanupFeatChoices(prevFeat);
                                                 }
                                             } else {
-                                                // Сохраняем новый фит
-                                                setChosenFeats([
-                                                    ...draft.chosen.feats.filter(f => f !== selected),
-                                                    value,
-                                                ]);
+                                                // Сохраняем новый фит с уникальным ключом
+                                                const newFeats = [
+                                                    ...draft.chosen.feats.filter(f => !f.startsWith(featKey + ':')),
+                                                    `${featKey}:${value}`,
+                                                ];
+                                                setChosenFeats(newFeats);
 
                                                 // Очищаем выборы предыдущего фита
                                                 if (prevFeat) {
@@ -629,6 +639,50 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                             </div>
                         );
                     }
+
+                    // ========================================================================
+                    // ВЫБОР НАВЫКОВ
+                    // ========================================================================
+                    case "skill": {
+                        return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
+                            const choiceKey = `${source}:skill:${ci}:${idx}`;
+                            const sourceArray = draft.chosen.skills?.[source] || [];
+                            const selected = sourceArray[idx] ?? "";
+
+                            // Чтобы не было дублей
+                            const takenExceptCurrent = sourceArray.filter((_, i) => i !== idx);
+
+                            // Список доступных навыков
+                            const available = (choice.options?.length ? choice.options : SKILLS.map(s => s.key))
+                                .filter((key) => !takenExceptCurrent.includes(key) || key === selected);
+
+                            return (
+                                <select
+                                    key={choiceKey}
+                                    className={getSelectStyles(!!selected)}
+                                    value={selected}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+
+                                        // Создаем массив фиксированной длины для сохранения позиций
+                                        const updated = Array.from({ length: choice.count ?? 1 }, (_, i) =>
+                                            i === idx ? value : (sourceArray[i] || "")
+                                        ).filter((v) => v !== "");
+
+                                        setChosenSkills(source, updated);
+                                    }}
+                                >
+                                    <option value="">Выберите навык</option>
+                                    {available.map((key) => (
+                                        <option key={key} value={key}>
+                                            {SKILL_LABELS[key] ?? key}
+                                        </option>
+                                    ))}
+                                </select>
+                            );
+                        });
+                    }
+
 
                     // ========================================================================
                     // НЕИЗВЕСТНЫЙ ТИП ВЫБОРА

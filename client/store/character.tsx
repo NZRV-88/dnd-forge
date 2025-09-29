@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/lib/supabaseClient";
 import { Abilities, ABILITIES } from "@/data/abilities";
@@ -42,6 +42,7 @@ export type CharacterDraft = {
     basics: Basics;
     stats: Abilities;
     asi: Record<number, AsiSelection>;
+    avatar?: string | null;
 
     // Все выборы игрока (из рас, классов, фитов, подрас и т.п.)
     chosen: {
@@ -187,6 +188,37 @@ export const CharacterContext = createContext<CharacterContextType | undefined>(
 export function CharacterProvider({ children }: { children: React.ReactNode }) {
     const [draft, setDraft] = useState<CharacterDraft>(makeDefaultDraft());
 
+    // Функция миграции старых ключей в новые
+    const migrateOldKeys = useCallback((chosen: any) => {
+        const migrated = { ...chosen };
+        
+        // Мигрируем ключи для всех типов выборов
+        ['abilities', 'skills', 'tools', 'languages', 'spells', 'features', 'fightingStyle'].forEach(type => {
+            if (migrated[type]) {
+                const newTypeData: any = {};
+                
+                Object.entries(migrated[type]).forEach(([key, value]) => {
+                    // Если ключ в старом формате (без уровня), добавляем 'base'
+                    if (key.match(/^(race|subrace|class|subclass)-\d+$/)) {
+                        const newKey = key.replace(/(race|subrace|class|subclass)-(\d+)$/, '$1-base-$2');
+                        newTypeData[newKey] = value;
+                    } else if (key.match(/^(race|subrace|class|subclass)-\d+-\d+-[a-z0-9]+-[a-z0-9]+$/)) {
+                        // Если ключ в новом формате, но без уровня в начале, добавляем 'base'
+                        const newKey = key.replace(/^(race|subrace|class|subclass)-(\d+)-(\d+)-([a-z0-9]+)-([a-z0-9]+)$/, '$1-base-$2-$3-$4-$5');
+                        newTypeData[newKey] = value;
+                    } else {
+                        // Оставляем ключ как есть, если он уже в правильном формате
+                        newTypeData[key] = value;
+                    }
+                });
+                
+                migrated[type] = newTypeData;
+            }
+        });
+        
+        return migrated;
+    }, []);
+
     /* -----------------------------
        Автосохранение в localStorage
     ----------------------------- */
@@ -195,7 +227,12 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         if (raw) {
             try {
                 const parsed = JSON.parse(raw);
-                setDraft({ ...makeDefaultDraft(), ...parsed });
+                // Временно отключаем миграцию
+                setDraft({ 
+                    ...makeDefaultDraft(), 
+                    ...parsed,
+                    chosen: { ...makeDefaultDraft().chosen, ...parsed.chosen }
+                });
             } catch (e) {
                 console.warn("Ошибка загрузки драфта из localStorage", e);
             }
@@ -431,12 +468,15 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             // достаём draft из JSON-поля data
             const savedDraft = data.data;
 
+            // Миграция старых ключей в новые
+            const migratedChosen = migrateOldKeys(savedDraft.chosen || {});
+
             // мержим с дефолтами, чтобы не поломались старые персонажи
             setDraft({
                 ...makeDefaultDraft(),
                 ...savedDraft,
                 basics: { ...makeDefaultDraft().basics, ...savedDraft.basics },
-                chosen: { ...makeDefaultDraft().chosen, ...savedDraft.chosen },
+                chosen: { ...makeDefaultDraft().chosen, ...migratedChosen },
             });
         }
     };

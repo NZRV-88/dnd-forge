@@ -4,6 +4,7 @@ import { useCharacter } from "@/store/character";
 import { Button } from "@/components/ui/button";
 import ExitButton from "@/components/ui/ExitButton";
 import StepArrows from "@/components/ui/StepArrows";
+import CharacterHeader from "@/components/ui/CharacterHeader";
 import { useParams } from "react-router-dom";
 
 // Снаряжение по умолчанию для каждого класса (адаптировано по PHB)
@@ -119,6 +120,9 @@ export default function EquipmentPick() {
             <div className="mx-auto max-w-5xl relative">
                 <StepArrows back={`/create/${id}/abilities`} next={`/create/${id}/summary`} />   
                 <ExitButton />
+
+                {/* Шапка с именем и аватаркой */}
+                <CharacterHeader />
                 <h1 className="text-2xl font-bold mb-6 text-center">
                     Выбор снаряжения
                 </h1>

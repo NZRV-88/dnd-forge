@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { handleNameGenerator } from "./routes/name-generator";
+import { handleAdvancedNameGenerator } from "./routes/advanced-name-generator";
 
 export function createServer() {
   const app = express();
@@ -18,6 +20,12 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+  
+  // Name generator API
+  app.post("/api/name-generator", handleNameGenerator);
+  
+  // Advanced name generator API (syllable-based)
+  app.post("/api/advanced-name-generator", handleAdvancedNameGenerator);
 
   return app;
 }

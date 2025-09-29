@@ -1,6 +1,8 @@
 import { ClassInfo } from "./types";
 
 export const Warlock: ClassInfo = {
+  bg: "/assets/class-bgs/warlock-bg.png",
+  source: "PH24",
   key: "warlock",
   name: "Колдун",
   hitDice: 8, // d8

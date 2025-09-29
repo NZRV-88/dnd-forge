@@ -2,6 +2,7 @@ import { ClassInfo } from "./types";
 
 export const Rogue: ClassInfo = {
     bg: "/assets/class-bgs/rogue-bg.png",
+  source: "PH24",
   key: "rogue",
   name: "Плут",
   desc: "Ловкий мастер скрытности, ловушек и точных ударов.",

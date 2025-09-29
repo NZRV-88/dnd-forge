@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/lib/supabaseClient";
 import { CLASS_CATALOG } from "@/data/classes";
 import { RACE_CATALOG } from "@/data/races";
+import { getClassByKey } from "@/data/classes";
 
 type Basics = {
     name: string;
@@ -26,6 +27,8 @@ type SupabaseCharacter = {
     data: {
         basics: Basics;
         stats?: Record<string, number>;
+        hpRolls?: number[];
+        avatar?: string | null;
         created?: string;
     };
     created_at: string;
@@ -103,6 +106,9 @@ export default function Characters() {
                         const classInfo = CLASS_CATALOG.find(
                             (c) => c.key.toLowerCase() === b.class.toLowerCase()
                         );
+                        const subclassInfo = classInfo?.subclasses.find(
+                            (s) => s.key.toLowerCase() === b.subclass.toLowerCase()
+                        );
                         const raceInfo = RACE_CATALOG.find(
                             (c) => c.key.toLowerCase() === b.race.toLowerCase()
                         );
@@ -131,10 +137,18 @@ export default function Characters() {
                                     )}
 
                                     <div className="relative flex items-center gap-4">
-                                        {/* Аватарка */}
-                                        <div className="w-[75px] h-[75px] bg-gray-400/70 flex items-center justify-center text-4xl font-bold text-gray-100 font-monomakh">
-                                            {b.name ? b.name.charAt(0).toUpperCase() : "?"}
-                                        </div>
+                                        {/* Портрет */}
+                                        {char.data.avatar ? (
+                                            <img
+                                                src={char.data.avatar}
+                                                alt="Портрет персонажа"
+                                                className="w-[90px] h-[90px] rounded-lg object-cover border-2 border-white/20"
+                                            />
+                                        ) : (
+                                            <div className="w-[90px] h-[90px] bg-gray-400/70 flex items-center justify-center text-4xl font-bold text-gray-100 font-monomakh rounded-lg">
+                                                {b.name ? b.name.charAt(0).toUpperCase() : "?"}
+                                            </div>
+                                        )}
 
                                         {/* Имя и инфа */}
                                         <div>
@@ -143,7 +157,7 @@ export default function Characters() {
                                             </h1>
                                             <div className="text-sm text-gray-200 drop-shadow">
                                                 {raceInfo?.name || b.race } • {classInfo?.name || b.class}
-                                                {b.subclass ? ` • ${b.subclass}` : ""} • ур. {b.level}
+                                                {subclassInfo?.name ? ` • ${subclassInfo.name}` : ""} • Уровень {b.level}
                                             </div>
                                         </div>
                                     </div>

@@ -7,6 +7,7 @@ import { CLASS_CATALOG, CLASS_LABELS } from "@/data/classes";
 import type { ClassInfo } from "@/data/classes/types";
 import ExitButton from "@/components/ui/ExitButton";
 import StepArrows from "@/components/ui/StepArrows";
+import CharacterHeader from "@/components/ui/CharacterHeader";
 import * as Icons from "@/components/refs/icons";
 import { Slider } from "@/components/ui/slider";
 import FeatureBlock from "@/components/ui/FeatureBlock";
@@ -90,18 +91,40 @@ export default function ClassPick() {
     const feats = useMemo(() => {
         if (!info) return [];
 
-        const classFeats: { name: string; desc: string; choices?: any[]; featureLevel: number }[] = [];
+        const classFeats: { 
+            name: string; 
+            desc: string; 
+            choices?: any[]; 
+            featureLevel: number;
+            originalIndex: number;
+            originalLevel: number;
+            isSubclass?: boolean;
+            uniqueId: string;
+        }[] = [];
 
         // Фичи класса
         Object.entries(info.features).forEach(([lvl, featsArr]) => {
-            featsArr.forEach(f => classFeats.push({ ...f, featureLevel: Number(lvl) }));
+            featsArr.forEach((f, featIdx) => classFeats.push({ 
+                ...f, 
+                featureLevel: Number(lvl),
+                originalIndex: featIdx,
+                originalLevel: Number(lvl),
+                uniqueId: `${info.key}-${lvl}-${featIdx}-${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+            }));
         });
 
         // Фичи подклассов, если выбрана
         const subclass = info.subclasses.find(sc => sc.key === draft.basics.subclass);
         if (subclass) {
             Object.entries(subclass.features || {}).forEach(([lvl, featsArr]) => {
-                featsArr.forEach(f => classFeats.push({ ...f, featureLevel: Number(lvl) }));
+                featsArr.forEach((f, featIdx) => classFeats.push({ 
+                    ...f, 
+                    featureLevel: Number(lvl),
+                    originalIndex: featIdx,
+                    originalLevel: Number(lvl),
+                    isSubclass: true,
+                    uniqueId: `${info.key}-subclass-${subclass.key}-${lvl}-${featIdx}-${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+                }));
             });
         }
 
@@ -119,6 +142,10 @@ export default function ClassPick() {
                     back={`/create/${id}`}
                     next={`/create/${id}/background`}
                 />
+
+                {/* Шапка с именем и аватаркой */}
+                <CharacterHeader />
+
                 <div className="mb-6 relative">
                     <div>
                         <h1 className="text-2xl font-semibold">Выбор класса</h1>
@@ -259,16 +286,7 @@ export default function ClassPick() {
                                     </span>
                                 </div>
                                 <div
-                                    className="flex items-center gap-2 rounded border p-2 cursor-pointer hover:bg-muted/40"
-                                    title="Кликните, чтобы бросить кость хитов за каждый уровень (2+)"
-                                    onClick={() => {
-                                        if (!info) return;
-                                        const d = info.hitDice;
-                                        for (let lvl = 2; lvl <= draft.basics.level; lvl++) {
-                                            const roll = Math.floor(Math.random() * d) + 1;
-                                            setHpRollAtLevel(lvl, roll);
-                                        }
-                                    }}
+                                    className="flex items-center gap-2 rounded border p-2"                                                   
                                 >
                                     <span className="font-medium">Кость хитов:</span> {draft.basics.level}d{info.hitDice}
                                 </div>
@@ -342,13 +360,17 @@ export default function ClassPick() {
                             <div className="grid grid-cols-1 gap-4">
                                 {feats.map((f, idx) => (
                                     <FeatureBlock
-                                        key={idx}
+                                        key={f.uniqueId}
                                         name={f.name}
                                         desc={f.desc}
                                         featureLevel={f.featureLevel}
                                         source="class"
                                         idx={idx}
                                         choices={f.choices}
+                                        originalIndex={f.originalIndex}
+                                        originalLevel={f.originalLevel}
+                                        isSubclass={f.isSubclass}
+                                        uniqueId={f.uniqueId}
                                     />
                                 ))}
                             </div>

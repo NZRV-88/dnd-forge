@@ -1,6 +1,8 @@
 import { ClassInfo } from "./types";
 
 export const Sorcerer: ClassInfo = {
+  bg: "/assets/class-bgs/sorcerer-bg.png",
+  source: "PH24",
   key: "sorcerer",
   name: "Чародей",
   desc: "Врожденная магия и мощные метамагии.",

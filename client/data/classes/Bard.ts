@@ -1,7 +1,9 @@
 import { ClassInfo } from "./types";
 
 export const Bard: ClassInfo = {
+  bg: "/assets/class-bgs/bard-bg.png",
   key: "bard",
+  source: "PH24",
   name: "Бард",
   desc: "Вдохновитель и универсал с магией музыки.",
   hitDice: 8, // d8
