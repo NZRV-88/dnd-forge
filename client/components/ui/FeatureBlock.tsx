@@ -154,9 +154,10 @@ export default function FeatureBlock({
 
   return (
     <div className={`relative border rounded overflow-hidden ${hasUnfinishedChoice ? "border-blue-400" : "border-stone-200"}`}>
+      {/* Верхний индикатор незавершённого выбора */}
       {hasUnfinishedChoice && (
         <div className="absolute -top-2 -left-2 z-20">
-          <div className="bg-blue-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs shadow-md"></div>
+          <div className="bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-md">!</div>
         </div>
       )}
 
@@ -165,12 +166,21 @@ export default function FeatureBlock({
         className={`flex justify-between items-center p-2 cursor-pointer transition-colors duration-200 ${expanded ? "bg-primary/10 border-b border-primary" : "bg-muted/20 hover:bg-primary/5"}`}
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex flex-col">
-          <span className="font-medium">{name}</span>
-          <span className="text-xs text-muted-foreground mt-1">
-            {featureLevel} уровень
-            {choiceCountDisplay && ` • Выбор: ${choiceCountDisplay}`}
-          </span>
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col">
+            <span className="font-medium">{name}</span>
+            <span className="text-xs text-muted-foreground mt-1">
+              {featureLevel} уровень
+            </span>
+          </div>
+          {total > 0 && (
+            <span
+              className={`ml-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${hasUnfinishedChoice ? "border-blue-400 text-blue-600 bg-blue-50" : "border-emerald-300 text-emerald-700 bg-emerald-50"}`}
+              title={hasUnfinishedChoice ? "Нужно сделать выбор" : "Выбор завершён"}
+            >
+              Выбор: {choiceCountDisplay}
+            </span>
+          )}
         </div>
         <div className="flex items-center justify-center">
           {expanded ? <ChevronUp className="w-6 h-6 text-primary" /> : <ChevronDown className="w-6 h-6 text-primary" />}

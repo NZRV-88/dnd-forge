@@ -21,6 +21,7 @@ import * as Icons from "@/components/refs/icons";
 import { getDamageIcon } from "@/components/refs/icons";
 import { useParams } from "react-router-dom";
 import ChoiceRenderer from "@/components/ui/ChoiceRenderer";
+import FeatureBlock from "@/components/ui/FeatureBlock";
 interface RaceProps {
     r: RaceInfo;
 }
@@ -338,7 +339,7 @@ export default function Race() {
                                 </div>
                             </div>
 
-                            {/* Черты */}
+                            {/* Черты (используем FeatureBlock как для классов) */}
                             {r.traits.length > 0 && (
                                 <div>
                                     <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
@@ -346,23 +347,16 @@ export default function Race() {
                                     </h3>
                                     <div className="grid grid-cols-1 gap-4">
                                         {r.traits?.map((trait, ti) => (
-                                            <div key={ti} className="relative flex flex-col rounded border p-2 bg-muted/20">
-                                                <span className="font-medium">{trait.name}</span>
-                                                <div className="text-xs text-muted-foreground mt-1 [&>p]:mb-4">
-                                                    <ReactMarkdown>{trait.desc}</ReactMarkdown>
-                                                </div>
-
-                                                <div className="mt-auto">
-                                                    {trait.choices?.map((choice, ci) => (
-                                                        <ChoiceRenderer
-                                                            key={`race:${r.key}:trait-${ti}-${ci}`}
-                                                            ci={ci}
-                                                            source="race"
-                                                            choices={[choice]}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </div>
+                                            <FeatureBlock
+                                                key={`race-trait-${ti}`}
+                                                name={trait.name}
+                                                desc={trait.desc}
+                                                featureLevel={1}
+                                                source="race"
+                                                idx={ti}
+                                                choices={trait.choices}
+                                                textMaxHeight={100}
+                                            />
                                         ))}
                                     </div>
                                 </div>
@@ -542,27 +536,16 @@ export default function Race() {
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {r.subraces.find((s) => s.key === subrace)?.traits?.map((trait, ti) => (
-                                            <div key={ti} className="relative flex flex-col rounded border p-2 bg-muted/20">
-                                                <span className="font-medium">{trait.name}</span>
-                                                <div className="text-xs text-muted-foreground mt-1 [&>p]:mb-4">
-                                                    <ReactMarkdown>{trait.desc}</ReactMarkdown>
-                                                </div>
-                                                {/*<p className="text-xs text-muted-foreground mt-1">{trait.desc}</p>*/}
-
-                                                {/* --- ВЫБОРЫ --- */}
-
-                                                <div className="mt-auto">
-                                                {/* если у трейта есть выборы */}
-                                                {trait.choices?.map((choice, ci) => (
-                                                    <ChoiceRenderer
-                                                        key={`subrace:${r.key}:trait-${ti}-${ci}`}
-                                                        ci={ci}
-                                                        source={`subrace`}
-                                                        choices={[choice]}
-                                                    />
-                                                ))}
-                                                </div>
-                                            </div>
+                                            <FeatureBlock
+                                                key={`subrace-trait-${ti}`}
+                                                name={trait.name}
+                                                desc={trait.desc}
+                                                featureLevel={1}
+                                                source="subrace"
+                                                idx={ti}
+                                                choices={trait.choices}
+                                                textMaxHeight={100}
+                                            />
                                         ))}
                                     </div>
                                 </div>
