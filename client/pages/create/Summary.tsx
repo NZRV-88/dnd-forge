@@ -37,7 +37,7 @@ export default function Summary() {
         try {
             await saveToSupabase();
             alert("Персонаж сохранён!");
-            nav("/characters");
+            nav(`/characters/${draft.id}`);
         } catch (e) {
             console.error("Ошибка при сохранении персонажа:", e);
             alert("Ошибка при сохранении");

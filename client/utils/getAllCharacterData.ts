@@ -28,6 +28,8 @@ export function getAllCharacterData(draft: CharacterDraft) {
     const armors = new Set<string>();
     const savingThrows = new Set<string>();
     const abilityBonuses: Partial<Record<keyof Abilities, number>> = {};
+    // Динамические максимумы характеристик (по умолчанию 20)
+    const abilityMax: Partial<Record<keyof Abilities, number>> = {};
     let speed: number | undefined;
     let initiativeBonus: number | undefined;
 
@@ -70,6 +72,20 @@ export function getAllCharacterData(draft: CharacterDraft) {
                     for (const [k, v] of Object.entries(bonus.abilities)) {
                         abilityBonuses[k as keyof Abilities] =
                             (abilityBonuses[k as keyof Abilities] || 0) + v;
+                    }
+                }
+
+                // Изменение максимума характеристик
+                if ((bonus as any).abilityMax) {
+                    for (const [k, v] of Object.entries((bonus as any).abilityMax as Record<string, number>)) {
+                        const key = k as keyof Abilities;
+                        abilityMax[key] = Math.max(abilityMax[key] ?? 20, v);
+                    }
+                }
+                if ((bonus as any).abilityMaxIncrease) {
+                    for (const [k, v] of Object.entries((bonus as any).abilityMaxIncrease as Record<string, number>)) {
+                        const key = k as keyof Abilities;
+                        abilityMax[key] = (abilityMax[key] ?? 20) + v;
                     }
                 }
 
@@ -159,6 +175,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
         armors: Array.from(armors),
         savingThrows: Array.from(savingThrows),
         abilityBonuses,
+        abilityMax,
         speed,
         initiativeBonus,
     };

@@ -28,6 +28,9 @@ export type FeatBonus = {
     desc?: string;            // Описание бонуса
     abilities?: Partial<Record<keyof Abilities, number>>;
     abilityChoice?: (keyof Abilities)[];
+    // Повышение максимума характеристики (обычно 20). Либо установить конкретное значение, либо увеличить на N
+    abilityMax?: Partial<Record<keyof Abilities, number>>;
+    abilityMaxIncrease?: Partial<Record<keyof Abilities, number>>;
     skills?: string[];
     initiative?: number;
     speed?: number;

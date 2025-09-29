@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { RACE_CATALOG } from "@/data/races";
 import { CLASS_LABELS } from "@/data/classes";
 import { getEffectiveSpeed } from "@/data/races/types"; 
+import { supabase } from "@/lib/supabaseClient";
 
 const LIST_KEY = "dnd-ru-characters";
 
@@ -32,43 +33,45 @@ export default function CharacterView() {
     const [showLog, setShowLog] = useState(false);
 
 
-    // normalize skills/proficiencies on load
+    // Load character by id from Supabase
     useEffect(() => {
-        try {
-            const raw = localStorage.getItem(LIST_KEY) || "[]";
-            const list = JSON.parse(raw);
-            const found = list.find((c: any) => String(c.id) === String(id));
-            if (!found) {
-                setChar(null);
-                return;
-            }
-
-            // Normalise skills into array of keys (and accept different incoming formats)
-            if (found.skills) {
-                if (Array.isArray(found.skills)) {
-                    // already array -> ok
-                } else if (typeof found.skills === "object") {
-                    // convert object like { "Атлетика": { prof: true }, "Обман": true } -> array of names
-                    const arr: string[] = [];
-                    for (const [k, v] of Object.entries(found.skills)) {
-                        if (v && (v === true || (typeof v === "object" && ("prof" in v ? (v as any).prof : true)))) {
-                            arr.push(k);
-                        }
-                    }
-                    found.skills = arr;
-                } else {
-                    found.skills = [];
+        (async () => {
+            try {
+                const { data, error } = await supabase
+                    .from("characters")
+                    .select("*")
+                    .eq("id", id)
+                    .single();
+                if (error || !data) {
+                    setChar(null);
+                    return;
                 }
-            } else {
-                found.skills = [];
+                const draft = data.data || {};
+                // normalize skills
+                if (draft.skills) {
+                    if (Array.isArray(draft.skills)) {
+                        // ok
+                    } else if (typeof draft.skills === "object") {
+                        const arr: string[] = [];
+                        for (const [k, v] of Object.entries(draft.skills)) {
+                            if (v && (v === true || (typeof v === "object" && ("prof" in (v as any) ? (v as any).prof : true)))) {
+                                arr.push(k);
+                            }
+                        }
+                        draft.skills = arr;
+                    } else {
+                        draft.skills = [];
+                    }
+                } else {
+                    draft.skills = [];
+                }
+                setChar(draft);
+                setCurHp(draft.basics?.hpCurrent ?? 0);
+                setTempHp(draft.basics?.hpTemp ?? 0);
+            } catch {
+                setChar(null);
             }
-
-            setChar(found);
-            setCurHp(found.basics?.hpCurrent ?? 0);
-            setTempHp(found.basics?.hpTemp ?? 0);
-        } catch (e) {
-            setChar(null);
-        }
+        })();
     }, [id]);
 
     // final stats calculation (ASIs + race + feats as before)
@@ -122,12 +125,17 @@ export default function CharacterView() {
         const out: Record<string, number> = {};
         keys.forEach((k) => {
             const base = stats[k] || 0;
-            out[k] =
+            const total =
                 base +
                 (raceBonuses[k] || 0) +
                 (backgroundBonuses[k] || 0) +
                 (asiBonuses[k] || 0) +
                 (featBonuses[k] || 0);
+            const capFromData = (char?.abilityMax && typeof char.abilityMax[k] === "number")
+                ? char.abilityMax[k]
+                : undefined;
+            const maxVal = typeof capFromData === "number" ? capFromData : 20;
+            out[k] = Math.min(maxVal, total);
         });
 
         return {
@@ -208,20 +216,21 @@ export default function CharacterView() {
         setRollLog((prev) => [entry, ...prev].slice(0, 200));
     };
 
-    // Save changes (we update localStorage so hp changes persist)
-    const saveAll = () => {
+    // Save changes back to Supabase
+    const saveAll = async () => {
         try {
-            const raw = localStorage.getItem(LIST_KEY) || "[]";
-            const list = JSON.parse(raw);
-            const idx = list.findIndex((c: any) => String(c.id) === String(id));
-            if (idx >= 0) {
-                list[idx].basics.hpCurrent = curHp;
-                list[idx].basics.hpTemp = tempHp;
-                list[idx].skills = skillProfs;
-                localStorage.setItem(LIST_KEY, JSON.stringify(list));
-                setChar(list[idx]);
-            }
-        } catch { /* silent */ }
+            if (!char) return;
+            const updated = { ...char };
+            updated.basics = { ...updated.basics, hpCurrent: curHp, hpTemp: tempHp };
+            updated.skills = skillProfs;
+            const { error } = await supabase
+                .from("characters")
+                .update({ data: updated, updated_at: new Date() })
+                .eq("id", id);
+            if (!error) setChar(updated);
+        } catch {
+            // noop
+        }
     };
 
     // small helper to format ability mods
@@ -352,14 +361,7 @@ export default function CharacterView() {
                                     ? char.skills.filter((s: string) => s !== skillKey)
                                     : [...char.skills, skillKey];
 
-                                setChar((prev: any) => {
-                                    const newChar = { ...prev, skills: updated };
-
-                                    // сразу сохраняем изменения
-                                    localStorage.setItem("char", JSON.stringify(newChar));
-
-                                    return newChar;
-                                });
+                                setChar((prev: any) => ({ ...prev, skills: updated }));
                             }}
                         />
                     </div>
