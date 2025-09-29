@@ -81,9 +81,8 @@ export const Paladin: ClassInfo = {
                 desc: `Вы получаете черту Увеличение характеристик или другую черту на ваш выбор, требованиям которой вы соответствуете.`,
                 choices: [
                     {
-                        type: "feature",
+                        type: "feat",
                         count: 1,
-                        options: ["asi"],
                     }
                 ],
             },
