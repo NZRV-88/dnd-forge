@@ -8,8 +8,14 @@ export type Feature = {
     desc: string;
     choices?: ChoiceOption[];
     spells?: string[];              // Заклинания от класса
+    preparedSpells?: ClassSpell[];   
+    bonus?: Bonus[]; 
     source?: string
 };
+export type Bonus = {
+    key: string;
+    value: string;
+}
 
 
 export type SubclassInfo = {
@@ -19,7 +25,7 @@ export type SubclassInfo = {
     name?: string,
     nameEn?: string,
     desc: string;
-    features?: Record<number, Feature[]>;
+    features?: Record<number, Feature[]>;          
 };
 
 export interface ClassInfo {
@@ -50,3 +56,9 @@ export interface SpellcastingLevel {
     prepared?: string; // формула для подготовленных (например "paladinLevel + CHA")
     known?: number;    // если у класса фиксированное число известных
 }
+
+export type ClassSpell = {
+    level: number;              // уровень персонажа, с которого доступно заклинание
+    spells?: string[];          // список ключей заклинаний (для innate)
+    desc?: string;              // пояснение
+};
