@@ -38,6 +38,7 @@ function calcMaxHP(
     level: number,
     conMod: number,
     hpMode: "fixed" | "roll",
+    hpRolls?: number[],
 ) {
     if (!info || level < 1) return 0;
     
@@ -49,12 +50,15 @@ function calcMaxHP(
     // 2+ уровни: добавляем хиты за каждый уровень
     if (level > 1) {
         if (hpMode === "fixed") {
-            // Среднее значение кости хитов (округленное в большую сторону) + модификатор Телосложения
             const averageHitDie = Math.ceil(hitDie / 2) + 1;
             hp += (level - 1) * (averageHitDie + conMod);
         } else {
-            // Минимальное значение (1) + модификатор Телосложения
-            hp += (level - 1) * (1 + conMod);
+            const rolls = hpRolls || [];
+            for (let lvl = 2; lvl <= level; lvl++) {
+                const idx = lvl - 2;
+                const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
+                hp += dieValue + conMod;
+            }
         }
     }
     
@@ -64,7 +68,7 @@ function calcMaxHP(
 export default function ClassPick() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
-    const { draft, setBasics, setSubclass, setLevel } = useCharacter();
+    const { draft, setBasics, setSubclass, setLevel, setHpRollAtLevel } = useCharacter();
     
     // Локальное состояние для режима хитов
     const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
@@ -82,7 +86,7 @@ export default function ClassPick() {
     const conScore = Number(draft.stats?.con) || 10;
     const conMod = Math.floor((conScore - 10) / 2);
 
-    const maxHP = calcMaxHP(info, draft.basics.level, conMod, localHpMode);
+    const maxHP = calcMaxHP(info, draft.basics.level, conMod, localHpMode, draft.hpRolls);
     const feats = useMemo(() => {
         if (!info) return [];
 
@@ -254,7 +258,18 @@ export default function ClassPick() {
                                         </span>
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-2 rounded border p-2">
+                                <div
+                                    className="flex items-center gap-2 rounded border p-2 cursor-pointer hover:bg-muted/40"
+                                    title="Кликните, чтобы бросить кость хитов за каждый уровень (2+)"
+                                    onClick={() => {
+                                        if (!info) return;
+                                        const d = info.hitDice;
+                                        for (let lvl = 2; lvl <= draft.basics.level; lvl++) {
+                                            const roll = Math.floor(Math.random() * d) + 1;
+                                            setHpRollAtLevel(lvl, roll);
+                                        }
+                                    }}
+                                >
                                     <span className="font-medium">Кость хитов:</span> {draft.basics.level}d{info.hitDice}
                                 </div>
                                 <div className="flex items-center gap-2 rounded border p-2">
@@ -280,14 +295,42 @@ export default function ClassPick() {
                                         <strong>1-й уровень:</strong> {info.hitDice} + {conMod >= 0 ? "+" : ""}{conMod} = {info.hitDice + conMod} хитов
                                     </p>
                                     {draft.basics.level > 1 && (
-                                        <p>
-                                            <strong>2-{draft.basics.level} уровни:</strong> {draft.basics.level - 1} × ({localHpMode === "fixed" ? Math.ceil(info.hitDice / 2) + 1 : 1} + {conMod >= 0 ? "+" : ""}{conMod}) = {(draft.basics.level - 1) * ((localHpMode === "fixed" ? Math.ceil(info.hitDice / 2) + 1 : 1) + conMod)} хитов
-                                        </p>
+                                        <div>
+                                            {localHpMode === "fixed" ? (
+                                                <p>
+                                                    <strong>2-{draft.basics.level} уровни:</strong> {draft.basics.level - 1} × ({Math.ceil(info.hitDice / 2) + 1} + {conMod >= 0 ? "+" : ""}{conMod}) = {(draft.basics.level - 1) * ((Math.ceil(info.hitDice / 2) + 1) + conMod)} хитов
+                                                </p>
+                                            ) : (
+                                                <div className="space-y-1">
+                                                    <p className="font-medium">Броски за уровни:</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {Array.from({ length: draft.basics.level - 1 }).map((_, i) => {
+                                                            const lvl = i + 2;
+                                                            const v = draft.hpRolls?.[i] || 0;
+                                                            return (
+                                                                <button
+                                                                    key={lvl}
+                                                                    className={`px-2 py-1 rounded border text-xs ${v > 0 ? "border-green-500 text-green-700" : "border-gray-300 text-gray-500"}`}
+                                                                    title={`Уровень ${lvl}: кость d${info.hitDice}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const roll = Math.floor(Math.random() * info.hitDice) + 1;
+                                                                        setHpRollAtLevel(lvl, roll);
+                                                                    }}
+                                                                >
+                                                                    ур.{lvl}: {v > 0 ? v : "—"}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                     <p className="mt-1 text-xs text-blue-600">
                                         {localHpMode === "fixed" 
                                             ? "Используется среднее значение кости хитов (округленное в большую сторону)" 
-                                            : "Используется минимальное значение (1) для каждого уровня"
+                                            : "Нажмите на уровни выше, чтобы бросить d-кость и применить результат"
                                         }
                                     </p>
                                 </div>

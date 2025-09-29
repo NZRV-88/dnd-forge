@@ -56,6 +56,8 @@ export type CharacterDraft = {
     };
     abilitiesMode?: "array" | "roll" | "point-buy";
     rolls?: RollResult[];
+    // Броски кости хитов за уровни, начиная со 2-го уровня: hpRolls[0] -> уровень 2
+    hpRolls?: number[];
 };
 
 // Тип контекста (API для использования в приложении)
@@ -112,6 +114,9 @@ export type CharacterContextType = {
     setSubclass: (subclass: string) => void;
     setBackground: (background: string | null) => void;
     setAbilitiesMode: (mode: "array" | "roll" | "point-buy") => void;
+    // Работа с бросками кости хитов
+    setHpRollAtLevel: (level: number, value: number | null) => void; // level >= 2
+    resetHpRolls: () => void;
   
 };
 
@@ -163,6 +168,7 @@ const makeDefaultDraft = (): CharacterDraft => ({
     },
     abilitiesMode: "array",
     rolls: [],
+    hpRolls: [],
 });
 
 /* ------------------------------------------------------
@@ -227,6 +233,20 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             },
         }));
     };
+
+    // ---- HP Rolls helpers ----
+    const setHpRollAtLevel = (level: number, value: number | null) => {
+        if (level < 2) return;
+        setDraft((d) => {
+            const next = [...(d.hpRolls || [])];
+            const idx = level - 2;
+            while (next.length <= idx) next.push(0);
+            next[idx] = value === null ? 0 : value;
+            return { ...d, hpRolls: next };
+        });
+    };
+
+    const resetHpRolls = () => setDraft((d) => ({ ...d, hpRolls: [] }));
 
     /* -----------------------------
        Сеттеры для chosen.*
@@ -456,6 +476,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setChosenFeatures,
         removeChosenFeature, 
         setChosenFightingStyle,
+        setHpRollAtLevel,
+        resetHpRolls,
     };
 
     return (

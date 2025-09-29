@@ -98,7 +98,7 @@ export default function Characters() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {characters.map((char) => {
                         const b = char.data.basics;
-                        const hpMax = calcMaxHPForCard(b, char.data.stats);
+                        const hpMax = calcMaxHPForCard(b, char.data.stats, char.data.hpRolls);
 
                         const classInfo = CLASS_CATALOG.find(
                             (c) => c.key.toLowerCase() === b.class.toLowerCase()
@@ -229,7 +229,7 @@ export default function Characters() {
     );
 }
 
-function calcMaxHPForCard(basics: Basics, stats?: Record<string, number>) {
+function calcMaxHPForCard(basics: Basics, stats?: Record<string, number>, hpRolls?: number[]) {
     const die: Record<string, number> = {
         barbarian: 12,
         bard: 8,
@@ -250,7 +250,17 @@ function calcMaxHPForCard(basics: Basics, stats?: Record<string, number>) {
     const level = basics.level || 1;
     const hpMode = basics.hpMode || "fixed";
     let hp = d + conMod;
-    if (hpMode === "fixed") hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
-    else hp += (level - 1) * (1 + conMod);
+    if (level > 1) {
+        if (hpMode === "fixed") {
+            hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
+        } else {
+            const rolls = hpRolls || [];
+            for (let lvl = 2; lvl <= level; lvl++) {
+                const idx = lvl - 2;
+                const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
+                hp += dieValue + conMod;
+            }
+        }
+    }
     return Math.max(0, hp);
 }

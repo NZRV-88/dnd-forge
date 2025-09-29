@@ -172,8 +172,18 @@ export default function CharacterView() {
         const level = b.level || 1;
         const hpMode = b.hpMode || "fixed";
         let hp = d + conMod;
-        if (hpMode === "fixed") hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
-        else hp += (level - 1) * (1 + conMod);
+        if (level > 1) {
+            if (hpMode === "fixed") {
+                hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
+            } else {
+                const rolls: number[] = Array.isArray(char.hpRolls) ? char.hpRolls : [];
+                for (let lvl = 2; lvl <= level; lvl++) {
+                    const idx = lvl - 2;
+                    const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
+                    hp += dieValue + conMod;
+                }
+            }
+        }
         const extra = ((finalStats as any)._extraHp || 0) * level;
         return Math.max(0, hp + extra);
     })();
