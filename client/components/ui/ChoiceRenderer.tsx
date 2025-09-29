@@ -417,10 +417,28 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                             ? availableFeatures.find(f => f.key === selected[0]) 
                             : null;
 
-                        // Проверяем завершенность всех подвыборов
+                        // Проверяем завершенность всех подвыборов корректно по соответствующим сторам
                         const isChoiceComplete = selectedFeature?.choices?.every((subChoice) => {
-                            const subSourceArray = draft.chosen[`feature-${selectedFeature.key}`]?.[subChoice.type + "s"] || [];
-                            return subSourceArray.length >= (subChoice.count ?? 1);
+                            const subSource = `feature-${selectedFeature.key}`;
+                            const cnt = subChoice.count ?? 1;
+                            switch (subChoice.type) {
+                                case "ability":
+                                    return (draft.chosen.abilities?.[subSource]?.length || 0) >= cnt;
+                                case "skill":
+                                    return (draft.chosen.skills?.[subSource]?.length || 0) >= cnt;
+                                case "tool":
+                                    return (draft.chosen.tools?.[subSource]?.length || 0) >= cnt;
+                                case "language":
+                                    return (draft.chosen.languages?.[subSource]?.length || 0) >= cnt;
+                                case "spell":
+                                    return (draft.chosen.spells?.[subSource]?.length || 0) >= cnt;
+                                case "feature":
+                                    return (draft.chosen.features?.[subSource]?.length || 0) >= cnt;
+                                case "fighting-style":
+                                    return (draft.chosen.fightingStyle?.[subSource]?.length || 0) >= cnt;
+                                default:
+                                    return true;
+                            }
                         }) ?? true;
 
                         return (
