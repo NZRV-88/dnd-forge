@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,13 @@ const ALL_CLASSES = [
     "druid",
 ];
 
+/**
+ * Рассчитывает максимальные хиты согласно правилам D&D
+ * @param info - информация о классе
+ * @param level - уровень персонажа
+ * @param conMod - модификатор Телосложения
+ * @param hpMode - режим расчета хитов ("fixed" = среднее значение, "roll" = минимум)
+ */
 function calcMaxHP(
     info: ClassInfo | undefined,
     level: number,
@@ -33,13 +40,24 @@ function calcMaxHP(
     hpMode: "fixed" | "roll",
 ) {
     if (!info || level < 1) return 0;
-    const die = info.hitDice;
-    let hp = die + conMod;
-    if (hpMode === "fixed") {
-        hp += (level - 1) * (Math.floor(die / 2) + 1 + conMod);
-    } else {
-        hp += (level - 1) * (1 + conMod);
+    
+    const hitDie = info.hitDice;
+    
+    // 1-й уровень: максимум кости хитов + модификатор Телосложения
+    let hp = hitDie + conMod;
+    
+    // 2+ уровни: добавляем хиты за каждый уровень
+    if (level > 1) {
+        if (hpMode === "fixed") {
+            // Среднее значение кости хитов (округленное в большую сторону) + модификатор Телосложения
+            const averageHitDie = Math.ceil(hitDie / 2) + 1;
+            hp += (level - 1) * (averageHitDie + conMod);
+        } else {
+            // Минимальное значение (1) + модификатор Телосложения
+            hp += (level - 1) * (1 + conMod);
+        }
     }
+    
     return hp;
 }
 
@@ -47,6 +65,15 @@ export default function ClassPick() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
     const { draft, setBasics, setSubclass, setLevel } = useCharacter();
+    
+    // Локальное состояние для режима хитов
+    const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
+    
+    // Функция для обновления режима хитов
+    const handleHpModeChange = (mode: "fixed" | "roll") => {
+        setLocalHpMode(mode);
+        setBasics({ hpMode: mode });
+    };
 
     const info = useMemo(
         () => CLASS_CATALOG.find((c) => c.key === draft.basics.class),
@@ -55,14 +82,7 @@ export default function ClassPick() {
     const conScore = Number(draft.stats?.con) || 10;
     const conMod = Math.floor((conScore - 10) / 2);
 
-    const hitDie = info?.hitDice ?? 8;
-    const maxHP =
-        hitDie +
-        conMod +
-        (draft.basics.level - 1) *
-        (draft.basics.hpMode === "fixed"
-            ? Math.floor(hitDie / 2) + 1 + conMod
-            : 1 + conMod);
+    const maxHP = calcMaxHP(info, draft.basics.level, conMod, localHpMode);
     const feats = useMemo(() => {
         if (!info) return [];
 
@@ -193,6 +213,36 @@ export default function ClassPick() {
                                     </div>
                                 </h3>
                             </div>
+
+                            {/* Режим хитов */}
+                            <div className="mb-4">
+                                <h3 className="text-lg font-semibold mb-3 pl-3 flex items-center border-l-2 border-primary gap-2">
+                                    РЕЖИМ РОСТА ХИТОВ:
+                                </h3>
+                                <div className="flex gap-6">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="hpMode"
+                                            checked={localHpMode === "fixed"}
+                                            onChange={() => handleHpModeChange("fixed")}
+                                            className="w-4 h-4 text-primary focus:ring-primary"
+                                        />
+                                        <span className="font-medium">Фиксированный (усреднённый)</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="hpMode"
+                                            checked={localHpMode === "roll"}
+                                            onChange={() => handleHpModeChange("roll")}
+                                            className="w-4 h-4 text-primary focus:ring-primary"
+                                        />
+                                        <span className="font-medium">Бросок кубика</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             {/* Основная инфа */}
                             <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div className="flex items-center gap-2 rounded border p-2">
@@ -208,8 +258,38 @@ export default function ClassPick() {
                                     <span className="font-medium">Кость хитов:</span> {draft.basics.level}d{info.hitDice}
                                 </div>
                                 <div className="flex items-center gap-2 rounded border p-2">
+                                    <span className="font-medium">Модификатор Телосложения:</span>{" "}
+                                    <span className={conMod >= 0 ? "text-green-600" : "text-red-600"}>
+                                        {conMod >= 0 ? "+" : ""}{conMod}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 rounded border p-2">
                                     <span className="font-medium">Основные характеристики:</span>{" "}
                                     {info.mainStats?.join(", ") || "—"}
+                                </div>
+                            </div>
+
+                            {/* Информация о расчете хитов */}
+                            <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-3 text-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Icons.Heart className="w-4 h-4 text-blue-600" />
+                                    <span className="font-medium text-blue-800">Расчет хитов</span>
+                                </div>
+                                <div className="text-blue-700">
+                                    <p className="mb-1">
+                                        <strong>1-й уровень:</strong> {info.hitDice} + {conMod >= 0 ? "+" : ""}{conMod} = {info.hitDice + conMod} хитов
+                                    </p>
+                                    {draft.basics.level > 1 && (
+                                        <p>
+                                            <strong>2-{draft.basics.level} уровни:</strong> {draft.basics.level - 1} × ({localHpMode === "fixed" ? Math.ceil(info.hitDice / 2) + 1 : 1} + {conMod >= 0 ? "+" : ""}{conMod}) = {(draft.basics.level - 1) * ((localHpMode === "fixed" ? Math.ceil(info.hitDice / 2) + 1 : 1) + conMod)} хитов
+                                        </p>
+                                    )}
+                                    <p className="mt-1 text-xs text-blue-600">
+                                        {localHpMode === "fixed" 
+                                            ? "Используется среднее значение кости хитов (округленное в большую сторону)" 
+                                            : "Используется минимальное значение (1) для каждого уровня"
+                                        }
+                                    </p>
                                 </div>
                             </div>
 

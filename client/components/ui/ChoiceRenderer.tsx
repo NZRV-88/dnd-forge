@@ -1,72 +1,191 @@
-import type { ChoiceOption } from "@/data/shared/choices"; 
+/**
+ * ChoiceRenderer - Универсальный компонент для отображения различных типов выборов в D&D
+ * 
+ * Поддерживает следующие типы выборов:
+ * - subclass: выбор подкласса для класса
+ * - ability: выбор характеристик (сила, ловкость и т.д.)
+ * - skill: выбор навыков
+ * - tool: выбор инструментов
+ * - language: выбор языков
+ * - spell: выбор заклинаний
+ * - feat: выбор талантов (фитов)
+ * - feature: выбор особенностей с вложенными подвыборами
+ * - fighting-style: выбор боевых стилей
+ */
+
 import React from "react";
+import type { ChoiceOption } from "@/data/shared/choices";
 import { useCharacter } from "@/store/character";
+
+// Импорты данных
 import { Abilities, ABILITIES } from "@/data/abilities";
 import { Spells } from "@/data/spells";
 import type { Spell } from "@/data/spells/types";
 import { LANGUAGES } from "@/data/languages/languages";
-import { ALL_FEATS } from "@/data/feats/feats"; 
-import { Tools, TOOL_CATEGORY_LABELS } from "@/data/items/tools.ts";
-import { Feats } from "@/data/feats";
-import { getAllCharacterData } from "@//utils/getAllCharacterData";
+import { ALL_FEATS } from "@/data/feats/feats";
+import { Tools, TOOL_CATEGORY_LABELS } from "@/data/items/tools";
+import { CLASS_CATALOG } from "@/data/classes/";
+import { FEATURES } from "@/data/classes/features/features";
+import { FIGHTING_STYLES } from "@/data/classes/features/fightingStyles";
+import { getAllCharacterData } from "@/utils/getAllCharacterData";
 import * as Icons from "@/components/refs/icons";
-import { CLASS_CATALOG } from "@/data/classes/"; 
+import SpellMeta from "@/components/ui/SpellMeta";
+
+// ============================================================================
+// ТИПЫ
+// ============================================================================
+
 interface ChoiceRendererProps {
-    source: string; //"race" | "subrace" | "class" | "subclass" | "background"
+    /** Источник выбора (race, subrace, class, subclass, background, feature-*, feat-*) */
+    source: string;
+    /** Массив опций для выбора */
     choices: ChoiceOption[];
+    /** Индекс выбора (для уникальных ключей) */
     ci: number;
 }
 
+// ============================================================================
+// ОСНОВНОЙ КОМПОНЕНТ
+// ============================================================================
+
 export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps) {
+    // Получаем все необходимые функции и данные из контекста персонажа
     const {
+        // Функции для работы с характеристиками
         setChosenAbilities,
         removeChosenAbility,
-
+        
+        // Функции для работы с навыками
         setChosenSkills,
         removeChosenSkill,
-
+        
+        // Функции для работы с инструментами
         setChosenTools,
         removeChosenTool,
-
+        
+        // Функции для работы с языками
         setChosenLanguages,
         removeChosenLanguage,
-
+        
+        // Функции для работы с заклинаниями
         setChosenSpells,
         removeChosenSpell,
-
+        
+        // Функции для работы с талантами
         setChosenFeats,
         removeChosenFeat,
-
-        setSubclass, 
-
+        
+        // Функции для работы с особенностями
+        setChosenFeatures,
+        setChosenFightingStyle,
+        
+        // Функции для работы с подклассами
+        setSubclass,
+        
+        // Данные персонажа
         draft,
-        setDraft,
     } = useCharacter();
+
+    // ============================================================================
+    // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+    // ============================================================================
+
+    /**
+     * Генерирует стили для селекта в зависимости от состояния
+     * @param hasValue - есть ли выбранное значение
+     * @param isUnfinished - незавершен ли выбор
+     */
+    const getSelectStyles = (hasValue: boolean, isUnfinished: boolean = false) => {
+        const baseStyles = "w-full rounded-lg border-2 p-3 text-sm font-medium shadow-sm transition-all duration-200 hover:shadow-md focus:ring-2 focus:ring-primary/20 focus:outline-none";
+        
+        if (isUnfinished) {
+            return `${baseStyles} border-blue-400 bg-blue-50/30 text-blue-800 hover:border-blue-500 focus:border-blue-500`;
+        }
+        
+        // Для выбранных значений используем стандартные стили
+        return `${baseStyles} border-stone-300 bg-white hover:border-primary/50 focus:border-primary`;
+    };
+
+    /**
+     * Очищает все вложенные выборы для фита
+     * @param featKey - ключ фита
+     */
+    const cleanupFeatChoices = (featKey: string) => {
+        const cleanupPrefix = `feat:${featKey}`;
+        
+        // Очищаем все связанные выборы
+        Object.keys(draft.chosen.abilities).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenAbilities(key, []);
+        });
+        Object.keys(draft.chosen.skills).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenSkills(key, []);
+        });
+        Object.keys(draft.chosen.tools).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenTools(key, []);
+        });
+        Object.keys(draft.chosen.languages).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenLanguages(key, []);
+        });
+        Object.keys(draft.chosen.spells).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenSpells(key, []);
+        });
+    };
+
+    /**
+     * Очищает все вложенные выборы для особенности
+     * @param featureKey - ключ особенности
+     */
+    const cleanupFeatureChoices = (featureKey: string) => {
+        const cleanupPrefix = `feature-${featureKey}`;
+        
+        // Очищаем все связанные выборы
+        Object.keys(draft.chosen.abilities).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenAbilities(key, []);
+        });
+        Object.keys(draft.chosen.skills).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenSkills(key, []);
+        });
+        Object.keys(draft.chosen.tools).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenTools(key, []);
+        });
+        Object.keys(draft.chosen.languages).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenLanguages(key, []);
+        });
+        Object.keys(draft.chosen.spells).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenSpells(key, []);
+        });
+        Object.keys(draft.chosen.features).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenFeatures(key, []);
+        });
+        Object.keys(draft.chosen.fightingStyle || {}).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenFightingStyle(key, []);
+        });
+    };
+
+    // ============================================================================
+    // РЕНДЕР ТИПОВ ВЫБОРОВ
+    // ============================================================================
 
     return (
         <div className="space-y-4">
             {choices.map((choice, ci) => {
                 switch (choice.type) {
-                    case "subclass":
-                        // Получаем текущий выбранный класс
+                    // ========================================================================
+                    // ВЫБОР ПОДКЛАССА
+                    // ========================================================================
+                    case "subclass": {
                         const currentClass = draft.basics.class;
-
-                        // Все возможные подклассы для выбранного класса
                         const availableSubclasses = currentClass
                             ? (CLASS_CATALOG.find(c => c.key === currentClass)?.subclasses || [])
                             : [];
-
                         const selectedSubclass = draft.basics.subclass || "";
 
                         return (
                             <select
                                 key={`${source}:subclass:${ci}`}
-                                className="w-full rounded border p-2 text-sm"
+                                className={getSelectStyles(!!selectedSubclass)}
                                 value={selectedSubclass}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setSubclass(value);
-                                }}
+                                onChange={(e) => setSubclass(e.target.value)}
                             >
                                 <option value="">Выберите подкласс</option>
                                 {availableSubclasses.map(sc => (
@@ -76,133 +195,145 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                 ))}
                             </select>
                         );
+                    }
 
-                    case "ability":
+                    // ========================================================================
+                    // ВЫБОР ХАРАКТЕРИСТИК
+                    // ========================================================================
+                    case "ability": {
                         return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
                             const choiceKey = `${source}:ability:${ci}:${idx}`;
-                            const selected = draft.chosen.abilities?.[source]?.[idx] ?? "";
+                            const sourceArray = draft.chosen.abilities?.[source] || [];
+                            const selected = sourceArray[idx] ?? "";
 
                             return (
                                 <select
                                     key={choiceKey}
-                                    className="w-full rounded border p-2 text-sm"
+                                    className={getSelectStyles(!!selected)}
                                     value={selected}
                                     onChange={(e) => {
                                         const value = e.target.value as keyof Abilities;
-                                        if (!value) {
-                                            // убираем из массива по индексу
-                                            const updated = [...(draft.chosen.abilities[source] || [])];
-                                            updated.splice(idx, 1);
-                                            setChosenAbilities(source, updated);
-                                        } else {
-                                            // обновляем выбранную характеристику на текущем индексе
-                                            const updated = [...(draft.chosen.abilities[source] || [])];
-                                            updated[idx] = value;
-                                            setChosenAbilities(source, updated);
-                                        }
+                                        
+                                        // Создаем массив фиксированной длины для сохранения позиций
+                                        const updated = Array.from({ length: choice.count ?? 1 }, (_, i) => 
+                                            i === idx ? value : (sourceArray[i] || "")
+                                        ).filter((item): item is keyof Abilities => item !== "");
+                                        
+                                        setChosenAbilities(source, updated);
                                     }}
                                 >
                                     <option value="">Выберите характеристику</option>
-                                    {(choice.options || ABILITIES.map((a) => a.key)).map((opt) => (
+                                    {(choice.options || ABILITIES.map(a => a.key)).map((opt) => (
                                         <option key={opt} value={opt}>
-                                            {ABILITIES.find((a) => a.key === opt)?.label || opt}
+                                            {ABILITIES.find(a => a.key === opt)?.label || opt}
                                         </option>
                                     ))}
                                 </select>
                             );
                         });
+                    }
 
-                    case "spell":
+                    // ========================================================================
+                    // ВЫБОР ЗАКЛИНАНИЙ
+                    // ========================================================================
+                    case "spell": {
                         return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
                             const choiceKey = `${source}:spell:${ci}:${idx}`;
-
-                            // --- available spells (набор кандидатов) ---
-                            let available: Spell[] = [];
+                            
+                            // Фильтруем доступные заклинания
+                            let available: Spell[] = Spells;
+                            
+                            if ((choice as any).spellClass !== undefined) {
+                                available = available.filter(s => s.classes?.includes((choice as any).spellClass));
+                            }
+                            
                             if ((choice as any).spellLevel !== undefined) {
-                                // если в ChoiceOption передаётся spellLevel
-                                available = Spells.filter((s) => s.level === (choice as any).spellLevel);
-                            } else if (choice.options) {
-                                // или options — список ключей
-                                available = Spells.filter((s) => choice.options?.includes(s.key));
+                                available = available.filter(s => s.level === (choice as any).spellLevel);
+                            }
+                            
+                            if (choice.options) {
+                                available = available.filter(s => choice.options?.includes(s.key));
                             }
 
-                            // --- текущее выбранное значение для этого слота (по индексу) ---
+                            // Получаем текущий выбор - фиксируем позицию в массиве
                             const sourceArray = draft.chosen.spells?.[source] || [];
                             const selected = sourceArray[idx] ?? "";
 
-                            // --- исключаем уже выбранные в других слотах, но оставляем текущее ---
+                            // Исключаем уже выбранные в других слотах
                             const takenExceptCurrent = sourceArray.filter((_, i) => i !== idx);
                             const options = [...available]
                                 .sort((a, b) => a.name.localeCompare(b.name, "ru", { sensitivity: "base" }))
-                                .filter((s) => !takenExceptCurrent.includes(s.key) || s.key === selected);
+                                .filter(s => !takenExceptCurrent.includes(s.key) || s.key === selected);
+
+                            // Находим выбранное заклинание для карточки
+                            const selectedSpell = selected ? available.find(s => s.key === selected) : null;
 
                             return (
-                                <select
-                                    key={choiceKey}
-                                    className="w-full rounded border p-2 text-sm"
-                                    value={selected}
-                                    onChange={(e) => {
-                                        const value = e.target.value;
+                                <div key={choiceKey} className="space-y-2">
+                                    <select
+                                        className={getSelectStyles(!!selected)}
+                                        value={selected}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            
+                                            // Создаем массив фиксированной длины для сохранения позиций
+                                            const updated = Array.from({ length: choice.count ?? 1 }, (_, i) => 
+                                                i === idx ? value : (sourceArray[i] || "")
+                                            );
 
-                                        const prev = draft.chosen.spells?.[source] || [];
-                                        const updated = [...prev];
+                                            setChosenSpells(source, updated);
+                                        }}
+                                    >
+                                        <option value="">Выберите заклинание</option>
+                                        {options.map((spell) => (
+                                            <option key={spell.key} value={spell.key}>
+                                                {spell.name}
+                                            </option>
+                                        ))}
+                                    </select>
 
-                                        if (!value) {
-                                            // удаляем слот (если пользователь вернул пустое значение)
-                                            if (updated.length > idx) {
-                                                updated.splice(idx, 1);
-                                            }
-                                        } else {
-                                            // записываем выбор именно в этот индекс
-                                            updated[idx] = value;
-                                        }
-
-                                        // сохраняем массив обратно в стор
-                                        setChosenSpells(source, updated);
-                                    }}
-                                >
-                                    <option value="">Выберите заклинание</option>
-                                    {options.map((spell) => (
-                                        <option key={spell.key} value={spell.key}>
-                                            {spell.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    {/* Карточка выбранного заклинания */}
+                                    {selectedSpell && (
+                                        <div className="rounded border p-2 bg-muted/10">
+                                            <SpellMeta spell={selectedSpell} />
+                                        </div>
+                                    )}
+                                </div>
                             );
                         });
+                    }
 
-                    case "tool":
+                    // ========================================================================
+                    // ВЫБОР ИНСТРУМЕНТОВ
+                    // ========================================================================
+                    case "tool": {
                         return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
                             const choiceKey = `${source}:tool:${ci}:${idx}`;
                             const sourceArray = draft.chosen.tools?.[source] || [];
                             const selected = sourceArray[idx] ?? "";
-
-                            // исключаем уже занятые, кроме текущего
                             const takenExceptCurrent = sourceArray.filter((_, i) => i !== idx);
 
                             return (
                                 <div key={choiceKey} className="space-y-2">
                                     <select
-                                        className="w-full rounded border p-2 text-sm"
+                                        className={getSelectStyles(!!selected)}
                                         value={selected}
                                         onChange={(e) => {
                                             const value = e.target.value;
-                                            const updated = [...sourceArray];
-
-                                            if (!value) {
-                                                updated.splice(idx, 1); // очищаем слот
-                                            } else {
-                                                updated[idx] = value; // пишем новый выбор
-                                            }
+                                            
+                                            // Создаем массив фиксированной длины для сохранения позиций
+                                            const updated = Array.from({ length: choice.count ?? 1 }, (_, i) => 
+                                                i === idx ? value : (sourceArray[i] || "")
+                                            );
 
                                             setChosenTools(source, updated);
                                         }}
                                     >
                                         <option value="">Выберите инструмент</option>
                                         {choice.options
-                                            ?.filter((opt) => !takenExceptCurrent.includes(opt))
+                                            ?.filter(opt => !takenExceptCurrent.includes(opt))
                                             .map((opt) => {
-                                                const tool = Tools.find((t) => t.key === opt);
+                                                const tool = Tools.find(t => t.key === opt);
                                                 return (
                                                     <option key={opt} value={opt}>
                                                         {tool?.name || opt}
@@ -213,11 +344,10 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
 
                                     {/* Карточка выбранного инструмента */}
                                     {selected && (() => {
-                                        const tool = Tools.find((t) => t.key === selected);
+                                        const tool = Tools.find(t => t.key === selected);
                                         if (!tool) return null;
 
-                                        const categoryLabel =
-                                            TOOL_CATEGORY_LABELS[tool.category] || tool.category;
+                                        const categoryLabel = TOOL_CATEGORY_LABELS[tool.category] || tool.category;
 
                                         return (
                                             <div className="rounded-lg border border-stone-300 bg-stone-50 p-3 shadow-sm">
@@ -234,35 +364,39 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                 </div>
                             );
                         });
+                    }
 
-                    case "language":
+                    // ========================================================================
+                    // ВЫБОР ЯЗЫКОВ
+                    // ========================================================================
+                    case "language": {
                         return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
                             const sourceArray = draft.chosen.languages?.[source] || [];
                             const selected = sourceArray[idx] ?? "";
 
-                            // все известные языки (фиксированные + выборы)
+                            // Получаем все уже известные языки
                             const allData = getAllCharacterData(draft);
-                            const taken = allData.languages.filter((l) => l !== selected); // оставляем текущий выбранный
+                            const taken = allData.languages.filter(l => l !== selected);
 
                             return (
                                 <select
                                     key={`${source}:language:${ci}:${idx}`}
-                                    className="w-full rounded border p-2 text-sm"
+                                    className={getSelectStyles(!!selected)}
                                     value={selected}
                                     onChange={(e) => {
                                         const value = e.target.value;
-                                        const updated = [...sourceArray];
-                                        if (!value) {
-                                            // очищаем слот
-                                            updated.splice(idx, 1);
-                                        } else {
-                                            updated[idx] = value;
-                                        }
+                                        
+                                        // Создаем массив фиксированной длины для сохранения позиций
+                                        const updated = Array.from({ length: choice.count ?? 1 }, (_, i) => 
+                                            i === idx ? value : (sourceArray[i] || "")
+                                        );
+                                        
                                         setChosenLanguages(source, updated);
                                     }}
                                 >
                                     <option value="">Выберите язык</option>
-                                    {LANGUAGES.filter((lang) => !taken.includes(lang.key) || lang.key === selected)
+                                    {LANGUAGES
+                                        .filter(lang => !taken.includes(lang.key) || lang.key === selected)
                                         .map((lang) => (
                                             <option key={lang.key} value={lang.key}>
                                                 {lang.name}
@@ -271,48 +405,73 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                 </select>
                             );
                         });
+                    }
 
-                    //case "spell":
-                    //    let available: Spell[] = [];
+                    // ========================================================================
+                    // ВЫБОР ОСОБЕННОСТЕЙ (FEATURES)
+                    // ========================================================================
+                    case "feature": {
+                        const availableFeatures = FEATURES;
+                        const selected = draft.chosen.features?.[source] || [];
+                        const selectedFeature = selected[0] 
+                            ? availableFeatures.find(f => f.key === selected[0]) 
+                            : null;
 
-                    //    if (choice.options) {
-                    //        available = Spells.filter(s => choice.options!.includes(s.key));
-                    //    } else if (choice.spellLevel !== undefined) {
-                    //        available = Spells.filter(s => s.level === choice.spellLevel);
-                    //        if (choice.spellClass) {
-                    //            available = available.filter(s => s.classes?.includes(choice.spellClass));
-                    //        }
-                    //    }
+                        // Проверяем завершенность всех подвыборов
+                        const isChoiceComplete = selectedFeature?.choices?.every((subChoice) => {
+                            const subSourceArray = draft.chosen[`feature-${selectedFeature.key}`]?.[subChoice.type + "s"] || [];
+                            return subSourceArray.length >= (subChoice.count ?? 1);
+                        }) ?? true;
 
-                    //    return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
-                    //        const choiceKey = `${source}:spell:${ci}:${idx}`;
-                    //        const taken = draft.chosen.spells?.[source] ?? [];
+                        return (
+                            <div key={`${source}:feature:${ci}`} className="space-y-2">
+                                <select
+                                    className={getSelectStyles(!!selected[0])}
+                                    value={selected[0] || ""}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        const prevFeature = selected[0];
+                                        
+                                        // Очищаем вложенные выборы предыдущей особенности
+                                        if (prevFeature) {
+                                            cleanupFeatureChoices(prevFeature);
+                                        }
+                                        
+                                        setChosenFeatures(source, value ? [value] : []);
+                                    }}
+                                >
+                                    <option value="">Выберите особенность</option>
+                                    {availableFeatures.map((f) => (
+                                        <option key={f.key} value={f.key}>
+                                            {f.name}
+                                        </option>
+                                    ))}
+                                </select>
 
-                    //        return (
-                    //            <select
-                    //                key={choiceKey}
-                    //                className="w-full rounded border p-2 text-sm"
-                    //                value={draft.chosen.spells?.[choiceKey] ?? ""}
-                    //                onChange={(e) => {
-                    //                    const value = e.target.value;
-                    //                    if (!value) {
-                    //                        removeChosenSpell(source, choiceKey);
-                    //                    } else {
-                    //                        setChosenSpells(source, [...taken.filter(s => s !== choiceKey), value]);
-                    //                    }
-                    //                }}
-                    //            >
-                    //                <option value="">Выберите заклинание</option>
-                    //                {available.map(spell => (
-                    //                    <option key={spell.key} value={spell.key}>
-                    //                        {spell.name}
-                    //                    </option>
-                    //                ))}
-                    //            </select>
-                    //        );
-                    //    });
+                                {/* Описание выбранной особенности */}
+                                {selectedFeature && (
+                                    <div className="mt-2 p-2 border rounded bg-stone-50 text-xs text-stone-800">
+                                        {selectedFeature.desc}
+                                    </div>
+                                )}
 
-                    case "feat":
+                                {/* Рекурсивный рендер подвыборов */}
+                                {selectedFeature?.choices?.map((subChoice, sci) => (
+                                    <ChoiceRenderer
+                                        key={`${source}:feature:${ci}:sub-${sci}`}
+                                        ci={sci}
+                                        source={`feature-${selectedFeature.key}`}
+                                        choices={[subChoice]}
+                                    />
+                                ))}
+                            </div>
+                        );
+                    }
+
+                    // ========================================================================
+                    // ВЫБОР ТАЛАНТОВ (ФИТОВ)
+                    // ========================================================================
+                    case "feat": {
                         return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
                             const choiceKey = `${source}:feat:${ci}:${idx}`;
                             const selected = draft.chosen.feats[idx] || "";
@@ -320,62 +479,28 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                             return (
                                 <div key={choiceKey} className="space-y-2">
                                     <select
-                                        className="w-full rounded border p-2 text-sm"
+                                        className={getSelectStyles(!!selected)}
                                         value={selected}
                                         onChange={(e) => {
                                             const value = e.target.value;
                                             const prevFeat = selected;
 
                                             if (!value) {
-                                                // 1. удаляем сам фит
+                                                // Удаляем фит и очищаем связанные выборы
                                                 if (prevFeat) {
                                                     removeChosenFeat(prevFeat);
-                                                }
-
-                                                // 2. очищаем вложенные выборы
-                                                if (prevFeat) {
-                                                    const cleanupPrefix = `feat:${prevFeat}`;
-                                                    Object.keys(draft.chosen.abilities).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenAbilities(key, []);
-                                                    });
-                                                    Object.keys(draft.chosen.skills).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenSkills(key, []);
-                                                    });
-                                                    Object.keys(draft.chosen.tools).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenTools(key, []);
-                                                    });
-                                                    Object.keys(draft.chosen.languages).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenLanguages(key, []);
-                                                    });
-                                                    Object.keys(draft.chosen.spells).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenSpells(key, []);
-                                                    });
+                                                    cleanupFeatChoices(prevFeat);
                                                 }
                                             } else {
-                                                // 1. сохраняем новый фит
+                                                // Сохраняем новый фит
                                                 setChosenFeats([
-                                                    ...draft.chosen.feats.filter((f) => f !== selected),
+                                                    ...draft.chosen.feats.filter(f => f !== selected),
                                                     value,
                                                 ]);
 
-                                                // 2. очищаем вложенные выборы для предыдущего фита
+                                                // Очищаем выборы предыдущего фита
                                                 if (prevFeat) {
-                                                    const cleanupPrefix = `feat:${prevFeat}`;
-                                                    Object.keys(draft.chosen.abilities).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenAbilities(key, []);
-                                                    });
-                                                    Object.keys(draft.chosen.skills).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenSkills(key, []);
-                                                    });
-                                                    Object.keys(draft.chosen.tools).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenTools(key, []);
-                                                    });
-                                                    Object.keys(draft.chosen.languages).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenLanguages(key, []);
-                                                    });
-                                                    Object.keys(draft.chosen.spells).forEach((key) => {
-                                                        if (key.startsWith(cleanupPrefix)) setChosenSpells(key, []);
-                                                    });
+                                                    cleanupFeatChoices(prevFeat);
                                                 }
                                             }
                                         }}
@@ -390,7 +515,7 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
 
                                     {/* Карточка выбранного фита */}
                                     {selected && (() => {
-                                        const feat = ALL_FEATS.find((f) => f.key === selected);
+                                        const feat = ALL_FEATS.find(f => f.key === selected);
                                         if (!feat) return null;
 
                                         return (
@@ -399,7 +524,9 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                                     <Icons.Award className="w-5 h-5" />
                                                 </div>
 
-                                                <h4 className="font-semibold text-stone-900 tracking-wide">{feat.name}</h4>
+                                                <h4 className="font-semibold text-stone-900 tracking-wide">
+                                                    {feat.name}
+                                                </h4>
 
                                                 {feat.desc && (
                                                     <p className="text-sm text-stone-800/80 mt-2 leading-relaxed">
@@ -407,16 +534,22 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                                     </p>
                                                 )}
 
+                                                {/* Эффекты фита */}
                                                 {feat.effect?.map((eff, ei) => (
                                                     <div
                                                         key={ei}
                                                         className="mt-3 rounded border border-stone-200 bg-stone-50/70 p-2"
                                                     >
-                                                        <div className="font-medium text-stone-900">{eff.name}</div>
+                                                        <div className="font-medium text-stone-900">
+                                                            {eff.name}
+                                                        </div>
                                                         {eff.desc && (
-                                                            <p className="text-xs text-stone-800/70 mt-1">{eff.desc}</p>
+                                                            <p className="text-xs text-stone-800/70 mt-1">
+                                                                {eff.desc}
+                                                            </p>
                                                         )}
 
+                                                        {/* Рекурсивный рендер выборов эффекта */}
                                                         {eff.choices && (
                                                             <div className="mt-2">
                                                                 <ChoiceRenderer
@@ -434,8 +567,56 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                 </div>
                             );
                         });
+                    }
 
+                    // ========================================================================
+                    // ВЫБОР БОЕВЫХ СТИЛЕЙ
+                    // ========================================================================
+                    case "fighting-style": {
+                        const availableStyles = FIGHTING_STYLES;
+                        const selectedStyles: string[] = draft.chosen.fightingStyle?.[source] || [];
+                        const hasUnfinishedChoice = selectedStyles.length === 0;
+
+                        return (
+                            <div
+                                key={`${source}:fighting-style:${ci}`}
+                                className="relative space-y-2 border-2 border-stone-200 rounded-lg p-3 bg-white"
+                            >
+                                <select
+                                    className={getSelectStyles(!!selectedStyles[0])}
+                                    value={selectedStyles[0] || ""}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setChosenFightingStyle(source, value ? [value] : []);
+                                    }}
+                                >
+                                    <option value="">Выберите боевой стиль</option>
+                                    {availableStyles.map((fs) => (
+                                        <option key={fs.key} value={fs.key}>
+                                            {fs.name}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                {/* Описание выбранного стиля */}
+                                {selectedStyles.length > 0 && (
+                                    <div className="mt-2 p-2 border rounded bg-stone-50 text-xs text-stone-800 space-y-1">
+                                        {selectedStyles.map((key) => {
+                                            const style = availableStyles.find(fs => fs.key === key);
+                                            if (!style) return null;
+                                            return <div key={key}>{style.desc}</div>;
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    }
+
+                    // ========================================================================
+                    // НЕИЗВЕСТНЫЙ ТИП ВЫБОРА
+                    // ========================================================================
                     default:
+                        console.warn(`Unknown choice type: ${choice.type}`);
                         return null;
                 }
             })}

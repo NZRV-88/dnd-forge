@@ -51,6 +51,8 @@ export type CharacterDraft = {
         languages: Record<string, string[]>;
         feats: string[];                                // выбранные фиты (ключи)
         spells: Record<string, string[]>;
+        features: Record<string, string[]>;
+        fightingStyle?: Record<string, string[]>;
     };
     abilitiesMode?: "array" | "roll" | "point-buy";
     rolls?: RollResult[];
@@ -94,6 +96,11 @@ export type CharacterContextType = {
     setChosenFeats: (featKey: string[]) => void;
     removeChosenFeat: (featKey: string) => void;
 
+    setChosenFeatures: (source: string, features: string[]) => void;
+    removeChosenFeature: (source: string, feature: string) => void;
+
+    setChosenFightingStyle: (source: string, styleKey: string[]) => void;
+
     // Сохранение/загрузка
     saveToSupabase: () => Promise<void>;
     loadFromSupabase: (id: string) => Promise<void>;
@@ -105,6 +112,7 @@ export type CharacterContextType = {
     setSubclass: (subclass: string) => void;
     setBackground: (background: string | null) => void;
     setAbilitiesMode: (mode: "array" | "roll" | "point-buy") => void;
+  
 };
 
 /* ------------------------------------------------------
@@ -150,6 +158,8 @@ const makeDefaultDraft = (): CharacterDraft => ({
         languages: {},
         feats: [],
         spells: {},
+        features: {},
+        fightingStyle: {},
     },
     abilitiesMode: "array",
     rolls: [],
@@ -332,6 +342,33 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setDraft((d) => ({ ...d, abilitiesMode: newMode }));
     };
 
+    const setChosenFeatures = (source: string, features: string[]) =>
+        setDraft(d => ({
+            ...d,
+            chosen: { ...d.chosen, features: { ...d.chosen.features, [source]: features } },
+        }));
+
+    const removeChosenFeature = (source: string, feature: string) =>
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                features: {
+                    ...d.chosen.features,
+                    [source]: (d.chosen.features[source] || []).filter(f => f !== feature),
+                },
+            },
+        }));
+
+    const setChosenFightingStyle = (source: string, styleKey: string[]) =>
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                fightingStyle: { ...d.chosen.fightingStyle, [source]: styleKey }
+            }
+        }));
+
     /* -----------------------------
        Вычисляемые данные
        (пока просто выбранные; позже
@@ -416,6 +453,9 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setBackground,
 
         setAbilitiesMode,
+        setChosenFeatures,
+        removeChosenFeature, 
+        setChosenFightingStyle,
     };
 
     return (
