@@ -17,6 +17,7 @@ export default function Start() {
         loadFromSupabase,
         createNewCharacter,
         resetCharacter,
+        saveToSupabase,
         isLoading,
     } = useCharacter();
     const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
@@ -59,7 +60,7 @@ export default function Start() {
         }
     };
 
-    const handleExit = () => {
+    const handleExit = async () => {
         setDraft(d => ({
             ...d,
             basics: {
@@ -67,6 +68,16 @@ export default function Start() {
                 hpMode: localHpMode,
             },
         }));
+
+        // Сохраняем изменения в БД перед выходом
+        if (draft.id) {
+            try {
+                await saveToSupabase();
+            } catch (error) {
+                console.error("Ошибка сохранения при выходе:", error);
+            }
+        }
+
         nav("/characters");
     };
 

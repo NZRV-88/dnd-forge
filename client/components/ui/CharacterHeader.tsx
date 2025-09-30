@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCharacter } from "@/store/character";
 import AvatarManager from "./AvatarManager";
 import NameGenerator from "./NameGenerator";
 
 export default function CharacterHeader() {
-    const { draft, setDraft } = useCharacter();
+    const { draft, setDraft, saveToSupabase } = useCharacter();
     const [isAvatarManagerOpen, setIsAvatarManagerOpen] = useState(false);
     const [localName, setLocalName] = useState(draft?.basics?.name || "");
+
+    // Синхронизируем локальное имя с draft
+    useEffect(() => {
+        setLocalName(draft?.basics?.name || "");
+    }, [draft?.basics?.name]);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement> | string) => {
         const newName = typeof e === 'string' ? e : e.target.value;
@@ -20,6 +25,11 @@ export default function CharacterHeader() {
                 name: newName,
             },
         }));
+
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
     };
 
     const handleAvatarSelect = (avatarUrl: string | null) => {
@@ -27,6 +37,11 @@ export default function CharacterHeader() {
             ...d,
             avatar: avatarUrl,
         }));
+
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
     };
 
     const handleAvatarClick = () => {
