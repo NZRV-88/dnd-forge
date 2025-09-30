@@ -13,7 +13,7 @@ export interface FeatureBlockProps {
   name: string;
   desc: string;
   featureLevel?: number;
-  source: "class" | "subclass" | "race" | "subrace";
+  source: string;
   idx: number;
   choices?: ChoiceOption[];
   textMaxHeight?: number;
@@ -25,6 +25,7 @@ export interface FeatureBlockProps {
   ignoreLevel?: boolean;
   classInfo?: ClassInfo; // Добавляем информацию о классе для отображения таблицы особенностей
   showChoices?: boolean; // Показывать ли выборы в ClassTraitsTable
+  customContent?: React.ReactNode; // Кастомный контент для отображения внутри блока
 }
 
 export default function FeatureBlock({
@@ -43,6 +44,7 @@ export default function FeatureBlock({
   ignoreLevel = false,
   classInfo,
   showChoices = true,
+  customContent,
 }: FeatureBlockProps) {
   const { draft, setChosenFeatures, setChosenFightingStyle } = useCharacter();
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -226,6 +228,9 @@ export default function FeatureBlock({
               source={featureKey}
               showChoices={showChoices}
             />
+          ) : customContent ? (
+            /* Кастомный контент */
+            customContent
           ) : (
             <>
               <div 

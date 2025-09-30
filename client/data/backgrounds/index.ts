@@ -52,7 +52,7 @@ export const BACKGROUND_LABELS: Record<string, string> = {
   folkHero: "Народный герой",
   guildArtisan: "Гильдейский ремесленник",
   hermit: "Отшельник",
-  noble: "Благородный",
+  noble: "Дворянин",
   outlander: "Чужеземец",
   sage: "Мудрец",
   sailor: "Моряк",

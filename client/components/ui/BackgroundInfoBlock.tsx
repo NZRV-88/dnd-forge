@@ -1,179 +1,161 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProficiencyName } from "@/data/proficiencies";
 import type { BackgroundInfo } from "@/data/backgrounds/types";
 import ChoiceRenderer from "@/components/ui/ChoiceRenderer";
 import FeatureBlock from "@/components/ui/FeatureBlock";
 import { ALL_FEATS } from "@/data/feats/feats";
+import * as Icons from "@/components/refs/icons";
+import { BackgroundTraitsTable } from "@/components/ui/BackgroundTraitsTable";
 
 interface BackgroundInfoBlockProps {
     backgroundInfo: BackgroundInfo;
     source: string;
+    onRemove?: () => void;
 }
 
 export default function BackgroundInfoBlock({ 
     backgroundInfo, 
-    source 
+    source,
+    onRemove
 }: BackgroundInfoBlockProps) {
     return (
         <div className="space-y-6">
-            {/* Карточка выбранной предыстории */}
-            <Card className="min-h-[100px]">
-                <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                        {/* Иконка предыстории */}
-                        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                            {backgroundInfo.name.charAt(0)}
-                        </div>
-                        
-                        {/* Название и описание */}
-                        <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{backgroundInfo.name}</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                {backgroundInfo.longDesc || backgroundInfo.desc}
-                            </p>
-                        </div>
+            {/* Карточка выбранной предыстории - точно как до выбора */}
+            <div className="relative text-left rounded-lg border p-4 flex flex-col justify-between transition hover:shadow-md border-2 border-primary shadow-lg bg-gradient-to-b from-primary/5 to-transparent">
+                <div className="absolute right-2 top-2 text-primary">
+                    <Icons.Crown className="w-5 h-5" />
+                </div>
+                <div>
+                    <h3 className="font-medium text-lg">{backgroundInfo.name}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{backgroundInfo.desc}</p>
+                </div>
+                {/* Крестик для удаления в нижнем правом углу */}
+                {onRemove && (
+                    <button
+                        onClick={onRemove}
+                        className="absolute bottom-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                        <Icons.X className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
+
+            {/* Детальная информация в стиле Class.tsx */}
+            <Card className="border bg-card shadow-md">
+                <CardHeader>
+                    <CardTitle className="text-lg font-semibold">
+                        {backgroundInfo.name}
+                    </CardTitle>
+                    {backgroundInfo.longDesc ? (
+                        <p className="mt-1 text-sm text-muted-foreground italic leading-relaxed whitespace-pre-line">
+                            {backgroundInfo.longDesc}
+                        </p>
+                    ) : (
+                        <p className="mt-1 text-sm text-muted-foreground italic leading-relaxed">
+                            {backgroundInfo.desc}
+                        </p>
+                    )}
+                </CardHeader>
+
+                <CardContent className="space-y-6 pt-6">
+                    {/* Основные особенности предыстории */}
+                    <BackgroundTraitsTable
+                        backgroundInfo={backgroundInfo}
+                        choices={backgroundInfo.choices}
+                        source={`${source}-traits`}
+                        showChoices={true}
+                    />
+
+                    <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
+                        Особенности
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                        {/* Особенности предыстории */}
+                        {Array.isArray(backgroundInfo.feature) ? (
+                            backgroundInfo.feature.map((feature, index) => {
+                                // Если это feat, отображаем как карточку feat внутри FeatureBlock
+                                if (feature.feat) {
+                                    const featInfo = ALL_FEATS.find(f => f.key === feature.feat);
+                                    if (featInfo) {
+                                        return (
+                                            <FeatureBlock
+                                                key={feature.key || index}
+                                                name={feature.name}
+                                                desc={feature.desc || ""}
+                                                source={`${source}-feature-${index}`}
+                                                idx={index + 10}
+                                                customContent={
+                                                    <div className="mt-3 rounded-xl border border-stone-800 bg-gradient-to-b from-gray-100 to-gray-100 p-4 shadow-sm relative">
+                                                        <div className="absolute right-3 top-3 text-stone-500">
+                                                            <Icons.Award className="w-5 h-5" />
+                                                        </div>
+
+                                                        <h4 className="font-semibold text-stone-900 tracking-wide">
+                                                            {featInfo.name}
+                                                        </h4>
+
+                                                        {featInfo.desc && (
+                                                            <p className="text-sm text-stone-800/80 mt-2 leading-relaxed">
+                                                                {featInfo.desc}
+                                                            </p>
+                                                        )}
+
+                                                        {/* Эффекты фита */}
+                                                        {featInfo.effect?.map((eff, ei) => (
+                                                            <div
+                                                                key={ei}
+                                                                className="mt-3 rounded border border-stone-200 bg-stone-50/70 p-2"
+                                                            >
+                                                                <div className="font-medium text-stone-900">
+                                                                    {eff.name}
+                                                                </div>
+                                                                {eff.desc && (
+                                                                    <p className="text-xs text-stone-700 mt-1">
+                                                                        {eff.desc}
+                                                                    </p>
+                                                                )}
+                                                                {eff.choices && eff.choices.length > 0 && (
+                                                                    <div className="mt-2">
+                                                                        <ChoiceRenderer
+                                                                            choices={eff.choices}
+                                                                            source={`${source}-feat-${feature.feat}-effect-${ei}`}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                }
+                                            />
+                                        );
+                                    }
+                                }
+                                
+                                // Обычная особенность - используем FeatureBlock без уровня
+                                return (
+                                    <FeatureBlock
+                                        key={feature.key || index}
+                                        name={feature.name}
+                                        desc={feature.desc || ""}
+                                        source={`${source}-feature-${index}`}
+                                        idx={index + 10}
+                                        choices={feature.choices}
+                                    />
+                                );
+                            })
+                        ) : (
+                            <FeatureBlock
+                                name={backgroundInfo.feature.name}
+                                desc={backgroundInfo.feature.desc}
+                                source={`${source}-feature`}
+                                idx={10}
+                                choices={backgroundInfo.feature.choices}
+                            />
+                        )}
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Детальная информация */}
-            <div className="space-y-4">
-
-                    {/* Владения навыками */}
-                    {backgroundInfo.proficiencies?.some((p) => p.type === "skill") && (
-                        <div>
-                            <div className="text-sm font-medium">Владение навыками</div>
-                            <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground">
-                                {backgroundInfo.proficiencies
-                                    .filter((p) => p.type === "skill")
-                                    .map((p) => (
-                                        <li key={p.key}>
-                                            {getProficiencyName(p)}
-                                        </li>
-                                    ))}
-                            </ul>
-                        </div>
-                    )}
-
-                    {/* Владение инструментами */}
-                    {backgroundInfo.proficiencies?.some((p) => p.type === "tool") && (
-                        <div>
-                            <div className="text-sm font-medium">Владение инструментами</div>
-                            <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground">
-                                {backgroundInfo.proficiencies
-                                    .filter((p) => p.type === "tool")
-                                    .map((p) => (
-                                        <li key={p.key}>
-                                            {getProficiencyName(p)}
-                                        </li>
-                                    ))}
-                            </ul>
-                        </div>
-                    )}
-
-                    {/* Языки */}
-                    {backgroundInfo.languages?.length > 0 && (
-                        <div>
-                            <div className="text-sm font-medium">Языки</div>
-                            <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground">
-                                {backgroundInfo.languages.map((lang) => (
-                                    <li key={lang}>{lang}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-
-                    {/* Особенности */}
-                    {Array.isArray(backgroundInfo.feature) ? (
-                        backgroundInfo.feature.map((feature, index) => {
-                            // Если это feat, отображаем как карточку feat
-                            if (feature.feat) {
-                                const featInfo = ALL_FEATS.find(f => f.key === feature.feat);
-                                if (featInfo) {
-                                    return (
-                                        <div key={feature.key || index} className="mt-4">
-                                            <div className="text-sm font-medium mb-2">Черта: {featInfo.name}</div>
-                                            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                                                <CardContent className="p-4">
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                                                            {featInfo.name.charAt(0)}
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <h4 className="font-semibold text-purple-900">{featInfo.name}</h4>
-                                                            <p className="text-sm text-purple-700 mt-1">{featInfo.desc}</p>
-                                                            {featInfo.effect && featInfo.effect.length > 0 && (
-                                                                <div className="mt-2">
-                                                                    <ChoiceRenderer
-                                                                        choices={featInfo.effect[0].choices || []}
-                                                                        source={`${source}-feat-${feature.feat}`}
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                    );
-                                }
-                            }
-                            
-                            // Обычная особенность - используем FeatureBlock
-                            return (
-                                <div key={feature.key || index} className="mt-4">
-                                    <FeatureBlock
-                                        feature={{
-                                            name: feature.name,
-                                            desc: feature.desc || "",
-                                            level: 1,
-                                            choices: feature.choices
-                                        }}
-                                        source={`${source}-feature-${index}`}
-                                        showChoices={true}
-                                    />
-                                </div>
-                            );
-                        })
-                    ) : (
-                        <div className="mt-4">
-                            <FeatureBlock
-                                feature={{
-                                    name: backgroundInfo.feature.name,
-                                    desc: backgroundInfo.feature.desc,
-                                    level: 1,
-                                    choices: backgroundInfo.feature.choices
-                                }}
-                                source={`${source}-feature`}
-                                showChoices={true}
-                            />
-                        </div>
-                    )}
-
-                    {/* Снаряжение */}
-                    <div>
-                        <div className="text-sm font-medium">Снаряжение</div>
-                        <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground">
-                            {backgroundInfo.equipment.map((item) => (
-                                <li key={item}>{item}</li>
-                            ))}
-                        </ul>
-                    </div>
-
-                {/* Выборы предыстории */}
-                {backgroundInfo.choices && backgroundInfo.choices.length > 0 && (
-                    <div>
-                        <div className="text-sm font-medium">Выборы</div>
-                        <div className="mt-2">
-                            <ChoiceRenderer
-                                choices={backgroundInfo.choices}
-                                source={source}
-                            />
-                        </div>
-                    </div>
-                )}
-            </div>
         </div>
     );
 }

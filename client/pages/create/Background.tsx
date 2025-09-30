@@ -107,19 +107,11 @@ export default function BackgroundPick() {
                     <div className="flex justify-between gap-4">
                         {/* Блок выбранной предыстории */}
                         <div className="flex-1">
-                            <div className="relative">
-                                <BackgroundInfoBlock 
-                                    backgroundInfo={backgroundInfo!} 
-                                    source={`background-${draft.basics.background}`}
-                                />
-                                {/* Крестик для удаления */}
-                                <button
-                                    onClick={() => setShowRemoveConfirm(true)}
-                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                                >
-                                    <Icons.X className="w-4 h-4" />
-                                </button>
-                            </div>
+                            <BackgroundInfoBlock 
+                                backgroundInfo={backgroundInfo!} 
+                                source={`background-${draft.basics.background}`}
+                                onRemove={() => setShowRemoveConfirm(true)}
+                            />
                         </div>
                     </div>
                 )}
