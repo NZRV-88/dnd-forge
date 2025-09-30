@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getProficiencyName } from "@/data/proficiencies";
 import type { BackgroundInfo } from "@/data/backgrounds/types";
 import ChoiceRenderer from "@/components/ui/ChoiceRenderer";
+import FeatureBlock from "@/components/ui/FeatureBlock";
+import { ALL_FEATS } from "@/data/feats/feats";
 
 interface BackgroundInfoBlockProps {
     backgroundInfo: BackgroundInfo;
@@ -71,34 +73,68 @@ export default function BackgroundInfoBlock({
 
                     {/* Особенности */}
                     {Array.isArray(backgroundInfo.feature) ? (
-                        backgroundInfo.feature.map((feature, index) => (
-                            <div key={feature.key || index}>
-                                <div className="text-sm font-medium">
-                                    {feature.name}
+                        backgroundInfo.feature.map((feature, index) => {
+                            // Если это feat, отображаем как карточку feat
+                            if (feature.feat) {
+                                const featInfo = ALL_FEATS.find(f => f.key === feature.feat);
+                                if (featInfo) {
+                                    return (
+                                        <div key={feature.key || index} className="mt-4">
+                                            <div className="text-sm font-medium mb-2">Черта: {featInfo.name}</div>
+                                            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                                                <CardContent className="p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                                            {featInfo.name.charAt(0)}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-semibold text-purple-900">{featInfo.name}</h4>
+                                                            <p className="text-sm text-purple-700 mt-1">{featInfo.desc}</p>
+                                                            {featInfo.effect && featInfo.effect.length > 0 && (
+                                                                <div className="mt-2">
+                                                                    <ChoiceRenderer
+                                                                        choices={featInfo.effect[0].choices || []}
+                                                                        source={`${source}-feat-${feature.feat}`}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    );
+                                }
+                            }
+                            
+                            // Обычная особенность - используем FeatureBlock
+                            return (
+                                <div key={feature.key || index} className="mt-4">
+                                    <FeatureBlock
+                                        feature={{
+                                            name: feature.name,
+                                            desc: feature.desc || "",
+                                            level: 1,
+                                            choices: feature.choices
+                                        }}
+                                        source={`${source}-feature-${index}`}
+                                        showChoices={true}
+                                    />
                                 </div>
-                                {feature.desc && (
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        {feature.desc}
-                                    </p>
-                                )}
-                                {feature.choices && (
-                                    <div className="mt-2">
-                                        <ChoiceRenderer
-                                            choices={feature.choices}
-                                            source={`${source}-feature-${index}`}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
-                        <div>
-                            <div className="text-sm font-medium">
-                                Особенность: {backgroundInfo.feature.name}
-                            </div>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                {backgroundInfo.feature.desc}
-                            </p>
+                        <div className="mt-4">
+                            <FeatureBlock
+                                feature={{
+                                    name: backgroundInfo.feature.name,
+                                    desc: backgroundInfo.feature.desc,
+                                    level: 1,
+                                    choices: backgroundInfo.feature.choices
+                                }}
+                                source={`${source}-feature`}
+                                showChoices={true}
+                            />
                         </div>
                     )}
 
