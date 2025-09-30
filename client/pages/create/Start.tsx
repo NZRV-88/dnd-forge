@@ -17,7 +17,6 @@ export default function Start() {
         setDraft,
         loadFromSupabase,
         createNewCharacter,
-        resetCharacter,
         saveToSupabase,
         isLoading,
     } = useCharacter();
@@ -30,11 +29,9 @@ export default function Start() {
             if (draft.id !== id) {
                 loadFromSupabase(id);
             }
-        } else {
-            // режим создания
-            resetCharacter();
         }
-    }, [id, draft.id, loadFromSupabase, resetCharacter]);
+        // режим создания - не сбрасываем данные, оставляем как есть
+    }, [id, draft.id, loadFromSupabase]);
 
     // синхронизируем локальные поля, если basics обновились (например, после загрузки из базы)
     useEffect(() => {
