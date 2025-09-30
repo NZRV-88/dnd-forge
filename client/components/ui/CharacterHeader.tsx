@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCharacter } from "@/store/character";
 import AvatarManager from "./AvatarManager";
 import NameGenerator from "./NameGenerator";
@@ -8,10 +8,23 @@ export default function CharacterHeader() {
     const [isAvatarManagerOpen, setIsAvatarManagerOpen] = useState(false);
     const [localName, setLocalName] = useState(draft?.basics?.name || "");
 
-    // Синхронизируем локальное имя с draft
+    // Синхронизируем локальное имя с draft только при первой загрузке
     useEffect(() => {
-        setLocalName(draft?.basics?.name || "");
-    }, [draft?.basics?.name]);
+        if (draft?.basics?.name && !localName) {
+            setLocalName(draft.basics.name);
+        }
+    }, [draft?.basics?.name, localName]);
+
+    // Debounced функция для сохранения
+    const debouncedSave = useCallback(() => {
+        if (draft.id) {
+            const timeoutId = setTimeout(() => {
+                saveToSupabase().catch(console.error);
+            }, 500); // Сохраняем через 500ms после последнего изменения
+            
+            return () => clearTimeout(timeoutId);
+        }
+    }, [draft.id, saveToSupabase]);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement> | string) => {
         const newName = typeof e === 'string' ? e : e.target.value;
@@ -26,10 +39,8 @@ export default function CharacterHeader() {
             },
         }));
 
-        // Автоматически сохраняем в БД
-        if (draft.id) {
-            saveToSupabase().catch(console.error);
-        }
+        // Debounced сохранение в БД
+        debouncedSave();
     };
 
     const handleAvatarSelect = (avatarUrl: string | null) => {
