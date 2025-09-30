@@ -32,9 +32,9 @@ export default function Start() {
                 loadFromSupabase(id);
             }
         } else {
-            // режим создания - инициализируем пустой draft если нужно
-            if (!draft.id || draft.basics.name) {
-                // Если нет ID или есть имя (данные от предыдущего персонажа)
+            // режим создания - инициализируем пустой draft только если нет ID
+            if (!draft.id) {
+                // Если нет ID, инициализируем пустой draft
                 initNewCharacter();
             }
         }
