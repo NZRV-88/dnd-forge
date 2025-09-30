@@ -15,6 +15,7 @@ export default function Start() {
         draft,
         setDraft,
         loadFromSupabase,
+        createNewCharacter,
         resetCharacter,
         isLoading,
     } = useCharacter();
@@ -36,7 +37,7 @@ export default function Start() {
         setLocalHpMode(draft.basics.hpMode || "fixed");
     }, [draft.basics.hpMode]);
 
-    const handleNext = () => {
+    const handleNext = async () => {
         setDraft(d => ({
             ...d,
             basics: {
@@ -46,8 +47,12 @@ export default function Start() {
         }));
 
         if (id) {
+            // Режим редактирования - просто переходим
             nav(`/create/${id}/class`);
         } else {
+            // Режим создания - создаем персонажа в БД и переходим
+            const newId = uuidv4();
+            await createNewCharacter(newId);
             nav(`/create/${newId}/class`);
         }
     };
@@ -62,7 +67,6 @@ export default function Start() {
         }));
         nav("/characters");
     };
-    const newId = uuidv4();
 
     // Показываем загрузку, если данные загружаются
     if (isLoading) {

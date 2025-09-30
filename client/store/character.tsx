@@ -107,6 +107,7 @@ export type CharacterContextType = {
     // Сохранение/загрузка
     saveToSupabase: () => Promise<void>;
     loadFromSupabase: (id: string) => Promise<void>;
+    createNewCharacter: (id: string) => Promise<void>;
     isLoading: boolean;
 
     // Прочее
@@ -587,6 +588,42 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         if (error) console.error("Ошибка сохранения в Supabase:", error);
     };
 
+    const createNewCharacter = async (id: string) => {
+        setIsLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                console.error("Пользователь не авторизован");
+                return;
+            }
+
+            // Создаем новый draft с переданным ID
+            const newDraft = {
+                ...makeDefaultDraft(),
+                id: id,
+            };
+
+            // Сохраняем в БД
+            const { error } = await supabase.from("characters").insert({
+                id: id,
+                user_id: user.id,
+                data: newDraft,
+                created_at: new Date(),
+                updated_at: new Date(),
+            });
+
+            if (error) {
+                console.error("Ошибка создания персонажа в Supabase:", error);
+                return;
+            }
+
+            // Устанавливаем новый draft в состояние
+            setDraft(newDraft);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const loadFromSupabase = async (id: string) => {
         setIsLoading(true);
         try {
@@ -645,6 +682,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
         saveToSupabase,
         loadFromSupabase,
+        createNewCharacter,
         isLoading,
 
         resetCharacter,
