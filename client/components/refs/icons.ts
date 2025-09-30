@@ -26,6 +26,7 @@ export {
     ArrowRight,
     Wind,
     Award,
+    Settings,
 } from "lucide-react";
 
 import * as Icons from "@/components/refs/icons";

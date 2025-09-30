@@ -66,7 +66,7 @@ export default function Characters() {
     }, []);
 
     const edit = (id: string) => {
-        nav(`/create/${id}`);
+        nav(`/create/${id}/class`);
     };
 
     const remove = async (id: string) => {

@@ -18,16 +18,17 @@ export const Paladin: ClassInfo = {
         { type: "armor", category: "shield" },
         { type: "weapon", category: "simple" },
         { type: "weapon", category: "martial" },
-
-        { type: "skill", key: "athletics" },
-        { type: "skill", key: "religion" },
         { type: "savingThrow", key: "wis" },
         { type: "savingThrow", key: "cha" },
     ],
-    choices: [{ type: "skill", count: 2, options: ["athletics", "intimidation", "medicine", "insight", "persuasion", "perception"] }],
 
     features: {
         1: [
+            {
+                name: "Основные особенности класса",
+                desc: "",
+                choices: [{ type: "skill", count: 2, options: ["athletics", "intimidation", "medicine", "insight", "persuasion", "perception"] }],
+            },
             {
                 name: "Возложение рук",
                 desc: `Ваше благословенное касание может лечить раны. У вас есть резерв целительной силы, восстанавливающийся, когда вы завершаете Долгий отдых. С помощью этого резерва вы можете восстанавливать Хиты; количество Хитов в этом резерве равно вашему уровню Паладина, умноженному на 5.\n\nБонусным действием вы можете прикоснуться к существу (включая себя) и зачерпнуть силу из резерва, восстанавливая этому существу Хиты. Их количество не должно превышать число, оставшееся в резерве.\n\nВы также можете потратить 5 Хитов из резерва, чтобы снять с существа состояние Отравленный; эти потраченные Хиты не исцеляют существо.`

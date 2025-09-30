@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ChoiceRenderer from "@/components/ui/ChoiceRenderer";
+import { ClassTraitsTable } from "@/components/ui/ClassTraitsTable";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useCharacter } from "@/store/character";
 import { FEATURES } from "@/data/classes/features/features";
 import type { ChoiceOption } from "@/data/shared/choices";
+import type { ClassInfo } from "@/data/classes/types";
 
 export interface FeatureBlockProps {
   name: string;
@@ -19,6 +21,10 @@ export interface FeatureBlockProps {
   originalLevel?: number;
   isSubclass?: boolean;
   uniqueId?: string;
+  defaultExpanded?: boolean;
+  ignoreLevel?: boolean;
+  classInfo?: ClassInfo; // Добавляем информацию о классе для отображения таблицы особенностей
+  showChoices?: boolean; // Показывать ли выборы в ClassTraitsTable
 }
 
 export default function FeatureBlock({
@@ -33,9 +39,13 @@ export default function FeatureBlock({
   originalLevel,
   isSubclass,
   uniqueId,
+  defaultExpanded = false,
+  ignoreLevel = false,
+  classInfo,
+  showChoices = true,
 }: FeatureBlockProps) {
   const { draft, setChosenFeatures, setChosenFightingStyle } = useCharacter();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [textExpanded, setTextExpanded] = useState(false);
   const [needsToggle, setNeedsToggle] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -79,7 +89,7 @@ export default function FeatureBlock({
     }
   }, [expanded]);
 
-  if (featureLevel && draft.basics.level < featureLevel) return null;
+  if (!ignoreLevel && featureLevel && draft.basics.level < featureLevel) return null;
 
   // --- Функция: получить выбранные значения для одного choice (возвращает массив выбранных ключей) ---
   const getSelectedForChoice = (choice: ChoiceOption, sourceKey: string): string[] => {
@@ -156,8 +166,8 @@ export default function FeatureBlock({
     total = counts.total;
   }
 
-  const hasUnfinishedChoice = total > 0 ? selected < total : false;
-  const choiceCountDisplay = total > 0 ? `${selected}/${total}` : "";
+  const hasUnfinishedChoice = showChoices && total > 0 ? selected < total : false;
+  const choiceCountDisplay = showChoices && total > 0 ? `${selected}/${total}` : "";
 
   // --- Сброс вложенных при смене (если нужно) ---
   const handleFeatureChange = (value: string) => {
@@ -208,35 +218,47 @@ export default function FeatureBlock({
       {/* Content */}
       {expanded && (
         <div className="p-2 text-xs text-muted-foreground [&>p]:mb-4 whitespace-pre-line">
-          <div 
-            ref={contentRef} 
-            className={`relative ${!textExpanded ? 'overflow-hidden' : ''}`}
-            style={{ maxHeight: textExpanded ? "none" : `${textMaxHeight}px` }}
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{desc.replace(/\\n/g, "\n")}</ReactMarkdown>
-            {!textExpanded && needsToggle && (
-              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card via-card/80 to-transparent pointer-events-none" />
-            )}
-          </div>
+          {/* Специальный случай для "Основные особенности класса" */}
+          {name === "Основные особенности класса" && classInfo ? (
+            <ClassTraitsTable 
+              classInfo={classInfo} 
+              choices={choices}
+              source={featureKey}
+              showChoices={showChoices}
+            />
+          ) : (
+            <>
+              <div 
+                ref={contentRef} 
+                className={`relative ${!textExpanded ? 'overflow-hidden' : ''}`}
+                style={{ maxHeight: textExpanded ? "none" : `${textMaxHeight}px` }}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{desc.replace(/\\n/g, "\n")}</ReactMarkdown>
+                {!textExpanded && needsToggle && (
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card via-card/80 to-transparent pointer-events-none" />
+                )}
+              </div>
 
-          {needsToggle && (
-            <button
-              className="text-lime-500 font-semibold text-xs mt-1 hover:text-lime-600 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation(); // чтобы клик не закрывал блок
-                setTextExpanded(!textExpanded);
-              }}
-            >
-              {textExpanded ? "Свернуть" : "Показать больше"}
-            </button>
-          )}
+              {needsToggle && (
+                <button
+                  className="text-lime-500 font-semibold text-xs mt-1 hover:text-lime-600 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation(); // чтобы клик не закрывал блок
+                    setTextExpanded(!textExpanded);
+                  }}
+                >
+                  {textExpanded ? "Свернуть" : "Показать больше"}
+                </button>
+              )}
 
-          {choices && choices.length > 0 && (
-            <div className="mt-2">
-              {choices.map((choice, ci) => (
-                <ChoiceRenderer key={`${featureKey}-${ci}`} ci={ci} source={featureKey} choices={[choice]} />
-              ))}
-            </div>
+              {choices && choices.length > 0 && showChoices && (
+                <div className="mt-2">
+                  {choices.map((choice, ci) => (
+                    <ChoiceRenderer key={`${featureKey}-${ci}`} ci={ci} source={featureKey} choices={[choice]} isPreview={!showChoices} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

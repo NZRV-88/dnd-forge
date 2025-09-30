@@ -118,7 +118,9 @@ export type CharacterContextType = {
     // Работа с бросками кости хитов
     setHpRollAtLevel: (level: number, value: number | null) => void; // level >= 2
     resetHpRolls: () => void;
-  
+    
+    // Очистка выборов класса
+    clearClassChoices: () => void;
 };
 
 /* ------------------------------------------------------
@@ -281,9 +283,21 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             next[idx] = value === null ? 0 : value;
             return { ...d, hpRolls: next };
         });
+        
+        // Автоматически сохраняем в БД при изменении бросков
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
     };
 
-    const resetHpRolls = () => setDraft((d) => ({ ...d, hpRolls: [] }));
+    const resetHpRolls = () => {
+        setDraft((d) => ({ ...d, hpRolls: [] }));
+        
+        // Автоматически сохраняем в БД при сбросе бросков
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
 
     /* -----------------------------
        Сеттеры для chosen.*
@@ -426,6 +440,124 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             }
         }));
 
+    const clearClassChoices = () => {
+        console.log("Очищаем выборы класса...");
+        setDraft(d => {
+            console.log("Текущие выборы до очистки:", d.chosen);
+            const newChosen = { ...d.chosen };
+            const newAsi = { ...d.asi };
+            
+            // Очищаем все выборы, связанные с классом и подклассом
+            // Ключи имеют формат: {class}-{level}-{featureIndex}- или class-{class}-{level}-{featureIndex}-
+            const currentClass = d.basics.class;
+            const currentSubclass = d.basics.subclass;
+            
+            console.log("Очищаем abilities:", Object.keys(newChosen.abilities));
+            Object.keys(newChosen.abilities).forEach(key => {
+                if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
+                    key.startsWith('class-') || key.startsWith('subclass-')) {
+                    console.log("Удаляем ability:", key);
+                    delete newChosen.abilities[key];
+                }
+            });
+            console.log("Очищаем skills:", Object.keys(newChosen.skills));
+            Object.keys(newChosen.skills).forEach(key => {
+                if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
+                    key.startsWith('class-') || key.startsWith('subclass-')) {
+                    console.log("Удаляем skill:", key);
+                    delete newChosen.skills[key];
+                }
+            });
+            Object.keys(newChosen.tools).forEach(key => {
+                if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
+                    key.startsWith('class-') || key.startsWith('subclass-')) {
+                    console.log("Удаляем tool:", key);
+                    delete newChosen.tools[key];
+                }
+            });
+            Object.keys(newChosen.languages).forEach(key => {
+                if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
+                    key.startsWith('class-') || key.startsWith('subclass-')) {
+                    console.log("Удаляем language:", key);
+                    delete newChosen.languages[key];
+                }
+            });
+            Object.keys(newChosen.spells).forEach(key => {
+                if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
+                    key.startsWith('class-') || key.startsWith('subclass-')) {
+                    console.log("Удаляем spell:", key);
+                    delete newChosen.spells[key];
+                }
+            });
+            console.log("Очищаем features:", Object.keys(newChosen.features));
+            Object.keys(newChosen.features).forEach(key => {
+                if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
+                    key.startsWith('class-') || key.startsWith('subclass-')) {
+                    console.log("Удаляем feature:", key);
+                    delete newChosen.features[key];
+                }
+            });
+            if (newChosen.fightingStyle) {
+                console.log("Очищаем fightingStyle:", Object.keys(newChosen.fightingStyle));
+                Object.keys(newChosen.fightingStyle).forEach(key => {
+                    if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
+                        key.startsWith('class-') || key.startsWith('subclass-')) {
+                        console.log("Удаляем fightingStyle:", key);
+                        delete newChosen.fightingStyle![key];
+                    }
+                });
+            }
+            
+            // Очищаем фиты, связанные с классом
+            // Фиты могут иметь формат: class-{class}-{level}-{featureIndex}:{featKey} или {class}-{level}-{featureIndex}:{featKey}
+            console.log("Очищаем feats:", newChosen.feats);
+            const originalFeats = [...newChosen.feats];
+            newChosen.feats = newChosen.feats.filter(f => {
+                const sourceKey = f.split(':')[0];
+                const shouldKeep = !sourceKey.startsWith('class-') && 
+                                  !sourceKey.startsWith('subclass-') && 
+                                  !sourceKey.startsWith(`${currentClass}-`) && 
+                                  !sourceKey.startsWith(`${currentSubclass}-`);
+                if (!shouldKeep) {
+                    console.log("Удаляем feat:", f);
+                }
+                return shouldKeep;
+            });
+            console.log("Остались feats:", newChosen.feats);
+            
+            // Очищаем ASI (Ability Score Improvements), связанные с классом
+            Object.keys(newAsi).forEach(level => {
+                const levelNum = parseInt(level);
+                if (levelNum > 1) { // Оставляем только 1-й уровень
+                    delete newAsi[levelNum];
+                }
+            });
+            
+            const newDraft = {
+                ...d,
+                basics: {
+                    ...d.basics,
+                    class: '',
+                    subclass: '',
+                    level: 1, // Сбрасываем уровень на 1
+                },
+                asi: newAsi,
+                chosen: newChosen,
+                hpRolls: [],
+            };
+            
+            // Сохраняем изменения в базу данных
+            if (newDraft.id) {
+                saveToSupabase().catch(console.error);
+            }
+            
+            console.log("Очищенные выборы:", newChosen);
+            console.log("Очищенный ASI:", newAsi);
+            
+            return newDraft;
+        });
+    };
+
     /* -----------------------------
        Вычисляемые данные
        (пока просто выбранные; позже
@@ -518,6 +650,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setChosenFightingStyle,
         setHpRollAtLevel,
         resetHpRolls,
+        clearClassChoices,
     };
 
     return (

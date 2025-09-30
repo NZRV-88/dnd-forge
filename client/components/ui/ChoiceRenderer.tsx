@@ -43,13 +43,15 @@ interface ChoiceRendererProps {
     choices: ChoiceOption[];
     /** Индекс выбора (для уникальных ключей) */
     ci: number;
+    /** Режим предпросмотра (без интерактивности) */
+    isPreview?: boolean;
 }
 
 // ============================================================================
 // ОСНОВНОЙ КОМПОНЕНТ
 // ============================================================================
 
-export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps) {
+export default function ChoiceRenderer({ source, choices, isPreview = false }: ChoiceRendererProps) {
     // Получаем все необходимые функции и данные из контекста персонажа
     const {
         // Функции для работы с характеристиками
@@ -97,7 +99,12 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
      * @param isUnfinished - незавершен ли выбор
      */
     const getSelectStyles = (hasValue: boolean, isUnfinished: boolean = false) => {
-        const baseStyles = "w-full rounded-lg border-2 p-3 text-sm font-medium shadow-sm transition-all duration-200 hover:shadow-md focus:ring-2 focus:ring-primary/20 focus:outline-none";
+        if (isPreview) {
+            // В режиме предпросмотра убираем рамку и интерактивность
+            return "w-full text-xs text-muted-foreground";
+        }
+        
+        const baseStyles = "w-full rounded-lg border-2 p-3 text-sm font-medium shadow-sm transition-all duration-200 hover:shadow-md focus:ring-2 focus:ring-primary/20 focus:outline-none mt-2";
         
         if (isUnfinished) {
             return `${baseStyles} border-blue-400 bg-blue-50/30 text-blue-800 hover:border-blue-500 focus:border-blue-500`;
@@ -501,6 +508,57 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                             const featKey = `${source}-${idx}`;
                             const selected = sourceFeats.find(f => f.startsWith(featKey + ':'))?.split(':')[1] || "";
 
+                            // Фильтруем доступные фиты
+                            let availableFeats = ALL_FEATS;
+                            
+                            // Определяем, является ли это ASI (Ability Score Improvement)
+                            // ASI может быть либо с источником "asi", либо с особенностью "Увеличение характеристик"
+                            const isAsi = source === "asi" || 
+                                (source.startsWith('fighter-') && source.includes('-') && 
+                                 draft.basics.class && source.startsWith(draft.basics.class + '-'));
+                            
+                            // Если это не ASI, исключаем уже выбранные фиты
+                            if (!isAsi) {
+                                // Получаем все уже выбранные фиты (кроме текущего)
+                                const allSelectedFeats = draft.chosen.feats
+                                    .filter(f => !f.startsWith(featKey + ':'))
+                                    .map(f => f.split(':')[1])
+                                    .filter(Boolean);
+                                
+                                // Исключаем "Увеличение характеристик" для не-ASI источников
+                                availableFeats = ALL_FEATS.filter(feat => 
+                                    feat.key !== "ability-score-improvement" && 
+                                    !allSelectedFeats.includes(feat.key)
+                                );
+                            } else {
+                                // Для ASI показываем "Увеличение характеристик" (можно переиспользовать) 
+                                // и исключаем только фиты, выбранные в других ASI источниках
+                                const currentClass = draft.basics.class;
+                                const asiSelectedFeats = draft.chosen.feats
+                                    .filter(f => {
+                                        // Исключаем текущий выбор
+                                        if (f.startsWith(featKey + ':')) return false;
+                                        
+                                        // Включаем только ASI источники (источники класса с уровнями 4,6,8,12,14,16,19)
+                                        const sourceKey = f.split(':')[0];
+                                        if (!sourceKey.startsWith(currentClass + '-')) return false;
+                                        
+                                        // Проверяем, что это ASI уровень
+                                        const levelMatch = sourceKey.match(new RegExp(`${currentClass}-(\\d+)-`));
+                                        if (!levelMatch) return false;
+                                        
+                                        const level = parseInt(levelMatch[1]);
+                                        return [4, 6, 8, 12, 14, 16, 19].includes(level);
+                                    })
+                                    .map(f => f.split(':')[1])
+                                    .filter(Boolean);
+                                
+                                availableFeats = ALL_FEATS.filter(feat => 
+                                    feat.key === "ability-score-improvement" || 
+                                    !asiSelectedFeats.includes(feat.key)
+                                );
+                            }
+
                             return (
                                 <div key={choiceKey} className="space-y-2">
                                     <select
@@ -534,7 +592,7 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                                         }}
                                     >
                                         <option value="">Выберите талант</option>
-                                        {ALL_FEATS.map((feat) => (
+                                        {availableFeats.map((feat) => (
                                             <option key={feat.key} value={feat.key}>
                                                 {feat.name}
                                             </option>
@@ -608,7 +666,7 @@ export default function ChoiceRenderer({ source, choices }: ChoiceRendererProps)
                         return (
                             <div
                                 key={`${source}:fighting-style:${ci}`}
-                                className="relative space-y-2 border-2 border-stone-200 rounded-lg p-3 bg-white"
+                                className="relative space-y-2"
                             >
                                 <select
                                     className={getSelectStyles(!!selectedStyles[0])}

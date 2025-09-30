@@ -100,7 +100,7 @@ export const SKILLS: Skill[] = [
         desc: "Ориентирование, выслеживание, нахождение пищи и воды."
     },
     {
-        key: "animal_handling",
+        key: "animal-handling",
         name: "Уход за животными",
         nameEn: "Animal Handling",
         ability: "WIS",
