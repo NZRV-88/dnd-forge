@@ -32,7 +32,8 @@ export default function Start() {
             }
         } else {
             // режим создания - сбрасываем только если есть данные от предыдущего персонажа
-            if (draft.id) {
+            // и только если мы действительно переходим с другой страницы
+            if (draft.id && draft.basics.name) {
                 resetCharacter();
             }
         }

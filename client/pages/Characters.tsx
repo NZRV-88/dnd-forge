@@ -38,7 +38,7 @@ export default function Characters() {
     const [characters, setCharacters] = useState<SupabaseCharacter[]>([]);
     const [loading, setLoading] = useState(true);
     const nav = useNavigate();
-    const { resetCharacter } = useCharacter();
+    const { } = useCharacter();
 
     useEffect(() => {
         (async () => {
@@ -88,7 +88,6 @@ export default function Characters() {
                 <h1 className="text-2xl font-bold">Мои персонажи</h1>
                 <Button
                     onClick={() => {
-                        resetCharacter(); // Сбрасываем данные перед созданием нового
                         nav(`/create`);
                     }}
                 >
@@ -229,7 +228,6 @@ export default function Characters() {
                     <div className="mt-2 text-sm">Сохраните героя на шаге «Итоги».</div>
                     <div className="mt-6">
                             <Button asChild onClick={() => {
-                                resetCharacter(); // Сбрасываем данные перед созданием нового
                                 nav(`/create`);
                             }}>
                             Создать нового
