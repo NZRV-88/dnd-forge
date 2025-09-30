@@ -1,17 +1,6 @@
 {
     "buildCommand": "npm run build:client",
     "outputDirectory": "dist/spa",
-    "functions": {
-        "api/ping.ts": {
-            "runtime": "@vercel/node@3.0.0"
-        },
-        "api/name-generator.ts": {
-            "runtime": "@vercel/node@3.0.0"
-        },
-        "api/advanced-name-generator.ts": {
-            "runtime": "@vercel/node@3.0.0"
-        }
-    },
     "rewrites": [
         {
             "source": "/api/(.*)",
