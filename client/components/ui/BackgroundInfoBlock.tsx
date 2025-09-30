@@ -16,16 +16,29 @@ export default function BackgroundInfoBlock({
     source 
 }: BackgroundInfoBlockProps) {
     return (
-        <Card className="min-h-[100px]">
-            <CardContent className="p-4">
-                <div className="space-y-3">
-                    {/* Название и описание */}
-                    <div>
-                        <h3 className="font-semibold text-lg">{backgroundInfo.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {backgroundInfo.longDesc || backgroundInfo.desc}
-                        </p>
+        <div className="space-y-6">
+            {/* Карточка выбранной предыстории */}
+            <Card className="min-h-[100px]">
+                <CardContent className="p-4">
+                    <div className="flex items-start gap-4">
+                        {/* Иконка предыстории */}
+                        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                            {backgroundInfo.name.charAt(0)}
+                        </div>
+                        
+                        {/* Название и описание */}
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-lg">{backgroundInfo.name}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                {backgroundInfo.longDesc || backgroundInfo.desc}
+                            </p>
+                        </div>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Детальная информация */}
+            <div className="space-y-4">
 
                     {/* Владения навыками */}
                     {backgroundInfo.proficiencies?.some((p) => p.type === "skill") && (
@@ -148,20 +161,19 @@ export default function BackgroundInfoBlock({
                         </ul>
                     </div>
 
-                    {/* Выборы предыстории */}
-                    {backgroundInfo.choices && backgroundInfo.choices.length > 0 && (
-                        <div>
-                            <div className="text-sm font-medium">Выборы</div>
-                            <div className="mt-2">
-                                <ChoiceRenderer
-                                    choices={backgroundInfo.choices}
-                                    source={source}
-                                />
-                            </div>
+                {/* Выборы предыстории */}
+                {backgroundInfo.choices && backgroundInfo.choices.length > 0 && (
+                    <div>
+                        <div className="text-sm font-medium">Выборы</div>
+                        <div className="mt-2">
+                            <ChoiceRenderer
+                                choices={backgroundInfo.choices}
+                                source={source}
+                            />
                         </div>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
