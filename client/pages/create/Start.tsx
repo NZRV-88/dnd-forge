@@ -21,16 +21,18 @@ export default function Start() {
     } = useCharacter();
     const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
 
-    // если id есть в url — грузим персонажа
+    // если id есть в url — грузим персонажа только если он не загружен
     useEffect(() => {
         if (id) {
-            // режим редактирования
-            loadFromSupabase(id);
+            // режим редактирования - загружаем только если ID не совпадает с текущим
+            if (draft.id !== id) {
+                loadFromSupabase(id);
+            }
         } else {
             // режим создания
             resetCharacter();
         }
-    }, [id, loadFromSupabase, resetCharacter]);
+    }, [id, draft.id, loadFromSupabase, resetCharacter]);
 
     // синхронизируем локальные поля, если basics обновились (например, после загрузки из базы)
     useEffect(() => {
