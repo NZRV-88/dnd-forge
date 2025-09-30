@@ -3,13 +3,13 @@
     "outputDirectory": "dist/spa",
     "functions": {
         "api/ping.ts": {
-            "runtime": "nodejs18.x@1.0.0"
+            "runtime": "@vercel/node@3.0.0"
         },
         "api/name-generator.ts": {
-            "runtime": "nodejs18.x@1.0.0"
+            "runtime": "@vercel/node@3.0.0"
         },
         "api/advanced-name-generator.ts": {
-            "runtime": "nodejs18.x@1.0.0"
+            "runtime": "@vercel/node@3.0.0"
         }
     },
     "rewrites": [
