@@ -88,48 +88,38 @@ export default function BackgroundPick() {
                 )}
 
                 {/* Сетка предысторий */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {sortedBackgrounds.map((bg) => {
-                        const isSelected = draft.basics.background === bg.key;
-                        return (
+                {!hasSelectedBackground ? (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {sortedBackgrounds.map((bg) => (
                             <button
                                 key={bg.key}
                                 onClick={() => handleBackgroundClick(bg.key)}
-                                className={`relative text-left rounded-lg border p-4 flex flex-col justify-between transition hover:shadow-md ${
-                                    isSelected
-                                        ? "border-2 border-primary shadow-lg bg-gradient-to-b from-primary/5 to-transparent"
-                                        : "hover:border-primary/50"
-                                }`}
+                                className="relative text-left rounded-lg border p-4 flex flex-col justify-between transition hover:shadow-md hover:border-primary/50"
                             >
-                                {isSelected && (
-                                    <div className="absolute right-2 top-2 text-primary">
-                                        <Icons.Crown className="w-5 h-5" />
-                                    </div>
-                                )}
                                 <div>
                                     <h3 className="font-medium text-lg">{bg.name}</h3>
                                     <p className="mt-2 text-sm text-muted-foreground">{bg.desc}</p>
                                 </div>
                             </button>
-                        );
-                    })}
-                </div>
-
-                {/* Блок выбранной предыстории */}
-                {hasSelectedBackground && (
-                    <div className="mt-6">
-                        <div className="relative">
-                            <BackgroundInfoBlock 
-                                backgroundInfo={backgroundInfo!} 
-                                source={`background-${draft.basics.background}`}
-                            />
-                            {/* Крестик для удаления */}
-                            <button
-                                onClick={() => setShowRemoveConfirm(true)}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                            >
-                                <Icons.X className="w-4 h-4" />
-                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex justify-between gap-4">
+                        {/* Блок выбранной предыстории */}
+                        <div className="flex-1">
+                            <div className="relative">
+                                <BackgroundInfoBlock 
+                                    backgroundInfo={backgroundInfo!} 
+                                    source={`background-${draft.basics.background}`}
+                                />
+                                {/* Крестик для удаления */}
+                                <button
+                                    onClick={() => setShowRemoveConfirm(true)}
+                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                                >
+                                    <Icons.X className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
