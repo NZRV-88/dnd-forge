@@ -16,6 +16,7 @@ export default function Start() {
         setDraft,
         loadFromSupabase,
         resetCharacter,
+        isLoading,
     } = useCharacter();
     const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
 
@@ -28,7 +29,7 @@ export default function Start() {
             // режим создания
             resetCharacter();
         }
-    }, [id]);
+    }, [id, loadFromSupabase, resetCharacter]);
 
     // синхронизируем локальные поля, если basics обновились (например, после загрузки из базы)
     useEffect(() => {
@@ -62,6 +63,22 @@ export default function Start() {
         nav("/characters");
     };
     const newId = uuidv4();
+
+    // Показываем загрузку, если данные загружаются
+    if (isLoading) {
+        return (
+            <div className="container mx-auto py-10">
+                <div className="mx-auto max-w-5xl relative">
+                    <div className="flex items-center justify-center min-h-[400px]">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                            <p className="text-muted-foreground">Загрузка персонажа...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto py-10">

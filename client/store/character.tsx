@@ -107,6 +107,7 @@ export type CharacterContextType = {
     // Сохранение/загрузка
     saveToSupabase: () => Promise<void>;
     loadFromSupabase: (id: string) => Promise<void>;
+    isLoading: boolean;
 
     // Прочее
     resetCharacter: () => void;
@@ -189,6 +190,7 @@ export const CharacterContext = createContext<CharacterContextType | undefined>(
 
 export function CharacterProvider({ children }: { children: React.ReactNode }) {
     const [draft, setDraft] = useState<CharacterDraft>(makeDefaultDraft());
+    const [isLoading, setIsLoading] = useState(false);
 
     // Функция миграции старых ключей в новые
     const migrateOldKeys = useCallback((chosen: any) => {
@@ -247,6 +249,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
     const resetCharacter = () => {
         setDraft(makeDefaultDraft());
+        setIsLoading(false);
         try {
             localStorage.removeItem("characterDraft");
         } catch {
@@ -585,31 +588,36 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     };
 
     const loadFromSupabase = async (id: string) => {
-        const { data, error } = await supabase
-            .from("characters")
-            .select("*")
-            .eq("id", id)
-            .single();
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("characters")
+                .select("*")
+                .eq("id", id)
+                .single();
 
-        if (error) {
-            console.error("Ошибка загрузки из Supabase:", error);
-            return;
-        }
+            if (error) {
+                console.error("Ошибка загрузки из Supabase:", error);
+                return;
+            }
 
-        if (data) {
-            // достаём draft из JSON-поля data
-            const savedDraft = data.data;
+            if (data) {
+                // достаём draft из JSON-поля data
+                const savedDraft = data.data;
 
-            // Миграция старых ключей в новые
-            const migratedChosen = migrateOldKeys(savedDraft.chosen || {});
+                // Миграция старых ключей в новые
+                const migratedChosen = migrateOldKeys(savedDraft.chosen || {});
 
-            // мержим с дефолтами, чтобы не поломались старые персонажи
-            setDraft({
-                ...makeDefaultDraft(),
-                ...savedDraft,
-                basics: { ...makeDefaultDraft().basics, ...savedDraft.basics },
-                chosen: { ...makeDefaultDraft().chosen, ...migratedChosen },
-            });
+                // мержим с дефолтами, чтобы не поломались старые персонажи
+                setDraft({
+                    ...makeDefaultDraft(),
+                    ...savedDraft,
+                    basics: { ...makeDefaultDraft().basics, ...savedDraft.basics },
+                    chosen: { ...makeDefaultDraft().chosen, ...migratedChosen },
+                });
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -637,6 +645,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
         saveToSupabase,
         loadFromSupabase,
+        isLoading,
 
         resetCharacter,
         setBasics,

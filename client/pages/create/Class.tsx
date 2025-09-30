@@ -70,11 +70,11 @@ function calcMaxHP(
 export default function ClassPick() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
-    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, loadFromSupabase } = useCharacter();
+    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, loadFromSupabase, isLoading } = useCharacter();
     
     // Загружаем персонажа при редактировании
     useEffect(() => {
-        if (id && !draft.id) {
+        if (id && draft.id !== id) {
             loadFromSupabase(id);
         }
     }, [id, draft.id, loadFromSupabase]);
@@ -164,6 +164,22 @@ export default function ClassPick() {
     };
 
     const hasSelectedClass = Boolean(draft.basics.class);
+
+    // Показываем загрузку, если данные загружаются
+    if (isLoading) {
+        return (
+            <div className="container mx-auto py-10">
+                <div className="mx-auto max-w-5xl relative overflow-visible">
+                    <div className="flex items-center justify-center min-h-[400px]">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                            <p className="text-muted-foreground">Загрузка персонажа...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto py-10">
