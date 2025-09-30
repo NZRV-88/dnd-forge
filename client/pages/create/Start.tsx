@@ -49,13 +49,22 @@ export default function Start() {
             characterHeaderRef.current.forceSave();
         }
 
+        // Получаем актуальные данные из CharacterHeader
+        const currentData = characterHeaderRef.current?.getCurrentData();
+        
+        // Принудительно обновляем draft с актуальными данными
         setDraft(d => ({
             ...d,
             basics: {
                 ...d.basics,
+                name: currentData?.name || d.basics.name,
                 hpMode: localHpMode,
             },
+            avatar: currentData?.avatar || d.avatar,
         }));
+
+        // Ждем обновления draft перед созданием персонажа
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         if (id) {
             // Режим редактирования - просто переходим

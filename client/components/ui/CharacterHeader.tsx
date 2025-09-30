@@ -9,6 +9,7 @@ interface CharacterHeaderProps {
 
 export interface CharacterHeaderRef {
     forceSave: () => void;
+    getCurrentData: () => { name: string; avatar: string | null };
 }
 
 const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ onForceSave }, ref) => {
@@ -95,10 +96,14 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
         setIsAvatarManagerOpen(true);
     };
 
-    // Экспортируем forceSave через ref
+    // Экспортируем методы через ref
     useImperativeHandle(ref, () => ({
-        forceSave
-    }), [forceSave]);
+        forceSave,
+        getCurrentData: () => ({
+            name: localName,
+            avatar: draft?.avatar || null
+        })
+    }), [forceSave, localName, draft?.avatar]);
 
     return (
         <>
