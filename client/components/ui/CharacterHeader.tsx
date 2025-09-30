@@ -1,12 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from "react";
 import { useCharacter } from "@/store/character";
 import AvatarManager from "./AvatarManager";
 import NameGenerator from "./NameGenerator";
 
-export default function CharacterHeader() {
+interface CharacterHeaderProps {
+    onForceSave?: () => void;
+}
+
+export interface CharacterHeaderRef {
+    forceSave: () => void;
+}
+
+const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ onForceSave }, ref) => {
     const { draft, setDraft, saveToSupabase } = useCharacter();
     const [isAvatarManagerOpen, setIsAvatarManagerOpen] = useState(false);
     const [localName, setLocalName] = useState(draft?.basics?.name || "");
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Синхронизируем локальное имя с draft только при первой загрузке
     useEffect(() => {
@@ -18,13 +27,27 @@ export default function CharacterHeader() {
     // Debounced функция для сохранения
     const debouncedSave = useCallback(() => {
         if (draft.id) {
-            const timeoutId = setTimeout(() => {
-                saveToSupabase().catch(console.error);
-            }, 500); // Сохраняем через 500ms после последнего изменения
+            // Очищаем предыдущий timeout
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
             
-            return () => clearTimeout(timeoutId);
+            // Устанавливаем новый timeout
+            saveTimeoutRef.current = setTimeout(() => {
+                saveToSupabase().catch(console.error);
+                saveTimeoutRef.current = null;
+            }, 500);
         }
     }, [draft.id, saveToSupabase]);
+
+    // Очищаем timeout при размонтировании компонента
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement> | string) => {
         const newName = typeof e === 'string' ? e : e.target.value;
@@ -43,21 +66,39 @@ export default function CharacterHeader() {
         debouncedSave();
     };
 
+    // Функция для принудительного сохранения
+    const forceSave = useCallback(() => {
+        if (draft.id) {
+            // Очищаем debounced timeout
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+                saveTimeoutRef.current = null;
+            }
+            // Сохраняем немедленно
+            saveToSupabase().catch(console.error);
+        }
+        // Вызываем внешний callback если есть
+        onForceSave?.();
+    }, [draft.id, saveToSupabase, onForceSave]);
+
     const handleAvatarSelect = (avatarUrl: string | null) => {
         setDraft(d => ({
             ...d,
             avatar: avatarUrl,
         }));
 
-        // Автоматически сохраняем в БД
-        if (draft.id) {
-            saveToSupabase().catch(console.error);
-        }
+        // Принудительно сохраняем аватар сразу
+        forceSave();
     };
 
     const handleAvatarClick = () => {
         setIsAvatarManagerOpen(true);
     };
+
+    // Экспортируем forceSave через ref
+    useImperativeHandle(ref, () => ({
+        forceSave
+    }), [forceSave]);
 
     return (
         <>
@@ -113,4 +154,8 @@ export default function CharacterHeader() {
             />
         </>
     );
-}
+});
+
+CharacterHeader.displayName = 'CharacterHeader';
+
+export default CharacterHeader;

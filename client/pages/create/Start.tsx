@@ -1,15 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 
 import { useCharacter } from "@/store/character";
 import StepArrows from "@/components/ui/StepArrows";
 import ExitButton from "@/components/ui/ExitButton";
-import CharacterHeader from "@/components/ui/CharacterHeader";
+import CharacterHeader, { CharacterHeaderRef } from "@/components/ui/CharacterHeader";
 
 export default function Start() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
+    const characterHeaderRef = useRef<CharacterHeaderRef>(null);
 
     const {
         draft,
@@ -69,6 +70,11 @@ export default function Start() {
             },
         }));
 
+        // Принудительно сохраняем все изменения перед выходом
+        if (characterHeaderRef.current) {
+            characterHeaderRef.current.forceSave();
+        }
+
         // Сохраняем изменения в БД перед выходом
         if (draft.id) {
             try {
@@ -106,7 +112,7 @@ export default function Start() {
                 <ExitButton onClick={handleExit} />
 
                 {/* Шапка с именем и аватаркой */}
-                <CharacterHeader />
+                <CharacterHeader ref={characterHeaderRef} />
 
                 <h1 className="text-2xl font-bold mb-6 text-center">Создание персонажа</h1>
 
