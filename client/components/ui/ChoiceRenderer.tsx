@@ -65,6 +65,8 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         // Функции для работы с инструментами
         setChosenTools,
         removeChosenTool,
+        setChosenToolProficiencies,
+        removeChosenToolProficiency,
         
         // Функции для работы с языками
         setChosenLanguages,
@@ -131,6 +133,9 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         Object.keys(draft.chosen.tools).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenTools(key, []);
         });
+        Object.keys(draft.chosen.toolProficiencies).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenToolProficiencies(key, []);
+        });
         Object.keys(draft.chosen.languages).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenLanguages(key, []);
         });
@@ -155,6 +160,9 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         });
         Object.keys(draft.chosen.tools).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenTools(key, []);
+        });
+        Object.keys(draft.chosen.toolProficiencies).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenToolProficiencies(key, []);
         });
         Object.keys(draft.chosen.languages).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenLanguages(key, []);
@@ -375,6 +383,63 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                     }
 
                     // ========================================================================
+                    // ВЫБОР ВЛАДЕНИЯ ИНСТРУМЕНТАМИ
+                    // ========================================================================
+                    case "tool-proficiency": {
+                        return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
+                            const choiceKey = `${source}:tool-proficiency:${ci}:${idx}`;
+                            const sourceArray = draft.chosen.toolProficiencies?.[source] || [];
+                            const selected = sourceArray[idx] ?? "";
+                            const takenExceptCurrent = sourceArray.filter((_, i) => i !== idx);
+
+                            return (
+                                <div key={choiceKey} className="space-y-2">
+                                    <select
+                                        className={getSelectStyles(!!selected)}
+                                        value={selected}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            
+                                            // Создаем массив фиксированной длины для сохранения позиций
+                                            const updated = Array.from({ length: choice.count ?? 1 }, (_, i) => 
+                                                i === idx ? value : (sourceArray[i] || "")
+                                            );
+
+                                            setChosenToolProficiencies(source, updated);
+                                        }}
+                                    >
+                                        <option value="">Выберите владение инструментом</option>
+                                        {choice.options
+                                            ?.filter(opt => !takenExceptCurrent.includes(opt))
+                                            .map((opt) => {
+                                                const categoryLabel = TOOL_CATEGORY_LABELS[opt] || opt;
+                                                return (
+                                                    <option key={opt} value={opt}>
+                                                        {categoryLabel}
+                                                    </option>
+                                                );
+                                            })}
+                                    </select>
+
+                                    {/* Карточка выбранного владения */}
+                                    {selected && (() => {
+                                        const categoryLabel = TOOL_CATEGORY_LABELS[selected] || selected;
+
+                                        return (
+                                            <div className="rounded-lg border border-stone-300 bg-stone-50 p-3 shadow-sm">
+                                                <div className="font-medium text-stone-800">{categoryLabel}</div>
+                                                <p className="text-xs text-stone-600 mt-1">
+                                                    Владение всеми инструментами данной категории
+                                                </p>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            );
+                        });
+                    }
+
+                    // ========================================================================
                     // ВЫБОР ЯЗЫКОВ
                     // ========================================================================
                     case "language": {
@@ -437,6 +502,8 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     return (draft.chosen.skills?.[subSource]?.length || 0) >= cnt;
                                 case "tool":
                                     return (draft.chosen.tools?.[subSource]?.length || 0) >= cnt;
+                                case "tool-proficiency":
+                                    return (draft.chosen.toolProficiencies?.[subSource]?.length || 0) >= cnt;
                                 case "language":
                                     return (draft.chosen.languages?.[subSource]?.length || 0) >= cnt;
                                 case "spell":

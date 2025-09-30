@@ -167,7 +167,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
 
     return {
         skills: Array.from(skills),
-        Tools: Array.from(Tools),
+        tools: Array.from(tools),
         languages: Array.from(languages),
         spells: Array.from(spells),
         feats: Array.from(feats),

@@ -49,6 +49,7 @@ export type CharacterDraft = {
         abilities: Record<string, (keyof Abilities)[]>; // источник -> выбранные характеристики
         skills: Record<string, string[]>;               // источник -> выбранные навыки
         tools: Record<string, string[]>;
+        toolProficiencies: Record<string, string[]>;    // источник -> выбранные владения инструментами
         languages: Record<string, string[]>;
         feats: string[];                                // выбранные фиты (ключи)
         spells: Record<string, string[]>;
@@ -89,6 +90,8 @@ export type CharacterContextType = {
 
     setChosenTools: (source: string, tools: string[]) => void;
     removeChosenTool: (source: string, tool: string) => void;
+    setChosenToolProficiencies: (source: string, toolProficiencies: string[]) => void;
+    removeChosenToolProficiency: (source: string, toolProficiency: string) => void;
 
     setChosenLanguages: (source: string, langs: string[]) => void;
     removeChosenLanguage: (source: string, lang: string) => void;
@@ -166,6 +169,7 @@ const makeDefaultDraft = (): CharacterDraft => ({
         abilities: {},
         skills: {},
         tools: {},
+        toolProficiencies: {},
         languages: {},
         feats: [],
         spells: {},
@@ -371,6 +375,24 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             },
         }));
 
+    const setChosenToolProficiencies = (source: string, toolProficiencies: string[]) =>
+        setDraft(d => ({
+            ...d,
+            chosen: { ...d.chosen, toolProficiencies: { ...d.chosen.toolProficiencies, [source]: toolProficiencies } },
+        }));
+
+    const removeChosenToolProficiency = (source: string, toolProficiency: string) =>
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                toolProficiencies: {
+                    ...d.chosen.toolProficiencies,
+                    [source]: (d.chosen.toolProficiencies[source] || []).filter(t => t !== toolProficiency),
+                },
+            },
+        }));
+
     const setChosenLanguages = (source: string, langs: string[]) =>
         setDraft(d => ({
             ...d,
@@ -486,6 +508,13 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                     key.startsWith('class-') || key.startsWith('subclass-')) {
                     console.log("Удаляем tool:", key);
                     delete newChosen.tools[key];
+                }
+            });
+            Object.keys(newChosen.toolProficiencies).forEach(key => {
+                if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
+                    key.startsWith('class-') || key.startsWith('subclass-')) {
+                    console.log("Удаляем toolProficiency:", key);
+                    delete newChosen.toolProficiencies[key];
                 }
             });
             Object.keys(newChosen.languages).forEach(key => {
@@ -682,6 +711,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenSkill,
         setChosenTools,
         removeChosenTool,
+        setChosenToolProficiencies,
+        removeChosenToolProficiency,
         setChosenLanguages,
         removeChosenLanguage,
         setChosenSpells,
