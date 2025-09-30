@@ -1,15 +1,15 @@
 {
-    "buildCommand": "npm run build:vercel",
-    "outputDirectory": "dist/spa",
-    "functions": {
-        "api/index.ts": {
-            "runtime": "nodejs18.x"
+    "builds": [
+        {
+            "src": "package.json",
+            "use": "@vercel/static-build",
+            "config": { "distDir": "dist/spa" }
         }
-    },
+    ],
     "routes": [
         {
             "src": "/api/(.*)",
-            "dest": "/api/index.ts"
+            "dest": "/api/$1"
         },
         {
             "src": "/(.*)",

@@ -1406,7 +1406,7 @@ function generateNameFromSyllables(syllables: any, gender: string): string {
     if (gender === 'female') {
         // Для женского пола: приоритет femaleSuffixes, fallback на общие suffixes
         if (hasFemaleSuffixes) {
-            suffix = femaleSuffixes[Math.floor(Math.random() * femaleSuffixes.length)];
+        suffix = femaleSuffixes[Math.floor(Math.random() * femaleSuffixes.length)];
         } else if (hasGeneralSuffixes) {
             suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
         } else {
@@ -1415,10 +1415,10 @@ function generateNameFromSyllables(syllables: any, gender: string): string {
     } else if (gender === 'male') {
         // Для мужского пола: приоритет maleSuffixes, fallback на общие suffixes
         if (hasMaleSuffixes) {
-            suffix = maleSuffixes[Math.floor(Math.random() * maleSuffixes.length)];
+        suffix = maleSuffixes[Math.floor(Math.random() * maleSuffixes.length)];
         } else if (hasGeneralSuffixes) {
             suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-        } else {
+    } else {
             suffix = ''; // Fallback
         }
     } else {
