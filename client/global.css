@@ -98,7 +98,7 @@
 
 .frame-border {
     border: 16px solid transparent; /* ширина угла */
-    border-image-source: url('/src/assets/frames/skillFrame.svg');
+    border-image-source: url('/src/assets/frames/SkillFrame.svg');
     border-image-slice: 16; /* отрезаем по углу */
     border-image-repeat: stretch; /* боковины тянутся */
     padding: 0 3px; /* добавляем внутренний отступ */
