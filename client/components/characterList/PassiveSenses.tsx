@@ -201,6 +201,7 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
                                                 [key]: e.target.value,
                                             })
                                         }
+                                        spellCheck={false}
                                         className="flex-1 bg-neutral-800 border border-neutral-600 rounded px-2"
                                     />
                                 </div>
@@ -242,6 +243,7 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
                                                 [v.name]: { ...v, source: e.target.value },
                                             })
                                         }
+                                        spellCheck={false}
                                         className="flex-1 bg-neutral-800 border border-neutral-600 rounded px-2"
                                     />
                                 </div>

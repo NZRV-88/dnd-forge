@@ -66,6 +66,7 @@ export default function CharacterHeader() {
                                 value={localName}
                                 onChange={handleNameChange}
                                 placeholder="Введите имя персонажа"
+                                spellCheck={false}
                                 className="w-full text-2xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/50 focus:ring-0"
                             />
                             <NameGenerator 

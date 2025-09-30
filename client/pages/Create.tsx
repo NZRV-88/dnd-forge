@@ -104,6 +104,7 @@ export default function Create() {
                       value={basics.name}
                       onChange={(e) => setBasics({ name: e.target.value })}
                       placeholder="Например, Элара"
+                      spellCheck={false}
                       className="mt-1 w-full rounded-md border bg-background px-3 py-2 outline-none ring-0 focus:border-primary"
                     />
                   </div>
