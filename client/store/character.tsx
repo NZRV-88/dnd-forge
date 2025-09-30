@@ -108,6 +108,7 @@ export type CharacterContextType = {
     saveToSupabase: () => Promise<void>;
     loadFromSupabase: (id: string) => Promise<void>;
     createNewCharacter: (id: string) => Promise<void>;
+    initNewCharacter: () => void;
     isLoading: boolean;
 
     // Прочее
@@ -256,6 +257,14 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         } catch {
             // noop
         }
+    };
+
+    const initNewCharacter = () => {
+        console.log('Store: initNewCharacter called');
+        const newDraft = makeDefaultDraft();
+        setDraft(newDraft);
+        setIsLoading(false);
+        // Не удаляем localStorage, чтобы сохранить данные пользователя
     };
 
     const setBasics = (updates: Partial<CharacterDraft["basics"]>) =>
@@ -683,6 +692,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         saveToSupabase,
         loadFromSupabase,
         createNewCharacter,
+        initNewCharacter,
         isLoading,
 
         resetCharacter,

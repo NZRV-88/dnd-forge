@@ -19,6 +19,7 @@ export default function Start() {
         createNewCharacter,
         saveToSupabase,
         resetCharacter,
+        initNewCharacter,
         isLoading,
     } = useCharacter();
     const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
@@ -31,13 +32,13 @@ export default function Start() {
                 loadFromSupabase(id);
             }
         } else {
-            // режим создания - сбрасываем только если есть данные от предыдущего персонажа
-            // и только если мы действительно переходим с другой страницы
-            if (draft.id && draft.basics.name) {
-                resetCharacter();
+            // режим создания - инициализируем пустой draft если нужно
+            if (!draft.id || draft.basics.name) {
+                // Если нет ID или есть имя (данные от предыдущего персонажа)
+                initNewCharacter();
             }
         }
-    }, [id, draft.id, loadFromSupabase, resetCharacter]);
+    }, [id, draft.id, loadFromSupabase, initNewCharacter]);
 
     // синхронизируем локальные поля, если basics обновились (например, после загрузки из базы)
     useEffect(() => {
