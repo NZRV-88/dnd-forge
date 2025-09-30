@@ -27,18 +27,20 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
 
     // Debounced функция для сохранения
     const debouncedSave = useCallback(() => {
-        if (draft.id) {
-            // Очищаем предыдущий timeout
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-            }
-            
-            // Устанавливаем новый timeout
-            saveTimeoutRef.current = setTimeout(() => {
-                saveToSupabase().catch(console.error);
-                saveTimeoutRef.current = null;
-            }, 500);
+        // Очищаем предыдущий timeout
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
         }
+        
+        // Устанавливаем новый timeout
+        saveTimeoutRef.current = setTimeout(() => {
+            // Сохраняем в БД только если есть ID (персонаж уже создан)
+            if (draft.id) {
+                saveToSupabase().catch(console.error);
+            }
+            // Если нет ID, данные сохранятся в localStorage автоматически через useEffect
+            saveTimeoutRef.current = null;
+        }, 500);
     }, [draft.id, saveToSupabase]);
 
     // Очищаем timeout при размонтировании компонента
@@ -52,16 +54,20 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement> | string) => {
         const newName = typeof e === 'string' ? e : e.target.value;
+        console.log('CharacterHeader: handleNameChange called with:', newName);
         setLocalName(newName);
         
         // Обновляем в store
-        setDraft(d => ({
-            ...d,
-            basics: {
-                ...d.basics,
-                name: newName,
-            },
-        }));
+        setDraft(d => {
+            console.log('CharacterHeader: setDraft called, current draft.id:', d.id);
+            return {
+                ...d,
+                basics: {
+                    ...d.basics,
+                    name: newName,
+                },
+            };
+        });
 
         // Debounced сохранение в БД
         debouncedSave();
@@ -69,18 +75,25 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
 
     // Функция для принудительного сохранения
     const forceSave = useCallback(() => {
-        if (draft.id) {
-            // Очищаем debounced timeout
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-                saveTimeoutRef.current = null;
-            }
-            // Сохраняем немедленно
-            saveToSupabase().catch(console.error);
+        console.log('CharacterHeader: forceSave called, draft.id:', draft.id, 'localName:', localName);
+        
+        // Очищаем debounced timeout
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
         }
+        
+        // Сохраняем в БД только если есть ID (персонаж уже создан)
+        if (draft.id) {
+            console.log('CharacterHeader: Saving to Supabase');
+            saveToSupabase().catch(console.error);
+        } else {
+            console.log('CharacterHeader: No ID, data will be saved to localStorage automatically');
+        }
+        
         // Вызываем внешний callback если есть
         onForceSave?.();
-    }, [draft.id, saveToSupabase, onForceSave]);
+    }, [draft.id, saveToSupabase, onForceSave, localName]);
 
     const handleAvatarSelect = (avatarUrl: string | null) => {
         setDraft(d => ({
