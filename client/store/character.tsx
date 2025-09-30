@@ -597,9 +597,9 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            // Создаем новый draft с переданным ID
+            // Создаем новый draft с переданным ID, сохраняя текущие данные
             const newDraft = {
-                ...makeDefaultDraft(),
+                ...draft, // Сохраняем текущие данные пользователя
                 id: id,
             };
 

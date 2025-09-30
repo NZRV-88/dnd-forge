@@ -42,6 +42,11 @@ export default function Start() {
     }, [draft.basics.hpMode]);
 
     const handleNext = async () => {
+        // Принудительно сохраняем все изменения перед переходом
+        if (characterHeaderRef.current) {
+            characterHeaderRef.current.forceSave();
+        }
+
         setDraft(d => ({
             ...d,
             basics: {
