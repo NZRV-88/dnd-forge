@@ -46,6 +46,8 @@ export default function Start() {
     }, [draft.basics.hpMode]);
 
     const handleNext = async () => {
+        console.log('Start: handleNext called, current draft.basics.name:', draft.basics.name);
+        
         // Принудительно сохраняем все изменения перед переходом
         if (characterHeaderRef.current) {
             characterHeaderRef.current.forceSave();
@@ -53,17 +55,21 @@ export default function Start() {
 
         // Получаем актуальные данные из CharacterHeader
         const currentData = characterHeaderRef.current?.getCurrentData();
+        console.log('Start: currentData from CharacterHeader:', currentData);
         
         // Принудительно обновляем draft с актуальными данными
-        setDraft(d => ({
-            ...d,
-            basics: {
-                ...d.basics,
-                name: currentData?.name || d.basics.name,
-                hpMode: localHpMode,
-            },
-            avatar: currentData?.avatar || d.avatar,
-        }));
+        setDraft(d => {
+            console.log('Start: setDraft called, current draft.basics.name:', d.basics.name, 'new name:', currentData?.name);
+            return {
+                ...d,
+                basics: {
+                    ...d.basics,
+                    name: currentData?.name || d.basics.name,
+                    hpMode: localHpMode,
+                },
+                avatar: currentData?.avatar || d.avatar,
+            };
+        });
 
         // Ждем обновления draft перед созданием персонажа
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -74,6 +80,7 @@ export default function Start() {
         } else {
             // Режим создания - создаем персонажа в БД и переходим
             const newId = uuidv4();
+            console.log('Start: Creating new character with ID:', newId);
             await createNewCharacter(newId);
             nav(`/create/${newId}/class`);
         }

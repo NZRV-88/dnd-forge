@@ -21,6 +21,7 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
     // Синхронизируем локальное имя с draft только при первой загрузке
     useEffect(() => {
         if (draft?.basics?.name && !localName) {
+            console.log('CharacterHeader: Syncing localName with draft.basics.name:', draft.basics.name);
             setLocalName(draft.basics.name);
         }
     }, [draft?.basics?.name, localName]);
@@ -54,12 +55,12 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement> | string) => {
         const newName = typeof e === 'string' ? e : e.target.value;
-        console.log('CharacterHeader: handleNameChange called with:', newName);
+        console.log('CharacterHeader: handleNameChange called with:', newName, 'current localName:', localName);
         setLocalName(newName);
         
         // Обновляем в store
         setDraft(d => {
-            console.log('CharacterHeader: setDraft called, current draft.id:', d.id);
+            console.log('CharacterHeader: setDraft called, current draft.id:', d.id, 'current draft.basics.name:', d.basics.name);
             return {
                 ...d,
                 basics: {
@@ -112,10 +113,13 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
     // Экспортируем методы через ref
     useImperativeHandle(ref, () => ({
         forceSave,
-        getCurrentData: () => ({
-            name: localName,
-            avatar: draft?.avatar || null
-        })
+        getCurrentData: () => {
+            console.log('CharacterHeader: getCurrentData called, localName:', localName, 'draft.avatar:', draft?.avatar);
+            return {
+                name: localName,
+                avatar: draft?.avatar || null
+            };
+        }
     }), [forceSave, localName, draft?.avatar]);
 
     return (
