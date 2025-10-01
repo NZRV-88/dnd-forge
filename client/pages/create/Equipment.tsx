@@ -16,6 +16,7 @@ import { Weapons } from "@/data/items/weapons";
 import { Armors } from "@/data/items/armors";
 import { EQUIPMENT_PACKS } from "@/data/items/equipment-packs";
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
+import { getWeaponMasteryByKey } from "@/data/items";
 
 // Функция для перевода типов урона на русский
 const translateDamageType = (damageType: string): string => {
@@ -53,28 +54,53 @@ const translateWeaponProperties = (properties: string[]): string[] => {
     return properties.map(prop => translations[prop] || prop);
 };
 
-// Функция для перевода валюты на русский
-const translateCurrency = (cost: string): string => {
-    return cost
-        .replace(/gp/g, 'ЗМ')
-        .replace(/sp/g, 'СМ')
-        .replace(/cp/g, 'ММ');
-};
-
-// Функция для перевода мастерства оружия на русский
-const translateWeaponMastery = (mastery: string): string => {
-    const translations: Record<string, string> = {
-        'sap': 'Оглушение',
-        'slow': 'Замедление',
-        'topple': 'Опрокидывание',
-        'vex': 'Раздражение',
-        'nick': 'Зарубка',
-        'graze': 'Задевание',
-        'cleave': 'Рассечение',
-        'push': 'Отталкивание'
+    // Функция для перевода валюты на русский
+    const translateCurrency = (cost: string): string => {
+        return cost
+            .replace(/gp/gi, 'ЗМ')
+            .replace(/sp/gi, 'СМ')
+            .replace(/cp/gi, 'ММ');
     };
-    return translations[mastery] || mastery;
-};
+
+    // Функция для конвертации стоимости в медные монеты (ММ)
+    const convertToCopper = (cost: string): number => {
+        const match = cost.match(/(\d+)\s*(gp|sp|cp|ЗМ|СМ|ММ)/i);
+        if (!match) return 0;
+        
+        const amount = parseInt(match[1]);
+        const currency = match[2].toLowerCase();
+        
+        switch (currency) {
+            case 'gp':
+            case 'зм':
+                return amount * 100; // 1 ЗМ = 100 ММ
+            case 'sp':
+            case 'см':
+                return amount * 10;  // 1 СМ = 10 ММ
+            case 'cp':
+            case 'мм':
+                return amount;       // 1 ММ = 1 ММ
+            default:
+                return 0;
+        }
+    };
+
+    // Функция для конвертации медных монет в золотые
+    const convertCopperToGold = (copper: number): number => {
+        return Math.floor(copper / 100);
+    };
+
+    // Функция для конвертации медных монет в серебряные
+    const convertCopperToSilver = (copper: number): number => {
+        return Math.floor((copper % 100) / 10);
+    };
+
+    // Функция для конвертации медных монет в медные
+    const convertCopperToCopper = (copper: number): number => {
+        return copper % 10;
+    };
+
+
 
 // Функции для получения русских названий предметов
 const getItemName = (type: string, key: string): string => {
@@ -187,6 +213,7 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                 description: getWeaponCategory(weapon),
                 cost: translateCurrency(weapon.cost),
                 weight: weapon.weight,
+                category: getWeaponCategory(weapon),
                 attackType: attackType,
                 attackRange: attackRange,
                 properties: translateWeaponProperties(weapon.properties),
@@ -201,14 +228,30 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
         
         const armor = Armors.find(a => a.name === cleanName);
         if (armor) {
+            // Определяем категорию доспеха
+            let armorCategory = '';
+            if (armor.category === 'light') {
+                armorCategory = 'Лёгкий доспех';
+            } else if (armor.category === 'medium') {
+                armorCategory = 'Средний доспех';
+            } else if (armor.category === 'heavy') {
+                armorCategory = 'Тяжёлый доспех';
+            } else if (armor.category === 'shield') {
+                armorCategory = 'Щит';
+            } else {
+                armorCategory = 'Доспех';
+            }
+
             return {
-                description: `Доспех. Класс брони: ${armor.baseAC}`,
+                description: armorCategory,
                 cost: translateCurrency(armor.cost),
                 weight: armor.weight,
-                category: 'Доспех',
+                category: armorCategory,
                 ac: armor.baseAC,
                 maxDex: armor.maxDexBonus,
-                stealth: armor.disadvantageStealth
+                stealth: armor.disadvantageStealth,
+                armorCategory: armorCategory,
+                hasProficiency: true // TODO: проверить владение доспехом персонажа
             };
         }
         
@@ -233,10 +276,10 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     const itemInfo = getItemDescription(name);
     
     return (
-        <div className="border-2 rounded-lg bg-card">
+        <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                 <CollapsibleTrigger asChild>
-                    <div className={`flex justify-between items-center p-2 cursor-pointer transition-colors duration-200 ${isOpen ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
+                    <div className={`flex justify-between items-center p-2 cursor-pointer transition-colors duration-200 rounded-t-md ${isOpen ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
                         <div className="flex items-center gap-2">
                             {quantity && (
                                 <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-medium">
@@ -254,8 +297,9 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                     <div className="p-2 text-xs text-muted-foreground relative">
-                        <div className="mb-2">
-                            {itemInfo.description}
+                        {/* Категория в самом верху */}
+                        <div className="text-muted-foreground mb-2">
+                            <span className="font-medium text-foreground"></span> {itemInfo.category}
                         </div>
                         
                         <div className="grid grid-cols-2 gap-2 text-xs">
@@ -286,31 +330,46 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                                     </div>
                                     )}
                                     <div className="text-muted-foreground">
-                                        <span className="font-medium text-foreground">Мастерство:</span>  {translateWeaponMastery(itemInfo.mastery)}
+                                        <span className="font-medium text-foreground">Мастерство:</span> {getWeaponMasteryByKey(itemInfo.mastery)?.name || itemInfo.mastery}
                                     </div>
                                 </>
-                            ) : (
-                                /* Для других предметов показываем стандартные параметры */
+                            ) : itemInfo.armorCategory ? (
+                                /* Для доспеха показываем специальные параметры */
                                 <>
                                     <div className="text-muted-foreground">
-                                        <span className="font-medium text-foreground">Категория:</span> {itemInfo.category}
+                                        <span className="font-medium text-foreground">Владение:</span> {itemInfo.hasProficiency ? 'Да' : 'Нет'}
                                     </div>
                                     <div className="text-muted-foreground">
-                                        <span className="font-medium text-foreground">Стоимость:</span> {itemInfo.cost}
+                                        <span className="font-medium text-foreground">Класс брони:</span> {itemInfo.ac}
                                     </div>
                                     <div className="text-muted-foreground">
                                         <span className="font-medium text-foreground">Вес:</span> {itemInfo.weight} фнт.
                                     </div>
-                                    
-                                    {/* Дополнительные параметры для доспеха */}
-                                    {itemInfo.ac && (
-                                        <div className="text-muted-foreground">
-                                            <span className="font-medium text-foreground">КБ:</span> {itemInfo.ac}
-                                        </div>
-                                    )}
+                                    <div className="text-muted-foreground">
+                                        <span className="font-medium text-foreground">Стоимость:</span> {itemInfo.cost}
+                                    </div>
+                                </>
+                            ) : (
+                                /* Для других предметов показываем только вес и стоимость */
+                                <>
+                                    <div className="text-muted-foreground">
+                                        <span className="font-medium text-foreground">Вес:</span> {itemInfo.weight} фнт.
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                        <span className="font-medium text-foreground">Стоимость:</span> {itemInfo.cost}
+                                    </div>
                                 </>
                             )}
                         </div>
+                        
+                        {/* Описание вынесено отдельно */}
+                        {!itemInfo.attackType && !itemInfo.armorCategory && (
+                            <div className=" pb-2">
+                                <div className="text-xs text-muted-foreground leading-relaxed mt-2">
+                                    {itemInfo.description}
+                                </div>
+                            </div>
+                        )}
                         
                         {/* Красный крестик для удаления */}
                         <div
@@ -337,94 +396,6 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     );
 };
 
-// Снаряжение по умолчанию для каждого класса (адаптировано по PHB)
-const DEFAULT_EQUIPMENT: Record<string, string[]> = {
-    Варвар: [
-        "Большой топор или любое другое простое оружие",
-        "Два ручных топора или любое другое простое оружие ближнего боя",
-        "Пакет путешественника и четыре метательных копья",
-    ],
-    Бард: [
-        "Рапира, длинный меч или любое простое оружие",
-        "Дипломатический пакет, развлекательный пакет или пакет путешественника",
-        "Лютня или другой музыкальный инструмент",
-        "Кожаный доспех и кинжал",
-    ],
-    Воин: [
-        "Кольчуга или кожаный доспех, длинный лук и 20 стрел",
-        "Боевой топор или любое простое оружие ближнего боя",
-        "Щит или любое другое простое оружие",
-        "Пакет доспеха или пакет путешественника",
-    ],
-    Волшебник: [
-        "Посох или кинжал",
-        "Пакет учёного или пакет путешественника",
-        "Книга заклинаний",
-    ],
-    Друид: [
-        "Деревянный щит или любое простое оружие",
-        "Серп или любое простое оружие ближнего боя",
-        "Пакет учёного или пакет путешественника",
-        "Кожаный доспех, дубинка и набор травника",
-    ],
-    Жрец: [
-        "Булава или военное оружие по выбору",
-        "Щит или доспех по выбору",
-        "Пакет жреца или пакет путешественника",
-        "Священный символ",
-        "Кольчуга",
-    ],
-    Колдун: [
-        "Лёгкий арбалет и 20 болтов или любое простое оружие",
-        "Компонентная сумка или фокус для заклинаний",
-        "Пакет учёного или пакет путешественника",
-        "Кожаный доспех, кинжал и два простых оружия",
-    ],
-    Монах: [
-        "Короткий меч или любое простое оружие",
-        "Пакет путешественника или пакет доспеха",
-        "10 дротиков",
-    ],
-    Паладин: [
-        "Военное оружие и щит или два военных оружия",
-        "Пять метательных копий или любое простое оружие ближнего боя",
-        "Пакет жреца или пакет путешественника",
-        "Кольчуга и священный символ",
-    ],
-    Плут: [
-        "Рапира или короткий меч",
-        "Коротк��й лук и 20 стрел или короткий меч",
-        "Пакет вора, дипломатический пакет или пакет путешественника",
-        "Кожаный доспех, два кинжала и набор воровских инструментов",
-    ],
-    Следопыт: [
-        "Частичный доспех или кожаный доспех",
-        "Два меча или два простых оружия ближнего боя",
-        "Длинный лук и колчан с 20 стрелами",
-        "Пакет путешественника или пакет доспеха",
-    ],
-    Чародей: [
-        "Лёгкий арбалет и 20 болтов или любое простое оружие",
-        "Компонентная сумка или фокус для заклинаний",
-        "Пакет учёного или пакет путешественника",
-        "Два кинжала",
-    ],
-};
-
-const DEFAULT_GOLD: Record<string, number> = {
-    Варвар: 40,
-    Бард: 100,
-    Воин: 100,
-    Волшебник: 80,
-    Друид: 20,
-    Жрец: 125,
-    Колдун: 100,
-    Монах: 5,
-    Паладин: 100,
-    Плут: 160,
-    Следопыт: 100,
-    Чародей: 120,
-};
 
 
 export default function EquipmentPick() {
@@ -433,7 +404,14 @@ export default function EquipmentPick() {
     const { draft, setBasics } = useCharacter();
     const [selectedClassChoice, setSelectedClassChoice] = useState<number>(0);
     const [backgroundMode, setBackgroundMode] = useState<"equipment" | "gold">("equipment");
-    const [gold, setGold] = useState(DEFAULT_GOLD[draft.basics.class] || 50);
+    const [gold, setGold] = useState(0);
+    const [currency, setCurrency] = useState({
+        platinum: 0,  // Платина
+        gold: 0,      // Золото
+        electrum: 0,  // Электрум
+        silver: 0,    // Серебро
+        copper: 0     // Медь
+    });
     const [addedInventory, setAddedInventory] = useState<string[]>([]);
     const [openSections, setOpenSections] = useState({
         starting: true,
@@ -441,6 +419,13 @@ export default function EquipmentPick() {
         addItems: false,
         currency: false
     });
+    
+    // Состояние для фильтров и выбранных предметов
+    const [searchFilter, setSearchFilter] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [selectedItems, setSelectedItems] = useState<{[key: string]: number}>({});
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [notification, setNotification] = useState<{ message: string; type: 'buy' | 'add' | 'error' } | null>(null);
 
     // Загружаем инвентарь из драфта при инициализации
     useEffect(() => {
@@ -450,7 +435,28 @@ export default function EquipmentPick() {
         if (draft.basics.gold) {
             setGold(draft.basics.gold);
         }
-    }, [draft.basics.equipment, draft.basics.gold]);
+        if (draft.basics.currency) {
+            setCurrency(draft.basics.currency);
+        }
+    }, [draft.basics.equipment, draft.basics.gold, draft.basics.currency]);
+
+    // Функция для показа уведомления
+    const showNotification = (message: string, type: 'buy' | 'add' | 'error') => {
+        setNotification({ message, type });
+        setTimeout(() => {
+            setNotification(null);
+        }, 2000);
+    };
+
+    // Функция для расчета общего количества в ЗМ
+    const calculateTotalGold = () => {
+        return currency.platinum * 10 + currency.gold + currency.electrum * 0.5 + currency.silver * 0.1 + currency.copper * 0.01;
+    };
+
+    // Функция для обновления валюты в драфте
+    const updateCurrencyInDraft = (newCurrency: typeof currency) => {
+        setBasics({ currency: newCurrency });
+    };
 
     // Получаем данные класса
     const classInfo = getClassByKey(draft.basics.class);
@@ -463,23 +469,305 @@ export default function EquipmentPick() {
         }));
     };
 
+    // Функция для получения веса предмета
+    const getItemWeight = (itemName: string) => {
+        const cleanName = itemName.replace(/^\d+x\s+/, '');
+        
+        // Ищем в разных массивах
+        let item = Gears.find(g => g.name === cleanName);
+        if (item) return item.weight;
+        
+        item = Ammunitions.find(a => a.name === cleanName);
+        if (item) return item.weight;
+        
+        const weapon = Weapons.find(w => w.name === cleanName);
+        if (weapon) return weapon.weight;
+        
+        const armor = Armors.find(a => a.name === cleanName);
+        if (armor) return armor.weight;
+        
+        const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
+        if (pack) return pack.weight;
+        
+        return 0;
+    };
+
+    // Подсчет общего веса инвентаря
+    const calculateTotalWeight = () => {
+        let totalWeight = 0;
+        addedInventory.forEach(item => {
+            totalWeight += getItemWeight(item);
+        });
+        return totalWeight;
+    };
+
+    // Получение всех доступных предметов
+    const getAllItems = () => {
+        const items: Array<{type: string, key: string, name: string, cost: string, weight: number, category: string}> = [];
+        
+        // Добавляем оружие
+        Weapons.forEach(weapon => {
+            items.push({
+                type: 'weapon',
+                key: weapon.key,
+                name: weapon.name,
+                cost: translateCurrency(weapon.cost),
+                weight: weapon.weight,
+                category: 'Оружие'
+            });
+        });
+        
+        // Добавляем доспехи
+        Armors.forEach(armor => {
+            items.push({
+                type: 'armor',
+                key: armor.key,
+                name: armor.name,
+                cost: translateCurrency(armor.cost),
+                weight: armor.weight,
+                category: 'Доспехи'
+            });
+        });
+        
+        // Добавляем снаряжение
+        Gears.forEach(gear => {
+            items.push({
+                type: 'gear',
+                key: gear.key,
+                name: gear.name,
+                cost: translateCurrency(gear.cost),
+                weight: gear.weight,
+                category: 'Снаряжение'
+            });
+        });
+        
+        // Добавляем боеприпасы
+        Ammunitions.forEach(ammo => {
+            items.push({
+                type: 'ammunition',
+                key: ammo.key,
+                name: ammo.name,
+                cost: translateCurrency(ammo.cost),
+                weight: ammo.weight,
+                category: 'Боеприпасы'
+            });
+        });
+        
+        return items;
+    };
+
+    // Фильтрация предметов
+    const getFilteredItems = () => {
+        const allItems = getAllItems();
+        return allItems.filter(item => {
+            const matchesSearch = item.name.toLowerCase().includes(searchFilter.toLowerCase());
+            const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+            return matchesSearch && matchesCategory;
+        });
+    };
+
+    // Получение предметов для текущей страницы
+    const getCurrentPageItems = () => {
+        const filteredItems = getFilteredItems();
+        return filteredItems.slice(0, itemsPerPage);
+    };
+
+    // Проверка, есть ли еще предметы для показа
+    const hasMoreItems = () => {
+        const filteredItems = getFilteredItems();
+        return itemsPerPage < filteredItems.length;
+    };
+
+    // Получение описания предмета для карточек в "Добавить предметы"
+    const getItemDescription = (type: string, key: string) => {
+        if (type === 'weapon') {
+            const weapon = Weapons.find(w => w.key === key);
+            if (weapon) {
+                const attackType = weapon.type === 'ranged' ? 'дальний' : 'ближний';
+                const attackRange = weapon.range || '5 футов';
+                const hasProficiency = true; // TODO: проверить владение оружием персонажа
+                
+                // Рассчитываем урон с реальным модификатором
+                const baseDamage = weapon.damage;
+                let abilityModifier = 0;
+                let abilityName = '';
+                
+                if (draft.stats) {
+                    if (weapon.type === 'ranged') {
+                        abilityModifier = getAbilityModifier(draft.stats.dex || 10);
+                        abilityName = 'ЛОВ';
+                    } else {
+                        abilityModifier = getAbilityModifier(draft.stats.str || 10);
+                        abilityName = 'СИЛ';
+                    }
+                }
+                
+                const damageWithBonus = draft.stats
+                    ? `${baseDamage} ${abilityModifier >= 0 ? '+' : ''}${abilityModifier}`
+                    : `${baseDamage} + ${abilityName}`;
+                
+                // Определяем категорию оружия
+                const getWeaponCategory = (weapon: any) => {
+                    if (weapon.type === 'ranged') {
+                        return weapon.category === 'simple' ? 'Простое дальнобойное оружие' : 'Воинское дальнобойное оружие';
+                    } else {
+                        return weapon.category === 'simple' ? 'Простое рукопашное оружие' : 'Воинское рукопашное оружие';
+                    }
+                };
+
+                return {
+                    description: getWeaponCategory(weapon),
+                    cost: translateCurrency(weapon.cost),
+                    weight: weapon.weight,
+                    category: getWeaponCategory(weapon),
+                    attackType: attackType,
+                    attackRange: attackRange,
+                    properties: translateWeaponProperties(weapon.properties),
+                    damage: damageWithBonus,
+                    damageType: weapon.damageType,
+                    range: weapon.range,
+                    hasProficiency: hasProficiency,
+                    abilityName: abilityName,
+                    mastery: weapon.mastery
+                };
+            }
+        } else if (type === 'armor') {
+            const armor = Armors.find(a => a.key === key);
+            if (armor) {
+                let armorCategory = '';
+                if (armor.category === 'light') {
+                    armorCategory = 'Лёгкий доспех';
+                } else if (armor.category === 'medium') {
+                    armorCategory = 'Средний доспех';
+                } else if (armor.category === 'heavy') {
+                    armorCategory = 'Тяжёлый доспех';
+                } else if (armor.category === 'shield') {
+                    armorCategory = 'Щит';
+                } else {
+                    armorCategory = 'Доспех';
+                }
+
+                return {
+                    description: armorCategory,
+                    cost: translateCurrency(armor.cost),
+                    weight: armor.weight,
+                    category: armorCategory,
+                    ac: armor.baseAC,
+                    maxDex: armor.maxDexBonus,
+                    stealth: armor.disadvantageStealth,
+                    armorCategory: armorCategory,
+                    hasProficiency: true // TODO: проверить владение доспехом персонажа
+                };
+            }
+        } else if (type === 'gear') {
+            const gear = Gears.find(g => g.key === key);
+            if (gear) {
+                return {
+                    description: gear.desc,
+                    cost: translateCurrency(gear.cost),
+                    weight: gear.weight,
+                    category: 'Снаряжение'
+                };
+            }
+        } else if (type === 'ammunition') {
+            const ammo = Ammunitions.find(a => a.key === key);
+            if (ammo) {
+                return {
+                    description: ammo.desc,
+                    cost: translateCurrency(ammo.cost),
+                    weight: ammo.weight,
+                    category: 'Боеприпасы'
+                };
+            }
+        }
+        
+        return {
+            description: 'Описание не найдено',
+            cost: 'Неизвестно',
+            weight: 0,
+            category: 'Неизвестно'
+        };
+    };
+
+    // Добавление предмета в выбранные
+    const addToSelected = (itemKey: string) => {
+        setSelectedItems(prev => ({
+            ...prev,
+            [itemKey]: (prev[itemKey] || 0) + 1
+        }));
+    };
+
+    // Удаление предмета из выбранных
+    const removeFromSelected = (itemKey: string) => {
+        setSelectedItems(prev => {
+            const newSelected = { ...prev };
+            if (newSelected[itemKey] > 1) {
+                newSelected[itemKey] -= 1;
+            } else {
+                delete newSelected[itemKey];
+            }
+            return newSelected;
+        });
+    };
+
+
     // Функция для удаления предмета из инвентаря
     const removeFromInventory = (index: number) => {
         setAddedInventory(prev => {
-            const newInventory = prev.filter((_, i) => i !== index);
+            const item = prev[index];
+            if (!item) return prev;
             
-            // Если инвентарь пуст, сбрасываем флаг
-            if (newInventory.length === 0) {
-                setBasics({ 
-                    equipment: [], 
-                    isStartEquipmentAdded: false 
-                });
+            // Проверяем, есть ли количество в названии предмета
+            const quantityMatch = item.match(/^(\d+)x\s+(.+)$/);
+            
+            if (quantityMatch) {
+                const quantity = parseInt(quantityMatch[1]);
+                const itemName = quantityMatch[2];
+                
+                if (quantity > 1) {
+                    // Уменьшаем количество на 1
+                    const newQuantity = quantity - 1;
+                    const newItem = `${newQuantity}x ${itemName}`;
+                    const newInventory = [...prev];
+                    newInventory[index] = newItem;
+                    
+                    // Обновляем инвентарь в драфте
+                    setBasics({ equipment: newInventory });
+                    return newInventory;
+                } else {
+                    // Если количество 1, удаляем предмет полностью
+                    const newInventory = prev.filter((_, i) => i !== index);
+                    
+                    // Если инвентарь пуст, сбрасываем флаг
+                    if (newInventory.length === 0) {
+                        setBasics({ 
+                            equipment: [], 
+                            isStartEquipmentAdded: false 
+                        });
+                    } else {
+                        // Обновляем инвентарь в драфте
+                        setBasics({ equipment: newInventory });
+                    }
+                    
+                    return newInventory;
+                }
             } else {
-                // Обновляем инвентарь в драфте
-                setBasics({ equipment: newInventory });
+                // Если нет количества, удаляем предмет полностью
+                const newInventory = prev.filter((_, i) => i !== index);
+                
+                // Если инвентарь пуст, сбрасываем флаг
+                if (newInventory.length === 0) {
+                    setBasics({ 
+                        equipment: [], 
+                        isStartEquipmentAdded: false 
+                    });
+                } else {
+                    // Обновляем инвентарь в драфте
+                    setBasics({ equipment: newInventory });
+                }
+                
+                return newInventory;
             }
-            
-            return newInventory;
         });
     };
 
@@ -510,17 +798,21 @@ export default function EquipmentPick() {
                 });
                 setAddedInventory(prev => [...prev, ...newItems]);
                 
-                // Добавляем золото к общему золоту
-                if (selectedChoice.gold && selectedChoice.gold > 0) {
-                    setGold(prev => prev + selectedChoice.gold);
-                }
+                 // Добавляем золото к общему золоту
+                 if (selectedChoice.gold && selectedChoice.gold > 0) {
+                     setCurrency(prev => ({
+                         ...prev,
+                         gold: prev.gold + selectedChoice.gold
+                     }));
+                 }
                 
-                // Сохраняем в драфт и устанавливаем флаг
-                setBasics({ 
-                    equipment: [...addedInventory, ...newItems], 
-                    gold: gold + (selectedChoice.gold || 0),
-                    isStartEquipmentAdded: true
-                });
+                 // Сохраняем в драфт и устанавливаем флаг
+                 setBasics({ 
+                     equipment: [...addedInventory, ...newItems], 
+                     gold: gold + (selectedChoice.gold || 0),
+                     currency: currency,
+                     isStartEquipmentAdded: true
+                 });
             }
         }
     };
@@ -566,9 +858,9 @@ export default function EquipmentPick() {
                 <div className="space-y-4">
                     {/* Стартовое снаряжение */}
                     <Collapsible open={openSections.starting} onOpenChange={() => toggleSection('starting')}>
-                        <div className="border rounded-lg bg-card">
+                        <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
                             <CollapsibleTrigger asChild>
-                                <div className={`flex justify-between items-center p-2 cursor-pointer transition-colors duration-200 ${openSections.starting ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
+                                <div className={`flex justify-between items-center rounded-t-md p-2 cursor-pointer transition-colors duration-200 ${openSections.starting ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
                                     <div className="flex items-center gap-2">
                                         <div className="flex flex-col">
                                             <span className="font-medium">Стартовое снаряжение</span>
@@ -638,23 +930,23 @@ export default function EquipmentPick() {
                                             {BACKGROUND_LABELS[draft.basics.background]}: СТАРТОВОЕ СНАРЯЖЕНИЕ
                                         </h3>
                                         <div className="mb-3 space-y-2">
-                                            <label className="flex items-center gap-2">
-                                                <input
-                                                    type="radio"
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="radio"
                                                     checked={backgroundMode === "equipment"}
                                                     onChange={() => setBackgroundMode("equipment")}
-                                                />
+                        />
                                                 Снаряжение предыстории
-                                            </label>
-                                            <label className="flex items-center gap-2">
-                                                <input
-                                                    type="radio"
+                    </label>
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="radio"
                                                     checked={backgroundMode === "gold"}
                                                     onChange={() => setBackgroundMode("gold")}
-                                                />
+                        />
                                                 Золотые монеты (50 ЗМ)
-                                            </label>
-                                        </div>
+                    </label>
+                </div>
                                         {backgroundMode === "equipment" ? (
                                             <div>
                                                 <div className="text-sm text-muted-foreground">
@@ -694,15 +986,20 @@ export default function EquipmentPick() {
 
                     {/* Текущий инвентарь */}
                     <Collapsible open={openSections.inventory} onOpenChange={() => toggleSection('inventory')}>
-                        <div className="border rounded-lg bg-card">
+                        <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
                             <CollapsibleTrigger asChild>
-                                <div className={`flex justify-between items-center p-2 cursor-pointer transition-colors duration-200 ${openSections.inventory ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
+                                <div className={`flex justify-between items-center rounded-t-md p-2 cursor-pointer transition-colors duration-200 ${openSections.inventory ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
                                     <div className="flex items-center gap-2">
                                         <div className="flex flex-col">
                                             <span className="font-medium">Текущий инвентарь</span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-center">
+                                    <div className="flex items-center gap-2">
+                                        {addedInventory.length > 0 && (
+                                            <span className="text-xs text-muted-foreground">
+                                                Общий вес: {calculateTotalWeight()} фнт.
+                                            </span>
+                                        )}
                                         {openSections.inventory ? <ChevronUp className="w-6 h-6 text-primary" /> : <ChevronDown className="w-6 h-6 text-primary" />}
                                     </div>
                                 </div>
@@ -719,8 +1016,8 @@ export default function EquipmentPick() {
                                                     characterData={draft}
                                                 />
                                             ))}
-                                        </div>
-                                    ) : (
+                    </div>
+                ) : (
                                         <div className="text-sm text-muted-foreground">
                                             Инвентарь пуст. Добавьте стартовое снаряжение выше.
                                         </div>
@@ -732,9 +1029,9 @@ export default function EquipmentPick() {
 
                     {/* Добавить предметы */}
                     <Collapsible open={openSections.addItems} onOpenChange={() => toggleSection('addItems')}>
-                        <div className="border rounded-lg bg-card">
+                        <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
                             <CollapsibleTrigger asChild>
-                                <div className={`flex justify-between items-center p-2 cursor-pointer transition-colors duration-200 ${openSections.addItems ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
+                                <div className={`flex justify-between items-center rounded-t-md p-2 cursor-pointer transition-colors duration-200 ${openSections.addItems ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
                                     <div className="flex items-center gap-2">
                                         <div className="flex flex-col">
                                             <span className="font-medium">Добавить предметы</span>
@@ -747,52 +1044,478 @@ export default function EquipmentPick() {
                             </CollapsibleTrigger>
                             <CollapsibleContent>
                                 <div className="p-4">
-                                    <div className="text-sm text-muted-foreground">
-                                        Здесь будет интерфейс для добавления предметов в инвентарь
+                                    {/* Фильтры */}
+                                    <div className="space-y-4 mb-6">
+                                        {/* Поиск по названию */}
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground mb-2 block">
+                                                Поиск по названию
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Введите название предмета..."
+                                                value={searchFilter}
+                                                onChange={(e) => {
+                                                    setSearchFilter(e.target.value);
+                                                    setItemsPerPage(10);
+                                                }}
+                                                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            />
+                                        </div>
+                                        
+                                        {/* Фильтр по категории */}
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground mb-2 block">
+                                                Категория
+                                            </label>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setCategoryFilter('all');
+                                                        setItemsPerPage(10);
+                                                    }}
+                                                    className={`px-3 py-1 rounded-md text-xs transition-colors border shadow-inner ${
+                                                        categoryFilter === 'all'
+                                                            ? 'bg-[#96bf6b] text-white border-[#96bf6b]'
+                                                            : 'bg-transparent text-[#96bf6b] border-[#96bf6b] hover:bg-[#96bf6b] hover:text-white'
+                                                    }`}
+                                                >
+                                                    Все
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setCategoryFilter('Оружие');
+                                                        setItemsPerPage(10);
+                                                    }}
+                                                    className={`px-3 py-1 rounded-md text-xs transition-colors border shadow-inner ${
+                                                        categoryFilter === 'Оружие'
+                                                            ? 'bg-[#96bf6b] text-white border-[#96bf6b]'
+                                                            : 'bg-transparent text-[#96bf6b] border-[#96bf6b] hover:bg-[#96bf6b] hover:text-white'
+                                                    }`}
+                                                >
+                                                    Оружие
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setCategoryFilter('Доспехи');
+                                                        setItemsPerPage(10);
+                                                    }}
+                                                    className={`px-3 py-1 rounded-md text-xs transition-colors border shadow-inner ${
+                                                        categoryFilter === 'Доспехи'
+                                                            ? 'bg-[#96bf6b] text-white border-[#96bf6b]'
+                                                            : 'bg-transparent text-[#96bf6b] border-[#96bf6b] hover:bg-[#96bf6b] hover:text-white'
+                                                    }`}
+                                                >
+                                                    Доспехи
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setCategoryFilter('Снаряжение');
+                                                        setItemsPerPage(10);
+                                                    }}
+                                                    className={`px-3 py-1 rounded-md text-xs transition-colors border shadow-inner ${
+                                                        categoryFilter === 'Снаряжение'
+                                                            ? 'bg-[#96bf6b] text-white border-[#96bf6b]'
+                                                            : 'bg-transparent text-[#96bf6b] border-[#96bf6b] hover:bg-[#96bf6b] hover:text-white'
+                                                    }`}
+                                                >
+                                                    Снаряжение
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setCategoryFilter('Боеприпасы');
+                                                        setItemsPerPage(10);
+                                                    }}
+                                                    className={`px-3 py-1 rounded-md text-xs transition-colors border shadow-inner ${
+                                                        categoryFilter === 'Боеприпасы'
+                                                            ? 'bg-[#96bf6b] text-white border-[#96bf6b]'
+                                                            : 'bg-transparent text-[#96bf6b] border-[#96bf6b] hover:bg-[#96bf6b] hover:text-white'
+                                                    }`}
+                                                >
+                                                    Боеприпасы
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
+
+
+                                    {/* Список предметов */}
+                                    <div className="space-y-2">
+                                        {getCurrentPageItems().map((item) => {
+                                            const quantity = selectedItems[item.key] || 0;
+                                            const itemDescription = getItemDescription(item.type, item.key);
+                                            
+                                            return (
+                                                <div
+                                                    key={item.key}
+                                                    className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm"
+                                                >
+                                                    <Collapsible>
+                                                        <CollapsibleTrigger asChild>
+                                                            <div className="flex justify-between items-center p-2 cursor-pointer transition-colors duration-200 rounded-t-md bg-muted/40 hover:bg-primary/10">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-medium">
+                                                                        {item.name}
+                                                                    </span>
+                                                                    {quantity > 0 && (
+                                                                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-medium">
+                                                                            {quantity}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const allItems = getAllItems();
+                                                                            const itemData = allItems.find(i => i.key === item.key);
+                                                                            if (itemData) {
+                                                                                 const costInCopper = convertToCopper(itemData.cost);
+                                                                                 const currentTotalGold = calculateTotalGold();
+                                                                                 const currentGoldInCopper = currentTotalGold * 100; // Конвертируем ЗМ в ММ
+                                                                                 
+                                                                                 if (costInCopper <= currentGoldInCopper) {
+                                                                                     // Добавляем предмет в инвентарь
+                                                                                     setAddedInventory(prev => [...prev, itemData.name]);
+                                                                                     
+                                                                                     // Вычитаем стоимость из валюты
+                                                                                     const newGoldInCopper = currentGoldInCopper - costInCopper;
+                                                                                     const newTotalGold = newGoldInCopper / 100;
+                                                                                     
+                                                                                     // Распределяем по типам монет
+                                                                                     const newPlatinum = Math.floor(newTotalGold / 10);
+                                                                                     const remainingAfterPlatinum = newTotalGold % 10;
+                                                                                     const newGold = Math.floor(remainingAfterPlatinum);
+                                                                                     const remainingAfterGold = (remainingAfterPlatinum % 1) * 10;
+                                                                                     const newSilver = Math.floor(remainingAfterGold);
+                                                                                     const newCopper = Math.round((remainingAfterGold % 1) * 10);
+                                                                                     
+                                                                                     const newCurrency = {
+                                                                                         platinum: newPlatinum,
+                                                                                         gold: newGold,
+                                                                                         electrum: 0, // Пока не используем электрум
+                                                                                         silver: newSilver,
+                                                                                         copper: newCopper
+                                                                                     };
+                                                                                     setCurrency(newCurrency);
+                                                                                     
+                                                                                     // Сохраняем в драфт
+                                                                                     setBasics({
+                                                                                         equipment: [...addedInventory, itemData.name],
+                                                                                         gold: newTotalGold,
+                                                                                         currency: newCurrency
+                                                                                     });
+                                                                                     
+                                                                                     // Показываем уведомление
+                                                                                     showNotification(`Предмет "${itemData.name}" успешно куплен`, 'buy');
+                                                                                 } else {
+                                                                                     showNotification('Недостаточно средств для покупки', 'error');
+                                                                                 }
+                                                                            }
+                                                                        }}
+                                                                        className="px-1.5 py-0.5 bg-[#96bf6b] text-primary-foreground text-[10px] rounded transition-colors shadow-inner"
+                                                                    >
+                                                                        КУПИТЬ
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const allItems = getAllItems();
+                                                                            const itemData = allItems.find(i => i.key === item.key);
+                                                                             if (itemData) {
+                                                                                 // Добавляем предмет в инвентарь без трат
+                                                                                 setAddedInventory(prev => [...prev, itemData.name]);
+                                                                                 
+                                                                                 // Сохраняем в драфт
+                                                                                 setBasics({
+                                                                                     equipment: [...addedInventory, itemData.name],
+                                                                                     gold: gold,
+                                                                                     currency: currency
+                                                                                 });
+                                                                                 
+                                                                                 // Показываем уведомление
+                                                                                 showNotification(`Предмет "${itemData.name}" успешно добавлен`, 'add');
+                                                                             }
+                                                                        }}
+                                                                        className="px-1.5 py-0.5 bg-gray-600 text-white text-[10px] rounded transition-colors shadow-inner"
+                                                                    >
+                                                                        ДОБАВИТЬ
+                                                                    </button>
+                                                                    <ChevronDown className="w-6 h-6 text-primary" />
+                                                                </div>
+                                                            </div>
+                                                        </CollapsibleTrigger>
+                                                        <CollapsibleContent>
+                                                            <div className="p-2 text-xs text-muted-foreground">
+                                                                {/* Категория в самом верху */}
+                                                                <div className="text-muted-foreground mb-2">
+                                                                    <span className="font-medium text-foreground"></span> {itemDescription.category}
+                                                                </div>
+                                                                
+                                                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                    {/* Для оружия показываем специальные параметры */}
+                                                                    {itemDescription.attackType ? (
+                                                                        <>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Владение:</span> {itemDescription.hasProficiency ? 'Да' : 'Нет'}
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Дальность:</span> {itemDescription.attackRange}
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Урон:</span> {itemDescription.damage}
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Тип урона:</span> {translateDamageType(itemDescription.damageType)}
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Вес:</span> {itemDescription.weight} фнт.
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Стоимость:</span> {itemDescription.cost}
+                                                                            </div>
+                                                                            {itemDescription.properties && itemDescription.properties.length > 0 && (
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Свойства:</span> {itemDescription.properties.join(', ')}
+                                                                            </div>
+                                                                            )}
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Мастерство:</span> {getWeaponMasteryByKey(itemDescription.mastery)?.name || itemDescription.mastery}
+                                                                            </div>
+                                                                        </>
+                                                                    ) : itemDescription.armorCategory ? (
+                                                                        /* Для доспеха показываем специальные параметры */
+                                                                        <>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Владение:</span> {itemDescription.hasProficiency ? 'Да' : 'Нет'}
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Класс брони:</span> {itemDescription.ac}
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Вес:</span> {itemDescription.weight} фнт.
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Стоимость:</span> {itemDescription.cost}
+                                                                            </div>
+                                                                        </>
+                                                                    ) : (
+                                                                        /* Для других предметов показываем только вес и стоимость */
+                                                                        <>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Вес:</span> {itemDescription.weight} фнт.
+                                                                            </div>
+                                                                            <div className="text-muted-foreground">
+                                                                                <span className="font-medium text-foreground">Стоимость:</span> {itemDescription.cost}
+                                                                            </div>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                                
+                                                                {/* Описание вынесено отдельно */}
+                                                                {!itemDescription.attackType && !itemDescription.armorCategory && (
+                                                                    <div className="pb-2">
+                                                                        <div className="text-xs text-muted-foreground leading-relaxed mt-2">
+                                                                            {itemDescription.description}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </CollapsibleContent>
+                                                    </Collapsible>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    
+                                    {/* Кнопка "Показать больше" */}
+                                    {hasMoreItems() && (
+                                        <div className="mt-4">
+                                            <button
+                                                onClick={() => setItemsPerPage(prev => prev + 10)}
+                                                className="w-full px-4 py-2 bg-[#96bf6b] text-white rounded-md transition-colors text-sm font-medium uppercase tracking-wide shadow-inner"
+                                            >
+                                                Показать больше
+                                            </button>
+                                        </div>
+                                    )}
+                                    
+                                    {getFilteredItems().length === 0 && (
+                                        <div className="text-center text-muted-foreground py-8">
+                                            Предметы не найдены
+                                        </div>
+                                    )}
                                 </div>
                             </CollapsibleContent>
                         </div>
                     </Collapsible>
 
-                    {/* Валюта */}
-                    <Collapsible open={openSections.currency} onOpenChange={() => toggleSection('currency')}>
-                        <div className="border rounded-lg bg-card">
-                            <CollapsibleTrigger asChild>
-                                <div className={`flex justify-between items-center p-2 cursor-pointer transition-colors duration-200 ${openSections.currency ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium">Валюта</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-center">
-                                        {openSections.currency ? <ChevronUp className="w-6 h-6 text-primary" /> : <ChevronDown className="w-6 h-6 text-primary" />}
-                                    </div>
-                                </div>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                                <div className="p-4">
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block mb-2 font-medium">Золотые монеты (зм)</label>
-                        <input
-                            type="number"
-                            min={0}
-                            className="w-32 rounded-md border bg-background px-3 py-2 outline-none focus:border-primary"
-                            value={gold}
-                            onChange={(e) => setGold(Number(e.target.value))}
-                        />
-                                        </div>
-                                        <div className="text-sm text-muted-foreground">
-                                            Другие валюты будут добавлены позже
-                                        </div>
-                                    </div>
-                                </div>
-                            </CollapsibleContent>
-                        </div>
-                    </Collapsible>
+                     {/* Валюта */}
+                     <Collapsible open={openSections.currency} onOpenChange={() => toggleSection('currency')}>
+                         <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
+                             <CollapsibleTrigger asChild>
+                                 <div className={`flex justify-between items-center rounded-t-md p-2 cursor-pointer transition-colors duration-200 ${openSections.currency ? "bg-primary/15 border-b border-primary/30" : "bg-muted/40 hover:bg-primary/10"}`}>
+                                     <div className="flex items-center gap-2">
+                                         <div className="flex flex-col">
+                                             <span className="font-medium">Валюта</span>
+                                         </div>
+                                     </div>
+                                     <div className="flex items-center gap-2">
+                                         <span className="text-xs text-muted-foreground">
+                                             Всего в ЗМ: {calculateTotalGold().toFixed(2)}
+                                         </span>
+                                         {openSections.currency ? <ChevronUp className="w-6 h-6 text-primary" /> : <ChevronDown className="w-6 h-6 text-primary" />}
+                                     </div>
+                                 </div>
+                             </CollapsibleTrigger>
+                             <CollapsibleContent>
+                                 <div className="p-4">
+                                     <div className="space-y-2">
+                                         {/* Платина */}
+                                         <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
+                                             <div className="flex justify-between items-center p-2 rounded-t-md bg-muted/40">
+                                                 <div className="flex items-center gap-2">
+                                                     <span className="font-medium">Платина (ПМ)</span>
+                                                     <span className="text-xs text-muted-foreground">= 10 ЗМ</span>
+                                                 </div>
+                                                 <input
+                                                     type="number"
+                                                     min={0}
+                                                     className="w-16 rounded border bg-background px-1.5 py-0.5 text-xs outline-none focus:border-primary shadow-inner text-center"
+                                                     value={currency.platinum}
+                                                     onChange={(e) => {
+                                                         const inputValue = e.target.value;
+                                                         // Убираем ведущие нули и проверяем на валидность
+                                                         const cleanValue = inputValue.replace(/^0+/, '') || '0';
+                                                         const value = cleanValue === '' ? 0 : Number(cleanValue);
+                                                         const newCurrency = { ...currency, platinum: value };
+                                                         setCurrency(newCurrency);
+                                                         updateCurrencyInDraft(newCurrency);
+                                                     }}
+                                                 />
+                                             </div>
+                                         </div>
+
+                                         {/* Золото */}
+                                         <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
+                                             <div className="flex justify-between items-center p-2 rounded-t-md bg-muted/40">
+                                                 <div className="flex items-center gap-2">
+                                                     <span className="font-medium">Золото (ЗМ)</span>
+                                                     <span className="text-xs text-muted-foreground">= 10 СМ</span>
+                                                 </div>
+                                                 <input
+                                                     type="number"
+                                                     min={0}
+                                                     className="w-16 rounded border bg-background px-1.5 py-0.5 text-xs outline-none focus:border-primary shadow-inner text-center"
+                                                     value={currency.gold}
+                                                     onChange={(e) => {
+                                                         const inputValue = e.target.value;
+                                                         // Убираем ведущие нули и проверяем на валидность
+                                                         const cleanValue = inputValue.replace(/^0+/, '') || '0';
+                                                         const value = cleanValue === '' ? 0 : Number(cleanValue);
+                                                         const newCurrency = { ...currency, gold: value };
+                                                         setCurrency(newCurrency);
+                                                         updateCurrencyInDraft(newCurrency);
+                                                     }}
+                                                 />
+                                             </div>
+                                         </div>
+
+                                         {/* Электрум */}
+                                         <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
+                                             <div className="flex justify-between items-center p-2 rounded-t-md bg-muted/40">
+                                                 <div className="flex items-center gap-2">
+                                                     <span className="font-medium">Электрум (ЭМ)</span>
+                                                     <span className="text-xs text-muted-foreground">= 5 СМ</span>
+                                                 </div>
+                                                 <input
+                                                     type="number"
+                                                     min={0}
+                                                     className="w-16 rounded border bg-background px-1.5 py-0.5 text-xs outline-none focus:border-primary shadow-inner text-center"
+                                                     value={currency.electrum}
+                                                     onChange={(e) => {
+                                                         const inputValue = e.target.value;
+                                                         // Убираем ведущие нули и проверяем на валидность
+                                                         const cleanValue = inputValue.replace(/^0+/, '') || '0';
+                                                         const value = cleanValue === '' ? 0 : Number(cleanValue);
+                                                         const newCurrency = { ...currency, electrum: value };
+                                                         setCurrency(newCurrency);
+                                                         updateCurrencyInDraft(newCurrency);
+                                                     }}
+                                                 />
+                                             </div>
+                                         </div>
+
+                                         {/* Серебро */}
+                                         <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
+                                             <div className="flex justify-between items-center p-2 rounded-t-md bg-muted/40">
+                                                 <div className="flex items-center gap-2">
+                                                     <span className="font-medium">Серебро (СМ)</span>
+                                                     <span className="text-xs text-muted-foreground">= 10 ММ</span>
+                                                 </div>
+                                                 <input
+                                                     type="number"
+                                                     min={0}
+                                                     className="w-16 rounded border bg-background px-1.5 py-0.5 text-xs outline-none focus:border-primary shadow-inner text-center"
+                                                     value={currency.silver}
+                                                     onChange={(e) => {
+                                                         const inputValue = e.target.value;
+                                                         // Убираем ведущие нули и проверяем на валидность
+                                                         const cleanValue = inputValue.replace(/^0+/, '') || '0';
+                                                         const value = cleanValue === '' ? 0 : Number(cleanValue);
+                                                         const newCurrency = { ...currency, silver: value };
+                                                         setCurrency(newCurrency);
+                                                         updateCurrencyInDraft(newCurrency);
+                                                     }}
+                                                 />
+                                             </div>
+                                         </div>
+
+                                         {/* Медь */}
+                                         <div className="border-2 rounded-t-lg bg-card shadow-inner shadow-sm">
+                                             <div className="flex justify-between items-center p-2 rounded-t-md bg-muted/40">
+                                                 <div className="flex items-center gap-2">
+                                                     <span className="font-medium">Медь (ММ)</span>
+                                                 </div>
+                                                 <input
+                                                     type="number"
+                                                     min={0}
+                                                     className="w-16 rounded border bg-background px-1.5 py-0.5 text-xs outline-none focus:border-primary shadow-inner text-center"
+                                                     value={currency.copper}
+                                                     onChange={(e) => {
+                                                         const inputValue = e.target.value;
+                                                         // Убираем ведущие нули и проверяем на валидность
+                                                         const cleanValue = inputValue.replace(/^0+/, '') || '0';
+                                                         const value = cleanValue === '' ? 0 : Number(cleanValue);
+                                                         const newCurrency = { ...currency, copper: value };
+                                                         setCurrency(newCurrency);
+                                                         updateCurrencyInDraft(newCurrency);
+                                                     }}
+                                                 />
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </CollapsibleContent>
+                         </div>
+                     </Collapsible>
+                     </div>
                     </div>
+             
+             {/* Уведомление */}
+             {notification && (
+                 <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+                     <div className={`px-4 py-2 rounded-md text-white font-medium shadow-lg transition-all duration-300 ${
+                         notification.type === 'buy' 
+                             ? 'bg-[#96bf6b]' 
+                             : notification.type === 'add'
+                             ? 'bg-gray-600'
+                             : 'bg-red-500'
+                     }`}>
+                         {notification.message}
             </div>
+                 </div>
+             )}
         </div>
     );
 }

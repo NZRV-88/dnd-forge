@@ -37,8 +37,20 @@ type SupabaseCharacter = {
 export default function Characters() {
     const [characters, setCharacters] = useState<SupabaseCharacter[]>([]);
     const [loading, setLoading] = useState(true);
+    const [creating, setCreating] = useState(false);
+    const [editing, setEditing] = useState<string | null>(null);
     const nav = useNavigate();
-    const { initNewCharacter } = useCharacter();
+    
+    // Безопасное получение useCharacter
+    let initNewCharacter: (() => void) | null = null;
+    let createNewCharacter: ((id: string) => Promise<void>) | null = null;
+    try {
+        const characterContext = useCharacter();
+        initNewCharacter = characterContext.initNewCharacter;
+        createNewCharacter = characterContext.createNewCharacter;
+    } catch (error) {
+        console.warn("CharacterProvider not available, character functions will be null");
+    }
 
     useEffect(() => {
         (async () => {
@@ -65,8 +77,48 @@ export default function Characters() {
         })();
     }, []);
 
-    const edit = (id: string) => {
-        nav(`/create/${id}/class`);
+    const edit = async (id: string) => {
+        setEditing(id);
+        try {
+            // Загружаем данные персонажа перед переходом
+            if (initNewCharacter) {
+                initNewCharacter();
+            }
+            // Ждем немного, чтобы драфт обновился
+            await new Promise(resolve => setTimeout(resolve, 100));
+            nav(`/create/${id}/class`);
+        } finally {
+            setEditing(null);
+        }
+    };
+
+    const createNew = async () => {
+        if (!createNewCharacter || !initNewCharacter) {
+            console.error("Character functions not available");
+            return;
+        }
+        
+        setCreating(true);
+        const newId = uuidv4();
+        console.log('Characters: Creating new character with ID:', newId);
+        
+        try {
+            // Сначала очищаем драфт
+            console.log('Characters: Clearing draft before creating new character');
+            initNewCharacter();
+            
+            // Ждем немного, чтобы драфт обновился
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Создаем нового персонажа
+            await createNewCharacter(newId);
+            console.log('Characters: Character created, navigating to class page');
+            nav(`/create/${newId}/class`);
+        } catch (error) {
+            console.error('Characters: Error creating character:', error);
+        } finally {
+            setCreating(false);
+        }
     };
 
     const remove = async (id: string) => {
@@ -87,12 +139,10 @@ export default function Characters() {
             <div className="mb-8 flex items-center justify-between">
                 <h1 className="text-2xl font-bold">Мои персонажи</h1>
                 <Button
-                    onClick={() => {
-                        initNewCharacter(); // Инициализируем пустой draft
-                        nav(`/create`);
-                    }}
+                    onClick={createNew}
+                    disabled={creating}
                 >
-                    Создать персонажа
+                    {creating ? "Создание..." : "Создать персонажа"}
                 </Button>
             </div>
 
@@ -201,9 +251,11 @@ export default function Characters() {
                                             role="button"
                                             tabIndex={0}
                                             onKeyDown={(e) => { if (e.key === "Enter") edit(char.id); }}
-                                            className="flex-1 flex items-center justify-center py-3 cursor-pointer transition-colors hover:bg-gray-200 focus:bg-gray-600 text-center"
+                                            className={`flex-1 flex items-center justify-center py-3 cursor-pointer transition-colors hover:bg-gray-200 focus:bg-gray-600 text-center ${editing === char.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
-                                            <span className="uppercase font-medium">EDIT</span>
+                                            <span className="uppercase font-medium">
+                                                {editing === char.id ? "ЗАГРУЗКА..." : "EDIT"}
+                                            </span>
                                         </div>
                                         {/* Удалить */}
                                         <div
@@ -228,11 +280,8 @@ export default function Characters() {
                     </div>
                     <div className="mt-2 text-sm">Сохраните героя на шаге «Итоги».</div>
                     <div className="mt-6">
-                            <Button asChild onClick={() => {
-                                initNewCharacter(); // Инициализируем пустой draft
-                                nav(`/create`);
-                            }}>
-                            Создать нового
+                            <Button asChild onClick={createNew} disabled={creating}>
+                            {creating ? "Создание..." : "Создать нового"}
                         </Button>
                     </div>
                 </div>

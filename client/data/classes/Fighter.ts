@@ -396,9 +396,9 @@ export const Fighter: ClassInfo = {
                         { type: "armor", key: "studded-leather-armor" },
                         { type: "weapon", key: "scimitar" },
                         { type: "weapon", key: "shortsword" },
-                        { type: "weapon", key: "longbow" },
-                        { type: "gear", key: "arrow", quantity: 20 },
+                        { type: "weapon", key: "longbow" },         
                         { type: "gear", key: "quiver" },
+                        { type: "gear", key: "arrow", quantity: 20 },
                         { type: "equipment-pack", key: "dungeoneers-pack" }
                     ],
                     gold: 11

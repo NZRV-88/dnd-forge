@@ -637,10 +637,19 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     };
 
     const createNewCharacter = async (id: string) => {
+        console.log('createNewCharacter: Creating character with ID:', id);
+        
+        // Проверяем, не создается ли уже персонаж с таким ID
+        if (draft.id === id) {
+            console.log('createNewCharacter: Character with this ID already exists, skipping creation');
+            return;
+        }
+        
         setIsLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
+                console.log('createNewCharacter: User not authenticated');
                 // Пользователь не авторизован
                 return;
             }
@@ -650,6 +659,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 ...draft, // Сохраняем текущие данные пользователя
                 id: id,
             };
+
+            console.log('createNewCharacter: Saving to Supabase, newDraft.id:', newDraft.id);
 
             // Сохраняем в БД
             const { error } = await supabase.from("characters").insert({
@@ -661,10 +672,12 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             });
 
             if (error) {
+                console.error('createNewCharacter: Error saving to Supabase:', error);
                 // Ошибка создания персонажа в Supabase
                 return;
             }
 
+            console.log('createNewCharacter: Successfully saved to Supabase, setting draft');
             // Устанавливаем новый draft в состояние
             setDraft(newDraft);
         } finally {
@@ -673,6 +686,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     };
 
     const loadFromSupabase = async (id: string) => {
+        console.log('loadFromSupabase: Loading character with ID:', id);
         setIsLoading(true);
         try {
             const { data, error } = await supabase
@@ -682,11 +696,13 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
             if (error) {
+                console.error('loadFromSupabase: Error loading from Supabase:', error);
                 // Ошибка загрузки из Supabase
                 return;
             }
 
             if (data) {
+                console.log('loadFromSupabase: Successfully loaded character from Supabase');
                 // достаём draft из JSON-поля data
                 const savedDraft = data.data;
 

@@ -4,11 +4,12 @@ export { Armors } from "./armors";
 export { Tools } from "./tools";
 export { Gears } from "./gear";
 export { EQUIPMENT_PACKS } from "./equipment-packs";
+export { WEAPON_MASTERY, getWeaponMasteryByKey, getWeaponMasteryDescription } from "./weapon-mastery";
 
 import type { Weapon } from "./weapons";
 import type { Armor } from "./armors";
 import type { Tool } from "./tools";
-import type { Gear } from "./gear";
+import type { Gear, Ammunition } from "./gear";
 import type { EquipmentPack } from "./equipment-packs";
 
 import { Weapons } from "./weapons";

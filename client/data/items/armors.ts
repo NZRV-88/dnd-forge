@@ -147,7 +147,7 @@ export const Armors: Armor[] = [
         key: "chain-mail",
         source: "PH24",
         nameEn: "Chain Mail",
-        name: "Кольчуга",
+        name: "Кольчужный доспех",
         category: "heavy",
         cost: "75 gp",
         baseAC: 16,

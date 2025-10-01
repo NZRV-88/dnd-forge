@@ -72,22 +72,18 @@ export default function ClassPick() {
     const nav = useNavigate();
     const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, loadFromSupabase, isLoading } = useCharacter();
     
-    // Показываем загрузку если контекст еще не готов
-    if (isLoading) {
-        return <div className="p-4">Загрузка...</div>;
-    }
-    
-    // Загружаем персонажа при редактировании
-    useEffect(() => {
-        if (id && draft.id !== id) {
-            loadFromSupabase(id);
-        }
-    }, [id, draft.id, loadFromSupabase]);
-    
     // Модальные окна
     const [previewClass, setPreviewClass] = useState<string | null>(null);
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [showHealthSettings, setShowHealthSettings] = useState(false);
+    
+    // Загружаем персонажа при редактировании
+    useEffect(() => {
+        if (id && draft.id !== id && !isLoading) {
+            console.log('Class: Loading character from Supabase, id:', id, 'draft.id:', draft.id);
+            loadFromSupabase(id);
+        }
+    }, [id, draft.id, loadFromSupabase, isLoading]);
 
     const info = useMemo(
         () => CLASS_CATALOG.find((c) => c.key === draft.basics.class),
@@ -144,6 +140,11 @@ export default function ClassPick() {
         return classFeats;
     }, [info, draft.basics.subclass]);
 
+    // Показываем загрузку если контекст еще не готов
+    if (isLoading) {
+        return <div className="p-4">Загрузка...</div>;
+    }
+
     const handleClassClick = (classKey: string) => {
         // Если класс уже выбран, не показываем превью
         if (draft.basics.class === classKey) return;
@@ -169,22 +170,6 @@ export default function ClassPick() {
     };
 
     const hasSelectedClass = Boolean(draft.basics.class);
-
-    // Показываем загрузку, если данные загружаются
-    if (isLoading) {
-        return (
-            <div className="container mx-auto py-10">
-                <div className="mx-auto max-w-5xl relative overflow-visible">
-                    <div className="flex items-center justify-center min-h-[400px]">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                            <p className="text-muted-foreground">Загрузка персонажа...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="container mx-auto py-10">

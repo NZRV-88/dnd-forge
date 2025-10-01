@@ -16,7 +16,6 @@ export default function Start() {
         draft,
         setDraft,
         loadFromSupabase,
-        createNewCharacter,
         saveToSupabase,
         resetCharacter,
         initNewCharacter,
@@ -24,21 +23,14 @@ export default function Start() {
     } = useCharacter();
     const [localHpMode, setLocalHpMode] = useState<"fixed" | "roll">(draft.basics.hpMode || "fixed");
 
-    // если id есть в url — грузим персонажа только если он не загружен
+    // Загружаем персонажа при редактировании
     useEffect(() => {
-        if (id) {
-            // режим редактирования - загружаем только если ID не совпадает с текущим
-            if (draft.id !== id) {
-                loadFromSupabase(id);
-            }
-        } else {
-            // режим создания - инициализируем пустой draft только если нет ID
-            if (!draft.id) {
-                // Если нет ID, инициализируем пустой draft
-                initNewCharacter();
-            }
+        console.log('Start: useEffect triggered, id:', id, 'draft.id:', draft.id);
+        if (id && draft.id !== id) {
+            console.log('Start: Loading character from Supabase, id:', id);
+            loadFromSupabase(id);
         }
-    }, [id, draft.id, loadFromSupabase, initNewCharacter]);
+    }, [id, draft.id, loadFromSupabase]);
 
     // синхронизируем локальные поля, если basics обновились (например, после загрузки из базы)
     useEffect(() => {
@@ -74,16 +66,9 @@ export default function Start() {
         // Ждем обновления draft перед созданием персонажа
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        if (id) {
-            // Режим редактирования - просто переходим
-            nav(`/create/${id}/class`);
-        } else {
-            // Режим создания - создаем персонажа в БД и переходим
-            const newId = uuidv4();
-            console.log('Start: Creating new character with ID:', newId);
-            await createNewCharacter(newId);
-            nav(`/create/${newId}/class`);
-        }
+        // Просто переходим к следующему шагу
+        console.log('Start: Navigating to class page');
+        nav(`/create/${id}/class`);
     };
 
     const handleExit = async () => {
