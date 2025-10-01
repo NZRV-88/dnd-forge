@@ -26,6 +26,7 @@ export interface FeatureBlockProps {
   classInfo?: ClassInfo; // Добавляем информацию о классе для отображения таблицы особенностей
   showChoices?: boolean; // Показывать ли выборы в ClassTraitsTable
   customContent?: React.ReactNode; // Кастомный контент для отображения внутри блока
+  featKey?: string; // Ключ feat для проверки завершенности его выборов
 }
 
 export default function FeatureBlock({
@@ -45,6 +46,7 @@ export default function FeatureBlock({
   classInfo,
   showChoices = true,
   customContent,
+  featKey,
 }: FeatureBlockProps) {
   const { draft, setChosenFeatures, setChosenFightingStyle } = useCharacter();
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -56,7 +58,6 @@ export default function FeatureBlock({
   const featureKey = uniqueId || `${source}-${featureLevel || 'base'}-${idx}`; // уникальный ключ для этого блока
   
   // Временное логирование для отладки
-  console.log(`FeatureBlock: "${name}" (level ${featureLevel}) -> key: ${featureKey}`);
 
   useEffect(() => {
     if (expanded && contentRef.current) {
@@ -135,7 +136,9 @@ export default function FeatureBlock({
       total += cnt;
 
       const arr = getSelectedForChoice(choice, sourceKey);
-      selected += Math.min(arr.length, cnt);
+      // Фильтруем пустые значения при подсчете
+      const filledArr = arr.filter(item => item !== "");
+      selected += Math.min(filledArr.length, cnt);
 
       // если в этом choice выбранные элементы являются feature (т.е. нужно зайти в FEATURES и посчитать их вложенные choices)
       if (choice.type === "feature") {
@@ -163,7 +166,9 @@ export default function FeatureBlock({
   let selected = 0;
   let total = 0;
   if (choices && choices.length > 0) {
-    const counts = countChoicesRecursive(choices, featureKey);
+    // Если есть featKey, используем его source, иначе используем featureKey
+    const sourceForCount = featKey ? source : featureKey;
+    const counts = countChoicesRecursive(choices, sourceForCount);
     selected = counts.selected;
     total = counts.total;
   }
@@ -181,11 +186,11 @@ export default function FeatureBlock({
   };
 
   return (
-    <div className={`relative border rounded overflow-hidden ${hasUnfinishedChoice ? "border-blue-400" : "border-stone-200"}`}>
+    <div className={`relative border-2 rounded ${hasUnfinishedChoice ? "border-blue-300" : "border-stone-200"}`}>
       {/* Верхний индикатор незавершённого выбора */}
       {hasUnfinishedChoice && (
-        <div className="absolute -top-2 -left-2 z-20">
-          <div className="bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] shadow-md">!</div>
+        <div className="absolute -top-3 -left-3 z-20">
+          <div className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-lg">!</div>
               </div>
 
           )}
@@ -245,15 +250,23 @@ export default function FeatureBlock({
               </div>
 
               {needsToggle && (
-                <button
-                  className="text-lime-500 font-semibold text-xs mt-1 hover:text-lime-600 transition-colors"
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="text-lime-500 font-semibold text-xs mt-1 hover:text-lime-600 transition-colors cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation(); // чтобы клик не закрывал блок
                     setTextExpanded(!textExpanded);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation();
+                      setTextExpanded(!textExpanded);
+                    }
+                  }}
                 >
                   {textExpanded ? "Свернуть" : "Показать больше"}
-                </button>
+                </div>
               )}
 
               {choices && choices.length > 0 && showChoices && (

@@ -72,6 +72,11 @@ export default function ClassPick() {
     const nav = useNavigate();
     const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, loadFromSupabase, isLoading } = useCharacter();
     
+    // Показываем загрузку если контекст еще не готов
+    if (isLoading) {
+        return <div className="p-4">Загрузка...</div>;
+    }
+    
     // Загружаем персонажа при редактировании
     useEffect(() => {
         if (id && draft.id !== id) {
@@ -196,24 +201,26 @@ export default function ClassPick() {
                 {/* Заголовок - показываем только до выбора класса */}
                 {!hasSelectedClass && (
                     <div className="mb-6">
-                        <h1 className="text-2xl font-semibold">Выбор класса</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Выберите класс для вашего персонажа
-                        </p>
+                        <h1 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
+                            ВЫБОР КЛАССА
+                        </h1>
                     </div>
                 )}
 
                 {/* Заголовок после выбора класса */}
                 {hasSelectedClass && (
                     <div className="mb-6">
-                        <h1 className="text-2xl font-semibold">
-                            УРОВЕНЬ ПЕРСОНАЖА: <span className="text-primary">{draft.basics.level}</span>
+                        <h1 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
+                            ВЫБОР КЛАССА
                         </h1>
+                        <div className="text-[15px] font-semibold">
+                            УРОВЕНЬ ПЕРСОНАЖА: <span className="text-primary">{draft.basics.level}</span>
+                        </div>
                     </div>
                 )}
 
                 {/* Class grid */}
-                <div className={hasSelectedClass ? "flex justify-between gap-4" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
+                <div className={hasSelectedClass ? "flex gap-4" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
                     {/* Карточка класса - фиксированного размера */}
                     <div className={hasSelectedClass ? "w-80" : "contents"}>
                         {ALL_CLASSES.map((k) => {
@@ -264,81 +271,78 @@ export default function ClassPick() {
                                     
                                     {/* Красный крестик для удаления */}
                                     {isSelected && (
-                                        <button
+                                        <div
                                             onClick={(e) => {
+                                                e.preventDefault();
                                                 e.stopPropagation();
                                                 setShowRemoveConfirm(true);
                                             }}
-                                            className="absolute right-2 bottom-2 p-1 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors"
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }}
+                                            className="absolute right-2 bottom-2 p-1 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors cursor-pointer"
                                             title="Убрать класс"
                                         >
                                             <Icons.X className="w-4 h-4" />
-                                        </button>
+                                        </div>
                                     )}
                                 </button>
                             );
                         })}
                     </div>
 
-                    {/* Блоки здоровья и уровня (справа) */}
+                    {/* Кнопки уровня справа от карточки класса */}
                     {hasSelectedClass && (
-                        <div className="flex gap-4">
-                            {/* Блок хитов */}
-                            {info && (
-                                <Card className="w-fit border bg-card shadow-md min-h-[100px]">
-                                    <CardContent className="p-4 relative h-full flex flex-col justify-center">
-                                        <button
-                                            onClick={() => setShowHealthSettings(true)}
-                                            className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
-                                            title="Настройки здоровья"
-                                        >
-                                            <Icons.Settings className="w-4 h-4 text-muted-foreground" />
-                                        </button>
-                                        
-                                        <div className="text-left pr-8">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <span className="text-sm text-muted-foreground">Здоровье: </span>
-                                                <span className="text-sm text-muted-foreground">{maxHP}</span>
-                                            </div>
-                                            
-                                            <div className="text-sm text-muted-foreground">
-                                                Кость хитов: d{info.hitDice}
-                                            </div>
-                                            
-                                            <Icons.Heart className="w-4 h-4 text-red-500 absolute bottom-2 right-2" />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                            {/* Блок повышения уровня */}
-                            <Card className="w-48 border bg-card shadow-md min-h-[100px]">
-                                <CardContent className="p-4 h-full flex flex-col justify-center">
-                                    <div className="text-center">
-                                        <div className="text-sm text-muted-foreground mb-3">Уровень</div>
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button
-                                                onClick={() => setLevel(Math.max(1, draft.basics.level - 1))}
-                                                className="p-2 rounded-lg border hover:bg-muted transition-colors disabled:opacity-50"
-                                                disabled={draft.basics.level <= 1}
-                                            >
-                                                <Icons.ChevronDown className="w-4 h-4" />
-                                            </button>
-                                            <div className="text-sm text-muted-foreground w-12 text-center">
-                                                {draft.basics.level}
-                                            </div>
-                                            <button
-                                                onClick={() => setLevel(Math.min(20, draft.basics.level + 1))}
-                                                className="p-2 rounded-lg border hover:bg-muted transition-colors disabled:opacity-50"
-                                                disabled={draft.basics.level >= 20}
-                                            >
-                                                <Icons.ChevronUp className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                        <div className="flex flex-col justify-center gap-2">
+                            <button
+                                onClick={() => setLevel(Math.min(20, draft.basics.level + 1))}
+                                className="w-8 h-8 rounded-lg border border-border bg-background hover:bg-muted transition-colors disabled:opacity-50 flex items-center justify-center"
+                                disabled={draft.basics.level >= 20}
+                                title="Повысить уровень"
+                            >
+                                <Icons.ArrowUp className="w-4 h-4 text-foreground" />
+                            </button>
+                            <div className="text-sm text-muted-foreground w-8 text-center">
+                                {draft.basics.level}
+                            </div>
+                            <button
+                                onClick={() => setLevel(Math.max(1, draft.basics.level - 1))}
+                                className="w-8 h-8 rounded-lg border border-border bg-background hover:bg-muted transition-colors disabled:opacity-50 flex items-center justify-center"
+                                disabled={draft.basics.level <= 1}
+                                title="Понизить уровень"
+                            >
+                                <Icons.ArrowDown className="w-4 h-4 text-foreground" />
+                            </button>
                         </div>
+                    )}
+
+                    {/* Блок здоровья (справа) */}
+                    {hasSelectedClass && info && (
+                        <Card className="w-fit border bg-card shadow-md min-h-[100px]">
+                            <CardContent className="p-4 relative h-full flex flex-col justify-center">
+                                <button
+                                    onClick={() => setShowHealthSettings(true)}
+                                    className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
+                                    title="Настройки здоровья"
+                                >
+                                    <Icons.Settings className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                                
+                                <div className="text-left pr-8">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-sm text-muted-foreground">Здоровье: </span>
+                                        <span className="text-sm text-muted-foreground">{maxHP}</span>
+                                    </div>
+                                    
+                                    <div className="text-sm text-muted-foreground">
+                                        Кость хитов: d{info.hitDice}
+                                    </div>
+                                    
+                                    <Icons.Heart className="w-4 h-4 text-red-500 absolute bottom-2 right-2" />
+                                </div>
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
 

@@ -26,11 +26,7 @@ export const Noble: BackgroundInfo = {
     "25 зм"
   ],
   feature: [
-    {
-    key: "skilled",
-    name: "Одарённый ",
-    feat: "skilled"
-  },
+
   {
     key: "ability-scores",
     name: "Увеличение характеристик ",
@@ -39,9 +35,16 @@ export const Noble: BackgroundInfo = {
       {
         type: "ability",
         count: 3,
-        options: ["str", "int", "cha"]
+        options: ["str", "int", "cha"],
+        abilityMode: "flexible",
+        maxSameChoice: 2  // можно выбрать одну способность максимум 2 раза (для +2)
       }
     ]
+  },
+  {
+    key: "skilled",
+    name: "Одарённый ",
+    feat: "skilled"
   },
   ]
 };

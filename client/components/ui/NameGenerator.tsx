@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "./button";
 import { useCharacter } from "@/store/character";
 
 interface NameGeneratorProps {
@@ -169,16 +168,14 @@ export default function NameGenerator({ onNameGenerated, className = "" }: NameG
 
     return (
         <div className={`gap-2 ${className}`}>
-            <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                onClick={generateName}
-                disabled={isGenerating}
-                className="text-[8px] text-muted-foreground hover:text-foreground uppercase"
+            <span
+                onClick={isGenerating ? undefined : generateName}
+                className={`text-[8px] text-muted-foreground hover:text-foreground uppercase cursor-pointer transition-colors ${
+                    isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
             >
                 {isGenerating ? "Генерирую..." : "Предложить имя"}
-            </Button>
+            </span>
         </div>
     );
 }

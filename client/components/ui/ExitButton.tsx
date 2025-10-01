@@ -41,7 +41,7 @@ export default function ExitButton({ onClick }: ExitButtonProps) {
             disabled={saving}
             aria-busy={saving}
             aria-label={saving ? "Сохранение" : "Выход"}
-            className={`absolute right-3 top-3 p-2 ${saving ? "opacity-60 cursor-not-allowed" : "text-muted-foreground hover:text-foreground"}`}
+            className={`absolute right-3 top-3 p-2 z-50 ${saving ? "opacity-60 cursor-not-allowed" : "text-muted-foreground hover:text-foreground"}`}
             whileHover={!saving ? { rotate: 90, scale: 1.1 } : undefined}
             whileTap={!saving ? { scale: 0.9 } : undefined}
             transition={{ type: "spring", stiffness: 300 }}

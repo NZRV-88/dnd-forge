@@ -14,12 +14,10 @@ export default function StepArrows({ back, next, onNext, onBack }: StepArrowsPro
     const nav = useNavigate();
 
     const goNext = async () => {
-        console.debug("[StepArrows] goNext clicked", { next, hasOnNext: !!onNext });
 
         if (onNext) {
             try {
                 const res = await Promise.resolve(onNext());
-                console.debug("[StepArrows] onNext result:", res);
 
                 // если onNext вернул строку — считаем это за путь и переходим
                 if (typeof res === "string" && res) {
@@ -36,7 +34,6 @@ export default function StepArrows({ back, next, onNext, onBack }: StepArrowsPro
                 // ничего дополнительно не делаем
                 return;
             } catch (err) {
-                console.error("[StepArrows] onNext error:", err);
                 return;
             }
         }
@@ -48,12 +45,10 @@ export default function StepArrows({ back, next, onNext, onBack }: StepArrowsPro
     };
 
     const goBack = async () => {
-        console.debug("[StepArrows] goBack clicked", { back, hasOnBack: !!onBack });
 
         if (onBack) {
             try {
                 const res = await Promise.resolve(onBack());
-                console.debug("[StepArrows] onBack result:", res);
                 if (typeof res === "string" && res) {
                     nav(res);
                     return;
@@ -61,7 +56,6 @@ export default function StepArrows({ back, next, onNext, onBack }: StepArrowsPro
                 if (res === false) return;
                 return;
             } catch (err) {
-                console.error("[StepArrows] onBack error:", err);
                 return;
             }
         }

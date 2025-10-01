@@ -9,6 +9,7 @@ import { SKILLS } from "@/data/skills";
 import { Feats } from "@/data/feats";
 import type { RaceInfo, SubraceInfo } from "@/data/races/types";
 import { getAllAbilityBonuses, getSubraceAbilityBonuses, getRaceAbilityBonuses, getEffectiveSpeed } from "@/data/races/types";
+import RaceRemoveModal from "@/components/ui/RaceRemoveModal";
 import { LANGUAGES, getLanguageName } from "@/data/languages/languages";
 import { Tools } from "@/data/items/tools";
 import { ABILITIES } from "@/data/abilities";
@@ -98,9 +99,55 @@ export default function Race() {
         draft.basics.race || RACE_CATALOG[0].key
     );
     const sel = selected;
-    const r = getRaceByKey(sel)!;
+    const r = getRaceByKey(sel);
     const [subrace, setSubraceState] = useState<string | null>(draft.basics.subrace || null);
     const [selectedSubraceKey, setSelectedSubraceKey] = useState<string | null>(null);
+    const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+
+    // Если раса не выбрана, показываем только выбор расы
+    if (!r) {
+        return (
+            <div className="container mx-auto py-10">
+                <div className="mx-auto max-w-5xl relative">
+                    <StepArrows back={`/create/${id}/background`} next={`/create/${id}/abilities`} />
+                    <ExitButton />
+                    
+                    <div className="mb-6">
+                        <h1 className="text-2xl font-semibold">Выбор расы</h1>
+                        <p className="text-sm text-muted-foreground">
+                            Выберите расу для вашего персонажа
+                        </p>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {[...RACE_CATALOG]
+                            .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+                            .map((race) => (
+                                <button
+                                    key={race.key}
+                                    onClick={() => pickRace(race.key)}
+                                    className="text-left rounded-xl border bg-card transition hover:shadow-md hover:scale-[1.01] relative min-h-[100px]"
+                                >
+                                    <div className="p-4">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                                <span className="text-sm font-bold text-primary">
+                                                    {race.name.charAt(0)}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <div className="font-medium tracking-wide">{race.name}</div>
+                                            </div>
+                                        </div>
+                                        <p className="mt-1 text-sm text-muted-foreground">{race.desc}</p>
+                                    </div>
+                                </button>
+                            ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const selectedSubrace = r.subraces?.find(
         (s) => s.key === subrace
@@ -158,6 +205,21 @@ export default function Race() {
         setSelected(key);
     }
 
+    const handleRemoveRace = () => {
+        setIsRemoveModalOpen(true);
+    };
+
+    const confirmRemoveRace = () => {
+        setBasics({ race: undefined, subrace: undefined });
+        setSubraceState(undefined);
+        setSelectedSubraceKey(null);
+        setIsRemoveModalOpen(false);
+    };
+
+    const cancelRemoveRace = () => {
+        setIsRemoveModalOpen(false);
+    };
+
     function pickSubrace(subraceKey: string) {
         if (!r) return;
 
@@ -207,9 +269,9 @@ export default function Race() {
     //    nav("/characters");
     //}
 
-    const raceInfo = RACE_CATALOG.find(
-        (c) => c.key.toLowerCase() === draft.basics.race.toLowerCase()
-    );
+    const raceInfo = draft.basics.race ? RACE_CATALOG.find(
+        (c) => c.key.toLowerCase() === draft.basics.race?.toLowerCase()
+    ) : null;
 
     const subraceObj = r.subraces?.find((s) => s.name === subrace);
 
@@ -241,15 +303,24 @@ export default function Race() {
                 {/* Шапка с именем и аватаркой */}
                 <CharacterHeader />
 
-                <div className="mb-6 flex items-baseline justify-between">
-                    <div>
+                {/* Заголовок - показываем только до выбора расы */}
+                {!draft.basics.race && (
+                    <div className="mb-6">
                         <h1 className="text-2xl font-semibold">Выбор расы</h1>
                         <p className="text-sm text-muted-foreground">
-                            Текущий выбор: {raceInfo?.name || "не выбрана"}
-                            {draft.basics.subrace ? ` • ${draft.basics.subrace}` : ""}
+                            Выберите расу для вашего персонажа
                         </p>
                     </div>
-                </div>
+                )}
+
+                {/* Заголовок после выбора расы */}
+                {draft.basics.race && (
+                    <div className="mb-6">
+                        <h1 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
+                            ВЫБОР РАСЫ
+                        </h1>
+                    </div>
+                )}
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {[...RACE_CATALOG]
@@ -260,11 +331,16 @@ export default function Race() {
                         )
                         .map((race) => {
                             const isSelected = draft.basics.race === race.key;
+                            
+                            // Если раса выбрана, показываем только её
+                            if (draft.basics.race && !isSelected) return null;
+                            
                             return (
                                 <button
                                     key={race.key}
                                     onClick={() => pickRace(race.key)}
-                                    className={`text-left rounded-xl border bg-card transition hover:shadow-md hover:scale-[1.01] ${isSelected
+                                    disabled={isSelected}
+                                    className={`text-left rounded-xl border bg-card transition hover:shadow-md hover:scale-[1.01] relative min-h-[100px] ${isSelected
                                         ? "border-2 border-primary shadow-lg scale-[1.02] bg-gradient-to-b from-primary/5 to-transparent"
                                         : ""
                                         }`}
@@ -296,12 +372,32 @@ export default function Race() {
                                             <p className="mt-1 text-sm text-muted-foreground">{race.desc}</p>
                                         </div>
                                     </div>
+                                    
+                                    {/* Красный крестик для удаления */}
+                                    {isSelected && (
+                                        <div
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                handleRemoveRace();
+                                            }}
+                                            onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                            }}
+                                            className="absolute right-2 bottom-2 p-1 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors cursor-pointer"
+                                            title="Убрать расу"
+                                        >
+                                            <Icons.X className="w-4 h-4" />
+                                        </div>
+                                    )}
                                 </button>
                             );
                         })}
                 </div>
 
-                {r && (
+                {/* Информация о выбранной расе */}
+                {r && draft.basics.race && (
                     <Card className="mt-6 overflow-hidden border bg-card shadow-md">
                         <CardHeader className="border-b pb-3">
                             <CardTitle className="text-xl font-bold tracking-wide">{r.name || r.key}</CardTitle>
@@ -727,6 +823,14 @@ export default function Race() {
                     </Card>
                 )}
             </div>
+
+            {/* Модальное окно удаления расы */}
+            <RaceRemoveModal
+                raceInfo={r}
+                isOpen={isRemoveModalOpen}
+                onClose={cancelRemoveRace}
+                onConfirm={confirmRemoveRace}
+            />
         </div>
     );
 }

@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/lib/supabaseClient";
 import { Abilities, ABILITIES } from "@/data/abilities";
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
+import { getFixedBackgroundData } from "@/utils/getFixedBackgroundData";
 import type { RollResult } from "@/pages/create/Abilities"; 
 
 /* ------------------------------------------------------
@@ -132,16 +133,6 @@ export type CharacterContextType = {
 /* ------------------------------------------------------
    Значения по умолчанию
 ------------------------------------------------------ */
-function useCharacterId() {
-    // Пробуем взять ID персонажа из URL (если есть)
-    if (typeof window === "undefined") return null;
-    const params = new URLSearchParams(window.location.search);
-    return params.get("id");
-}
-
-const urlId = useCharacterId();
-const id = urlId || uuidv4();
-const STORAGE_KEY = `character:${id}`;
 
 // abilities подтягиваются из общего списка
 const defaultStats: Abilities = ABILITIES.reduce(
@@ -149,8 +140,8 @@ const defaultStats: Abilities = ABILITIES.reduce(
     {}
 ) as Abilities;
 
-const makeDefaultDraft = (): CharacterDraft => ({
-    id,
+const makeDefaultDraft = (id?: string): CharacterDraft => ({
+    id: id || uuidv4(),
     basics: {
         name: "",
         race: "",
@@ -196,7 +187,14 @@ export const CharacterContext = createContext<CharacterContextType | undefined>(
 
 export function CharacterProvider({ children }: { children: React.ReactNode }) {
     const [draft, setDraft] = useState<CharacterDraft>(makeDefaultDraft());
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isInitialized, setIsInitialized] = useState(false);
+
+    // Инициализация провайдера
+    useEffect(() => {
+        setIsLoading(false);
+        setIsInitialized(true);
+    }, []);
 
     // Функция миграции старых ключей в новые
     const migrateOldKeys = useCallback((chosen: any) => {
@@ -264,7 +262,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     };
 
     const initNewCharacter = () => {
-        console.log('Store: initNewCharacter called');
         const newDraft = makeDefaultDraft();
         setDraft(newDraft);
         setIsLoading(false);
@@ -281,13 +278,36 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setBasics({ subclass });
 
     const setBackground = (background: string | null) => {
-        setDraft((d) => ({
-            ...d,
-            basics: {
-                ...d.basics,
-                background,
-            },
-        }));
+        setDraft((d) => {
+            // Получаем навыки новой предыстории
+            const newBackgroundSkills: string[] = [];
+            if (background) {
+                const bgData = getFixedBackgroundData(background);
+                newBackgroundSkills.push(...bgData.proficiencies.skills);
+            }
+
+            // Очищаем конфликтующие навыки из chosen.skills
+            const newChosenSkills = { ...d.chosen.skills };
+            for (const [source, skills] of Object.entries(newChosenSkills)) {
+                // Фильтруем навыки, удаляя те, что конфликтуют с предыстор ией
+                const filtered = skills.map(skill => 
+                    newBackgroundSkills.includes(skill) ? "" : skill
+                );
+                newChosenSkills[source] = filtered;
+            }
+
+            return {
+                ...d,
+                basics: {
+                    ...d.basics,
+                    background,
+                },
+                chosen: {
+                    ...d.chosen,
+                    skills: newChosenSkills,
+                },
+            };
+        });
     };
 
     // ---- HP Rolls helpers ----
@@ -476,9 +496,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         }));
 
     const clearClassChoices = () => {
-        console.log("Очищаем выборы класса...");
         setDraft(d => {
-            console.log("Текущие выборы до очистки:", d.chosen);
             const newChosen = { ...d.chosen };
             const newAsi = { ...d.asi };
             
@@ -487,64 +505,52 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             const currentClass = d.basics.class;
             const currentSubclass = d.basics.subclass;
             
-            console.log("Очищаем abilities:", Object.keys(newChosen.abilities));
             Object.keys(newChosen.abilities).forEach(key => {
                 if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
                     key.startsWith('class-') || key.startsWith('subclass-')) {
-                    console.log("Удаляем ability:", key);
                     delete newChosen.abilities[key];
                 }
             });
-            console.log("Очищаем skills:", Object.keys(newChosen.skills));
             Object.keys(newChosen.skills).forEach(key => {
                 if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
                     key.startsWith('class-') || key.startsWith('subclass-')) {
-                    console.log("Удаляем skill:", key);
                     delete newChosen.skills[key];
                 }
             });
             Object.keys(newChosen.tools).forEach(key => {
                 if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
                     key.startsWith('class-') || key.startsWith('subclass-')) {
-                    console.log("Удаляем tool:", key);
                     delete newChosen.tools[key];
                 }
             });
             Object.keys(newChosen.toolProficiencies).forEach(key => {
                 if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
                     key.startsWith('class-') || key.startsWith('subclass-')) {
-                    console.log("Удаляем toolProficiency:", key);
                     delete newChosen.toolProficiencies[key];
                 }
             });
             Object.keys(newChosen.languages).forEach(key => {
                 if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
                     key.startsWith('class-') || key.startsWith('subclass-')) {
-                    console.log("Удаляем language:", key);
                     delete newChosen.languages[key];
                 }
             });
             Object.keys(newChosen.spells).forEach(key => {
                 if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
                     key.startsWith('class-') || key.startsWith('subclass-')) {
-                    console.log("Удаляем spell:", key);
                     delete newChosen.spells[key];
                 }
             });
-            console.log("Очищаем features:", Object.keys(newChosen.features));
             Object.keys(newChosen.features).forEach(key => {
                 if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
                     key.startsWith('class-') || key.startsWith('subclass-')) {
-                    console.log("Удаляем feature:", key);
                     delete newChosen.features[key];
                 }
             });
             if (newChosen.fightingStyle) {
-                console.log("Очищаем fightingStyle:", Object.keys(newChosen.fightingStyle));
                 Object.keys(newChosen.fightingStyle).forEach(key => {
                     if (key.startsWith(`${currentClass}-`) || key.startsWith(`${currentSubclass}-`) || 
                         key.startsWith('class-') || key.startsWith('subclass-')) {
-                        console.log("Удаляем fightingStyle:", key);
                         delete newChosen.fightingStyle![key];
                     }
                 });
@@ -552,7 +558,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             
             // Очищаем фиты, связанные с классом
             // Фиты могут иметь формат: class-{class}-{level}-{featureIndex}:{featKey} или {class}-{level}-{featureIndex}:{featKey}
-            console.log("Очищаем feats:", newChosen.feats);
             const originalFeats = [...newChosen.feats];
             newChosen.feats = newChosen.feats.filter(f => {
                 const sourceKey = f.split(':')[0];
@@ -561,11 +566,9 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                                   !sourceKey.startsWith(`${currentClass}-`) && 
                                   !sourceKey.startsWith(`${currentSubclass}-`);
                 if (!shouldKeep) {
-                    console.log("Удаляем feat:", f);
                 }
                 return shouldKeep;
             });
-            console.log("Остались feats:", newChosen.feats);
             
             // Очищаем ASI (Ability Score Improvements), связанные с классом
             Object.keys(newAsi).forEach(level => {
@@ -615,7 +618,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     const saveToSupabase = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        console.log("Сохраняем в Supabase draft:", draft);
         const { error } = await supabase.from("characters").upsert({
             id: draft.id,
             user_id: user.id,
@@ -623,7 +625,9 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             updated_at: new Date(),
         });
 
-        if (error) console.error("Ошибка сохранения в Supabase:", error);
+        if (error) {
+            // Ошибка сохранения в Supabase
+        }
     };
 
     const createNewCharacter = async (id: string) => {
@@ -631,7 +635,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                console.error("Пользователь не авторизован");
+                // Пользователь не авторизован
                 return;
             }
 
@@ -651,7 +655,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             });
 
             if (error) {
-                console.error("Ошибка создания персонажа в Supabase:", error);
+                // Ошибка создания персонажа в Supabase
                 return;
             }
 
@@ -672,7 +676,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
             if (error) {
-                console.error("Ошибка загрузки из Supabase:", error);
+                // Ошибка загрузки из Supabase
                 return;
             }
 
@@ -741,6 +745,10 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         clearClassChoices,
     };
 
+    if (!isInitialized) {
+        return <div className="p-4">Загрузка...</div>;
+    }
+
     return (
         <CharacterContext.Provider value={api}>
             {children}
@@ -754,7 +762,10 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
 export const useCharacter = () => {
     const ctx = useContext(CharacterContext);
-    if (!ctx) throw new Error("useCharacter must be used within CharacterProvider");
+    if (!ctx) {
+        console.error("useCharacter must be used within CharacterProvider. Context value:", ctx);
+        throw new Error("useCharacter must be used within CharacterProvider");
+    }
     return ctx;
 };
 

@@ -78,13 +78,18 @@ export default function BackgroundInfoBlock({
                                 if (feature.feat) {
                                     const featInfo = ALL_FEATS.find(f => f.key === feature.feat);
                                     if (featInfo) {
+                                        // Собираем все выборы из эффектов feat
+                                        const featChoices = featInfo.effect?.flatMap(eff => eff.choices || []) || [];
+                                        
                                         return (
                                             <FeatureBlock
                                                 key={feature.key || index}
                                                 name={feature.name}
                                                 desc={feature.desc || ""}
-                                                source={`${source}-feature-${index}`}
+                                                source={`${source}-feat-${feature.feat}`}
                                                 idx={index + 10}
+                                                choices={featChoices}
+                                                featKey={feature.feat}
                                                 customContent={
                                                     <div className="mt-3 rounded-xl border border-stone-800 bg-gradient-to-b from-gray-100 to-gray-100 p-4 shadow-sm relative">
                                                         <div className="absolute right-3 top-3 text-stone-500">
@@ -119,7 +124,7 @@ export default function BackgroundInfoBlock({
                                                                     <div className="mt-2">
                                                                         <ChoiceRenderer
                                                                             choices={eff.choices}
-                                                                            source={`${source}-feat-${feature.feat}-effect-${ei}`}
+                                                                            source={`${source}-feat-${feature.feat}`}
                                                                         />
                                                                     </div>
                                                                 )}

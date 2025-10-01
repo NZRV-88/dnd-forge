@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from "react";
 import { useCharacter } from "@/store/character";
+import { useNavigate } from "react-router-dom";
 import AvatarManager from "./AvatarManager";
 import NameGenerator from "./NameGenerator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertCircle } from "lucide-react";
+import { checkCharacterCompleteness } from "@/utils/checkCharacterCompleteness";
 
 interface CharacterHeaderProps {
     onForceSave?: () => void;
@@ -14,14 +18,17 @@ export interface CharacterHeaderRef {
 
 const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ onForceSave }, ref) => {
     const { draft, setDraft, saveToSupabase } = useCharacter();
+    const navigate = useNavigate();
     const [isAvatarManagerOpen, setIsAvatarManagerOpen] = useState(false);
     const [localName, setLocalName] = useState(draft?.basics?.name || "");
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Проверяем завершенность выборов на каждой странице
+    const incompletePages = checkCharacterCompleteness(draft);
+
     // Синхронизируем локальное имя с draft только при первой загрузке
     useEffect(() => {
         if (draft?.basics?.name && !localName) {
-            console.log('CharacterHeader: Syncing localName with draft.basics.name:', draft.basics.name);
             setLocalName(draft.basics.name);
         }
     }, [draft?.basics?.name, localName]);
@@ -55,12 +62,10 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement> | string) => {
         const newName = typeof e === 'string' ? e : e.target.value;
-        console.log('CharacterHeader: handleNameChange called with:', newName, 'current localName:', localName);
         setLocalName(newName);
         
         // Обновляем в store
         setDraft(d => {
-            console.log('CharacterHeader: setDraft called, current draft.id:', d.id, 'current draft.basics.name:', d.basics.name);
             return {
                 ...d,
                 basics: {
@@ -76,8 +81,6 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
 
     // Функция для принудительного сохранения
     const forceSave = useCallback(() => {
-        console.log('CharacterHeader: forceSave called, draft.id:', draft.id, 'localName:', localName);
-        
         // Очищаем debounced timeout
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
@@ -86,10 +89,7 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
         
         // Сохраняем в БД только если есть ID (персонаж уже создан)
         if (draft.id) {
-            console.log('CharacterHeader: Saving to Supabase');
             saveToSupabase().catch(console.error);
-        } else {
-            console.log('CharacterHeader: No ID, data will be saved to localStorage automatically');
         }
         
         // Вызываем внешний callback если есть
@@ -114,7 +114,6 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
     useImperativeHandle(ref, () => ({
         forceSave,
         getCurrentData: () => {
-            console.log('CharacterHeader: getCurrentData called, localName:', localName, 'draft.avatar:', draft?.avatar);
             return {
                 name: localName,
                 avatar: draft?.avatar || null
@@ -124,7 +123,7 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
 
     return (
         <>
-            <div className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 mb-6">
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 mb-6 relative">
                 <div className="container mx-auto py-4">
                     <div className="flex items-center gap-4">
                         {/* Портрет */}
@@ -147,7 +146,7 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
 
                         {/* Поле имени */}
                         <div className="flex-1">
-                            <label className="block text-sm font-medium text-muted-foreground mb-1">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Имя персонажа
                             </label>
                             <input
@@ -156,15 +155,47 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
                                 onChange={handleNameChange}
                                 placeholder="Введите имя персонажа"
                                 spellCheck={false}
-                                className="w-full text-2xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/50 focus:ring-0"
+                                className="w-full text-2xl font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/50 focus:ring-0 mb-2"
                             />
                             <NameGenerator 
                                 onNameGenerated={handleNameChange}
-                                className="mt-2"
+                                className=""
                             />
                         </div>
                     </div>
                 </div>
+                
+                {/* Индикатор незавершенных выборов в нижнем правом углу шапки */}
+                {incompletePages.length > 0 && (
+                    <div className="absolute bottom-4 right-4 z-10">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="relative cursor-pointer">
+                                    <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors">
+                                        <AlertCircle className="w-5 h-5" />
+                                    </div>
+                                    <div className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">
+                                        {incompletePages.length}
+                                    </div>
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                                <div className="space-y-2">
+                                    <div className="font-semibold text-sm">Незавершенные выборы:</div>
+                                    {incompletePages.map((page, idx) => (
+                                        <div 
+                                            key={idx}
+                                            onClick={() => navigate(page.path)}
+                                            className="text-xs hover:text-primary cursor-pointer hover:underline"
+                                        >
+                                            • {page.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
+                )}
             </div>
 
             {/* Модальное окно управления портретами */}

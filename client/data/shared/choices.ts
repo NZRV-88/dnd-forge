@@ -17,5 +17,7 @@ export interface ChoiceOption {
     spellLevel?: number;      // ограничение по уровню заклинаний
     spellClass?: string;      // например "wizard"
     desc?: string;
+    abilityMode?: "flexible" | "unique"; // flexible: можно +2/+1 или +1/+1/+1, unique: все должны быть разными
+    maxSameChoice?: number;   // максимум раз, сколько можно выбрать одну и ту же опцию (для flexible режима)
     // описание
 }

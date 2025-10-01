@@ -83,7 +83,9 @@ export default function BackgroundPick() {
                     </div>
                 ) : (
                     <div className="mb-6">
-                        <h1 className="text-2xl font-semibold">ПРЕДЫСТОРИЯ ПЕРСОНАЖА</h1>
+                        <h1 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
+                            ВЫБОР ПРЕДЫСТОРИИ
+                        </h1>
                     </div>
                 )}
 

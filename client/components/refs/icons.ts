@@ -23,6 +23,7 @@ export {
     ChevronUp,
     ChevronDown,
     ArrowUp,
+    ArrowDown,
     ArrowRight,
     Wind,
     Award,
