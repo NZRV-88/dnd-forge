@@ -372,4 +372,43 @@ export const Fighter: ClassInfo = {
             },
         },
     ],
+    
+    // Выборы стартовой экипировки Воина
+    equipmentChoices: [
+        {
+            name: "Стартовая экипировка",
+            description: "Выберите один из следующих комплектов:",
+            choices: [
+                {
+                    name: "(А) Тяжёлый воин",
+                    items: [
+                        { type: "armor", key: "chain-mail" },
+                        { type: "weapon", key: "greatsword" },
+                        { type: "weapon", key: "flail" },
+                        { type: "weapon", key: "javelin", quantity: 8 },
+                        { type: "equipment-pack", key: "dungeoneers-pack" }
+                    ],
+                    gold: 4
+                },
+                {
+                    name: "(Б) Лёгкий воин",
+                    items: [
+                        { type: "armor", key: "studded-leather-armor" },
+                        { type: "weapon", key: "scimitar" },
+                        { type: "weapon", key: "shortsword" },
+                        { type: "weapon", key: "longbow" },
+                        { type: "gear", key: "arrow", quantity: 20 },
+                        { type: "gear", key: "quiver" },
+                        { type: "equipment-pack", key: "dungeoneers-pack" }
+                    ],
+                    gold: 11
+                },
+                {
+                    name: "(В) Только золото",
+                    items: [],
+                    gold: 155
+                }
+            ]
+        }
+    ]
 };

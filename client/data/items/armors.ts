@@ -4,7 +4,9 @@ export type ArmorCategory = "light" | "medium" | "heavy" | "shield";
 
 export interface Armor {
     key: string;              // уникальный ключ (slug)
+    source: string;           // источник (напр. "PH24")
     name: string;             // отображаемое название
+    nameEn?: string;           // отображаемое название на английском
     category: ArmorCategory;  // категория
     cost: string;             // стоимость (напр. "10 gp")
     baseAC: number;           // базовый класс брони
@@ -12,6 +14,13 @@ export interface Armor {
     disadvantageStealth?: boolean; // есть ли помеха к Скрытности
     weight: number;           // вес в фунтах
     properties?: string[];    // доп. свойства (если есть)
+    requirements?: ArmorRequirements; // требования для ношения доспеха
+}
+
+export interface ArmorRequirements {
+    strength?: number;        // минимальная Сила
+    speedPenalty?: number;    // описание штрафа к скорости при недостаточной Силе
+    description?: string;     // дополнительное описание требований
 }
 
 /* --------------------------
@@ -19,8 +28,10 @@ export interface Armor {
    -------------------------- */
 export const Armors: Armor[] = [
     {
-        key: "padded",
-        name: "Стёганый",
+        key: "padded-armor",
+        source: "PH24",
+        name: "Стёганый доспех",
+        nameEn: "Padded Armor",
         category: "light",
         cost: "5 gp",
         baseAC: 11,
@@ -29,8 +40,10 @@ export const Armors: Armor[] = [
         weight: 8,
     },
     {
-        key: "leather",
-        name: "Кожаный",
+        key: "leather-armor",
+        source: "PH24",
+        name: "Кожаный доспех",
+        nameEn: "Leather Armor",
         category: "light",
         cost: "10 gp",
         baseAC: 11,
@@ -39,8 +52,10 @@ export const Armors: Armor[] = [
         weight: 10,
     },
     {
-        key: "studded-leather",
-        name: "Проклёпанный кожаный",
+        key: "studded-leather-armor",
+        source: "PH24",
+        name: "Проклёпанный кожаный доспех",
+        nameEn: "Studded Leather Armor",
         category: "light",
         cost: "45 gp",
         baseAC: 12,
@@ -53,8 +68,10 @@ export const Armors: Armor[] = [
        Средние доспехи
        -------------------------- */
     {
-        key: "hide",
-        name: "Шкурный",
+        key: "hide-armor",
+        source: "PH24",
+        name: "Шкурный доспех",
+        nameEn: "Hide Armor",
         category: "medium",
         cost: "10 gp",
         baseAC: 12,
@@ -64,7 +81,9 @@ export const Armors: Armor[] = [
     },
     {
         key: "chain-shirt",
+        source: "PH24",
         name: "Кольчужная рубаха",
+        nameEn: "Chain Shirt",
         category: "medium",
         cost: "50 gp",
         baseAC: 13,
@@ -74,7 +93,9 @@ export const Armors: Armor[] = [
     },
     {
         key: "scale-mail",
-        name: "Чешуйчатый",
+        source: "PH24",
+        name: "Чешуйчатый доспех",
+        nameEn: "Scale Mail",
         category: "medium",
         cost: "50 gp",
         baseAC: 14,
@@ -84,7 +105,9 @@ export const Armors: Armor[] = [
     },
     {
         key: "breastplate",
+        source: "PH24",
         name: "Кираса",
+        nameEn: "Breastplate",
         category: "medium",
         cost: "400 gp",
         baseAC: 14,
@@ -93,8 +116,10 @@ export const Armors: Armor[] = [
         weight: 20,
     },
     {
-        key: "half-plate",
+        key: "half-plate-armor",
+        source: "PH24",
         name: "Полулаты",
+        nameEn: "Half-Plate Armor",
         category: "medium",
         cost: "750 gp",
         baseAC: 15,
@@ -108,9 +133,11 @@ export const Armors: Armor[] = [
        -------------------------- */
     {
         key: "ring-mail",
-        name: "Кольчужная броня",
+        source: "PH24",
+        name: "Колечный доспех",
+        nameEn: "Ring Mail",
         category: "heavy",
-        cost: "30 gp",
+        cost: "30 GP",
         baseAC: 14,
         maxDexBonus: 0,
         disadvantageStealth: true,
@@ -118,6 +145,8 @@ export const Armors: Armor[] = [
     },
     {
         key: "chain-mail",
+        source: "PH24",
+        nameEn: "Chain Mail",
         name: "Кольчуга",
         category: "heavy",
         cost: "75 gp",
@@ -125,29 +154,42 @@ export const Armors: Armor[] = [
         maxDexBonus: 0,
         disadvantageStealth: true,
         weight: 55,
-        properties: ["Требует СИЛ 13"],
+        requirements: {
+            strength: 13,
+            speedPenalty: 10
+        },
     },
     {
-        key: "splint",
-        name: "Пластинчатый (сплинт)",
+        key: "splint-armor",
+        source: "PH24",
+        nameEn: "Splint Armor",
+        name: "Пластинчатый доспех",
         category: "heavy",
         cost: "200 gp",
         baseAC: 17,
         maxDexBonus: 0,
         disadvantageStealth: true,
         weight: 60,
-        properties: ["Требует СИЛ 15"],
+        requirements: {
+            strength: 15,
+            speedPenalty: 10
+        },
     },
     {
-        key: "plate",
-        name: "Латы",
+        key: "plate-armor",
+        source: "PH24",
+        nameEn: "Plate Armor",
+        name: "Латный доспех",
         category: "heavy",
         cost: "1500 gp",
         baseAC: 18,
         maxDexBonus: 0,
         disadvantageStealth: true,
         weight: 65,
-        properties: ["Требует СИЛ 15"],
+        requirements: {
+            strength: 15,
+            speedPenalty: 10
+        },
     },
 
     /* --------------------------
@@ -155,6 +197,8 @@ export const Armors: Armor[] = [
        -------------------------- */
     {
         key: "shield",
+        source: "PH24",
+        nameEn: "Shield",
         name: "Щит",
         category: "shield",
         cost: "10 gp",

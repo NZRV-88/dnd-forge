@@ -1,8 +1,38 @@
 import type { Proficiency } from "@/data/proficiencies";
 import type { ChoiceOption } from "@/data/shared/choices";
 import type { SOURCES } from "@/data/sources";
+import type { Weapon } from "@/data/items/weapons";
+import type { Armor } from "@/data/items/armors";
+import type { Gear } from "@/data/items/gear";
+import type { EquipmentPack } from "@/data/items/equipment-packs";
 
 export type SourceKey = keyof typeof SOURCES;
+
+// Типы для экипировки класса
+export type EquipmentItem = {
+    type: "weapon" | "armor" | "gear" | "equipment-pack";
+    key: string;
+    quantity?: number;
+};
+
+export type EquipmentOption = {
+    name: string;
+    items: EquipmentItem[];
+    description?: string;
+};
+
+// Типы для выбора между комплектами экипировки
+export type EquipmentChoice = {
+    name: string;
+    items: EquipmentItem[];
+    gold?: number; // Дополнительное золото к комплекту
+};
+
+export type EquipmentChoices = {
+    name: string;
+    description?: string;
+    choices: EquipmentChoice[];
+};
 export type Feature = {
     name: string;
     desc: string;
@@ -43,7 +73,9 @@ export interface ClassInfo {
     choices?: ChoiceOption[];        // Если необходимо добавить выбор владением
     subclasses: SubclassInfo[]; // доступные подклассы
     features: Record<number, Feature[]>;
-    spellcasting?: SpellcastingInfo;  
+    spellcasting?: SpellcastingInfo;
+    equipment?: EquipmentOption[];   // Стартовая экипировка класса (фиксированная)
+    equipmentChoices?: EquipmentChoices[]; // Выборы между комплектами экипировки
 }
 
 export interface SpellcastingInfo {

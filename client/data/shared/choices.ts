@@ -7,10 +7,14 @@ export type ChoiceType =
     | "tool-proficiency"
     | "language"
     | "feat"
-    | "spell";
+    | "spell"
+    | "weapon"
+    | "armor"
+    | "gear"
+    | "equipment-pack";
 
 export interface ChoiceOption {
-    type: "ability" | "skill" | "tool" | "tool-proficiency" | "language" | "feat" | "spell" | "subclass" | "feature" | "fighting-style";
+    type: "ability" | "skill" | "tool" | "tool-proficiency" | "language" | "feat" | "spell" | "subclass" | "feature" | "fighting-style" | "weapon" | "armor" | "gear" | "equipment-pack";
     count: number;
     value?: number;
     options?: string[];        // конкретный список для выбора 

@@ -33,9 +33,9 @@ export function BackgroundTraitsTable({ backgroundInfo, choices, source, showCho
 
   return (
     <div className="space-y-3">
-      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      {/* <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
         Основные особенности предыстории
-      </div>
+      </div> */}
       
       <div className="text-xs text-muted-foreground space-y-2">
         {/* Владение навыками */}
@@ -72,6 +72,7 @@ export function BackgroundTraitsTable({ backgroundInfo, choices, source, showCho
             <ChoiceRenderer
               choices={choices}
               source={source || 'background-choices'}
+              ci={0}
             />
           </div>
         )}

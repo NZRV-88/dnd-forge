@@ -31,6 +31,9 @@ export type Basics = {
     hpMode: HpMode;
     hpCurrent?: number;
     background: string;
+    equipment?: string[];
+    gold?: number;
+    isStartEquipmentAdded?: boolean;
     //backgroundBonuses?: Partial<Record<keyof Abilities, number>>;
     //backgroundSkills?: string[];
     //raceBonuses?: Partial<Record<keyof Abilities, number>>;
@@ -153,6 +156,9 @@ const makeDefaultDraft = (id?: string): CharacterDraft => ({
         level: 1,
         hpMode: "fixed",
         hpCurrent: 0,
+        equipment: [],
+        gold: 0,
+        isStartEquipmentAdded: false,
     },
     stats: defaultStats,
     asi: {},
