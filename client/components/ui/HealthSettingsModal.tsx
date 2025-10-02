@@ -136,7 +136,7 @@ export default function HealthSettingsModal({
                 </div>
 
                 {/* Кнопки управления */}
-                <div className="flex gap-0 border-t">
+                <div className="flex gap-0 border-t border-gray-200">
                     {hpMode === "roll" && (
                         <Button
                             type="button"

@@ -48,7 +48,7 @@ export default function ClassRemoveModal({
                 </div>
 
                 {/* Кнопки подтверждения */}
-                <div className="flex gap-0 border-t">
+                <div className="flex gap-0 border-t border-gray-200">
                     <Button
                         type="button"
                         variant="outline"

@@ -1,11 +1,9 @@
 import { RequestHandler } from "express";
+import { generateCyrillicFantasyName } from "../../api/advanced-name-generator";
 
 // Простой прокси к основному генератору имен
-// Импортируем функцию из основного файла
 export const handleAdvancedNameGenerator: RequestHandler = async (req, res) => {
     try {
-        // Импортируем функцию генерации из основного файла
-        const { generateCyrillicFantasyName } = await import("../../api/advanced-name-generator");
         
         const { race, class: characterClass, gender = "any", count = 1 } = req.body;
         

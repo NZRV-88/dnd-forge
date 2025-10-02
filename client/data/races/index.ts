@@ -38,7 +38,19 @@ export const RACE_CATALOG: RaceInfo[] = [
 
 // Вспомогательная функция для поиска расы по ключу
 export const getRaceByKey = (key: string): RaceInfo | undefined => {
-  return RACE_CATALOG.find(race => race.key === key);
+  // Сначала ищем по точному ключу
+  let race = RACE_CATALOG.find(race => race.key === key);
+  
+  // Если не найдено, пробуем обратную совместимость для старых ключей
+  if (!race) {
+    if (key === "halfOrc") {
+      race = RACE_CATALOG.find(race => race.key === "half-orc");
+    } else if (key === "halfElf") {
+      race = RACE_CATALOG.find(race => race.key === "half-elf");
+    }
+  }
+  
+  return race;
 };
 
 /** Находит подрасу по ключу */

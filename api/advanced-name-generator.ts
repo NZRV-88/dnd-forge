@@ -272,7 +272,7 @@ const RACE_SYLLABLES = {
             "зо", "го", "ко", "то", "фо", "зи", "ги", "ки", "ти", "фи",
             "гх", "кх", "тх", "фх", "зг", "рг", "кг", "тг", "фг", "зг",
             "нк", "нг", "нт", "нф", "нз", "рк", "рг", "рт", "рф", "рз",
-                        "зу", "гу", "ку", "ту", "фу", "за", "га", "ка", "та", "фа",
+            "зу", "гу", "ку", "ту", "фу", "за", "га", "ка", "та", "фа",
             "зо", "го", "ко", "то", "фо", "гх", "кх", "тх", "фх", "зх"
         ],
         suffixes: [
@@ -812,7 +812,7 @@ function applyPhoneticRules(name: string): string {
     name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
     name = name.replace(/^'+|'+$/g, '');
     
-    console.log(`applyPhoneticRules: Финальное имя: "${name}"`);
+    // console.log(`applyPhoneticRules: Финальное имя: "${name}"`);
     return name;
 }
 
@@ -822,25 +822,52 @@ export function generateCyrillicFantasyName(race?: string, characterClass?: stri
         actualGender = Math.random() > 0.5 ? "male" : "female";
     }
     
-    const raceKey = race?.toLowerCase() || 'human';
+    const raceKey = race || 'human';
+    
+    // console.log('generateCyrillicFantasyName: Входные параметры:', {
+    //     race,
+    //     raceKey,
+    //     characterClass,
+    //     gender,
+    //     actualGender
+    // });
+    
+    // console.log('generateCyrillicFantasyName: Доступные расы:', Object.keys(RACE_SYLLABLES));
     
     // Проверяем, есть ли данные для этой расы
-    if (RACE_SYLLABLES[raceKey as keyof typeof RACE_SYLLABLES]) {
-        const firstName = generateNameFromSyllables(RACE_SYLLABLES[raceKey as keyof typeof RACE_SYLLABLES], actualGender);
-        const surname = generateSurnameFromSyllables(RACE_SYLLABLES[raceKey as keyof typeof RACE_SYLLABLES]);
+    let raceData = RACE_SYLLABLES[raceKey as keyof typeof RACE_SYLLABLES];
+    
+    // Если не найдено, пробуем kebab-case версию
+    if (!raceData && raceKey.includes('-')) {
+        const kebabKey = raceKey.replace('-', '');
+        raceData = RACE_SYLLABLES[kebabKey as keyof typeof RACE_SYLLABLES];
+        // console.log('generateCyrillicFantasyName: Пробуем kebab-case версию:', kebabKey);
+    }
+    
+    // Если не найдено, пробуем camelCase версию
+    if (!raceData && raceKey.includes('-')) {
+        const camelKey = raceKey.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase());
+        raceData = RACE_SYLLABLES[camelKey as keyof typeof RACE_SYLLABLES];
+        // console.log('generateCyrillicFantasyName: Пробуем camelCase версию:', camelKey);
+    }
+    
+    if (raceData) {
+        const firstName = generateNameFromSyllables(raceData, actualGender);
+        const surname = generateSurnameFromSyllables(raceData);
         
-        console.log('generateCyrillicFantasyName: Результат генерации:', {
-            race: raceKey,
-            gender: actualGender,
-            firstName,
-            surname,
-            finalResult: surname ? `${firstName} ${surname}` : firstName
-        });
+        // console.log('generateCyrillicFantasyName: Результат генерации:', {
+        //     race: raceKey,
+        //     gender: actualGender,
+        //     firstName,
+        //     surname,
+        //     finalResult: surname ? `${firstName} ${surname}` : firstName
+        // });
         
         return surname ? `${firstName} ${surname}` : firstName;
     }
     
     // Fallback для неизвестных рас
+    // console.log('generateCyrillicFantasyName: Раса не найдена, возвращаем "Неизвестное Имя"');
     return "Неизвестное Имя";
 }
 

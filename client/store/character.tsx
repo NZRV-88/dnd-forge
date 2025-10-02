@@ -253,8 +253,15 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 const newTypeData: any = {};
                 
                 Object.entries(migrated[type]).forEach(([key, value]) => {
-                    // Если ключ в старом формате (без уровня), добавляем 'base'
-                    if (key.match(/^(race|subrace|class|subclass)-\d+$/)) {
+                    // Мигрируем старые ключи рас
+                    if (key.includes('halfOrc')) {
+                        const newKey = key.replace('halfOrc', 'half-orc');
+                        newTypeData[newKey] = value;
+                    } else if (key.includes('halfElf')) {
+                        const newKey = key.replace('halfElf', 'half-elf');
+                        newTypeData[newKey] = value;
+                    } else if (key.match(/^(race|subrace|class|subclass)-\d+$/)) {
+                        // Если ключ в старом формате (без уровня), добавляем 'base'
                         const newKey = key.replace(/(race|subrace|class|subclass)-(\d+)$/, '$1-base-$2');
                         newTypeData[newKey] = value;
                     } else if (key.match(/^(race|subrace|class|subclass)-\d+-\d+-[a-z0-9]+-[a-z0-9]+$/)) {
@@ -270,6 +277,20 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 migrated[type] = newTypeData;
             }
         });
+        
+        return migrated;
+    }, []);
+    
+    // Функция миграции ключей рас в basics
+    const migrateRaceKeys = useCallback((basics: any) => {
+        const migrated = { ...basics };
+        
+        // Мигрируем ключи рас
+        if (migrated.race === 'halfOrc') {
+            migrated.race = 'half-orc';
+        } else if (migrated.race === 'halfElf') {
+            migrated.race = 'half-elf';
+        }
         
         return migrated;
     }, []);
@@ -984,6 +1005,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
                 // Миграция старых ключей в новые
                 const migratedChosen = migrateOldKeys(savedDraft.chosen || {});
+                const migratedBasics = migrateRaceKeys(savedDraft.basics || {});
                 const migrationEndTime = performance.now();
                 console.log(`loadFromSupabase: Migration took ${migrationEndTime - migrationStartTime}ms`);
 
@@ -992,7 +1014,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 setDraft({
                     ...makeDefaultDraft(),
                     ...savedDraft,
-                    basics: { ...makeDefaultDraft().basics, ...savedDraft.basics },
+                    basics: { ...makeDefaultDraft().basics, ...migratedBasics },
                     chosen: { ...makeDefaultDraft().chosen, ...migratedChosen },
                 });
                 const mergeEndTime = performance.now();

@@ -2,7 +2,7 @@ import { RaceInfo } from "../types";
 
 export const HalfElf: RaceInfo = {
     avatar: "/assets/race-avatars/halfelf.png",
-    key: "halfElf",
+    key: "half-elf",
     source: "PH14",
     name: "Полуэльф",
     nameEn: "Half-Elf",
