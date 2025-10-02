@@ -60,8 +60,6 @@ export const ALL_FEATS: Feat[] = [
                 ],
             },
         ],
-        // Убираем prerequisites, так как ASI доступны на разных уровнях в зависимости от класса
-        // prerequisites: { level: 4 },
     },
     {
         key: "actor",

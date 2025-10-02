@@ -103,11 +103,10 @@ export default function NameGenerator({ onNameGenerated, className = "" }: NameG
             const race = draft?.basics?.race;
             const characterClass = draft?.basics?.class;
             
-            // Если раса не выбрана, используем advanced name generator с пустой расой
-            // Это позволит генерировать универсальные имена
+            console.log('NameGenerator: Генерируем имя для:', { race, characterClass });
             
-            // Сначала пробуем продвинутый генератор
-            let response = await fetch('/api/advanced-name-generator', {
+            // Используем только продвинутый генератор
+            const response = await fetch('/api/advanced-name-generator', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -120,37 +119,31 @@ export default function NameGenerator({ onNameGenerated, className = "" }: NameG
                 })
             });
 
-            // Если продвинутый генератор не работает, используем ИИ
-            if (!response.ok) {
-                response = await fetch('/api/name-generator', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        race: race,
-                        class: characterClass,
-                        gender: 'any',
-                        style: 'fantasy',
-                        count: 1
-                    })
-                });
-            }
+            console.log('NameGenerator: Ответ от advanced-name-generator:', {
+                ok: response.ok,
+                status: response.status,
+                statusText: response.statusText
+            });
 
             if (!response.ok) {
-                throw new Error('Failed to generate name');
+                throw new Error(`Failed to generate name: ${response.status} ${response.statusText}`);
             }
 
             const data: NameGeneratorResponse = await response.json();
             
+            console.log('NameGenerator: Данные от advanced-name-generator:', data);
+            
             if (data.success && data.names.length > 0) {
+                console.log('NameGenerator: Используем имя от advanced-name-generator:', data.names[0]);
                 onNameGenerated(data.names[0]);
             } else {
+                console.log('NameGenerator: Advanced-name-generator не вернул имя, используем статические');
                 // Fallback к статическим именам
                 generateStaticName();
             }
         } catch (error) {
-            console.error('Error generating name:', error);
+            console.error('NameGenerator: Ошибка генерации имени:', error);
+            console.log('NameGenerator: Используем статические имена из-за ошибки');
             // Fallback к статическим именам
             generateStaticName();
         } finally {

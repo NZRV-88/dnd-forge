@@ -10,6 +10,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
+import { useState } from "react";
 
 export default function Summary() {
     const user = useAuth();
@@ -29,6 +30,17 @@ export default function Summary() {
         //equipment,
     } = useCharacter();
 
+    // Состояние для уведомлений
+    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+    // Функция для показа уведомления
+    const showNotification = (message: string, type: 'success' | 'error') => {
+        setNotification({ message, type });
+        setTimeout(() => {
+            setNotification(null);
+        }, 2000);
+    };
+
     const race = getRaceByKey(draft.basics.race);
     const subrace = race?.subraces?.find((s) => s.key === draft.basics.subrace) || null;
     const speed = getEffectiveSpeed(race, subrace);
@@ -37,11 +49,15 @@ export default function Summary() {
     const handleSave = async () => {
         try {
             await saveToSupabase();
-            alert("Персонаж сохранён!");
-            nav(`/characters`);
+            const characterName = draft.basics.name || "Безымянный";
+            showNotification(`Ваш персонаж ${characterName} создан`, 'success');
+            // Переходим на страницу персонажей через 2 секунды (после исчезновения уведомления)
+            setTimeout(() => {
+                nav(`/characters`);
+            }, 2000);
         } catch (e) {
             console.error("Ошибка при сохранении персонажа:", e);
-            alert("Ошибка при сохранении");
+            showNotification("Ошибка при сохранении", 'error');
         }
     };
 
@@ -270,6 +286,19 @@ export default function Summary() {
                     </button>
                 </div>
             </div>
+
+            {/* Уведомление */}
+            {notification && (
+                <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+                    <div className={`px-4 py-2 rounded-md text-white font-medium shadow-lg transition-all duration-300 ${
+                        notification.type === 'success' 
+                            ? 'bg-[#96bf6b]' 
+                            : 'bg-red-500'
+                    }`}>
+                        {notification.message}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
