@@ -957,13 +957,17 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
     const loadFromSupabase = async (id: string) => {
         console.log('loadFromSupabase: Loading character with ID:', id);
+        const startTime = performance.now();
         setIsLoading(true);
         try {
+            const dbStartTime = performance.now();
             const { data, error } = await supabase
                 .from("characters")
                 .select("*")
                 .eq("id", id)
                 .single();
+            const dbEndTime = performance.now();
+            console.log(`loadFromSupabase: DB query took ${dbEndTime - dbStartTime}ms`);
 
             if (error) {
                 console.error('loadFromSupabase: Error loading from Supabase:', error);
@@ -973,12 +977,17 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
             if (data) {
                 console.log('loadFromSupabase: Successfully loaded character from Supabase');
+                const migrationStartTime = performance.now();
+                
                 // достаём draft из JSON-поля data
                 const savedDraft = data.data;
 
                 // Миграция старых ключей в новые
                 const migratedChosen = migrateOldKeys(savedDraft.chosen || {});
+                const migrationEndTime = performance.now();
+                console.log(`loadFromSupabase: Migration took ${migrationEndTime - migrationStartTime}ms`);
 
+                const mergeStartTime = performance.now();
                 // мержим с дефолтами, чтобы не поломались старые персонажи
                 setDraft({
                     ...makeDefaultDraft(),
@@ -986,9 +995,13 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                     basics: { ...makeDefaultDraft().basics, ...savedDraft.basics },
                     chosen: { ...makeDefaultDraft().chosen, ...migratedChosen },
                 });
+                const mergeEndTime = performance.now();
+                console.log(`loadFromSupabase: Merge took ${mergeEndTime - mergeStartTime}ms`);
             }
         } finally {
             setIsLoading(false);
+            const endTime = performance.now();
+            console.log(`loadFromSupabase: Total time ${endTime - startTime}ms`);
         }
     };
 

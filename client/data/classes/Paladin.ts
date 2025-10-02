@@ -21,6 +21,31 @@ export const Paladin: ClassInfo = {
         { type: "savingThrow", key: "wis" },
         { type: "savingThrow", key: "cha" },
     ],
+    // Выборы стартовой экипировки
+    equipmentChoices: [
+        {
+            name: "Стартовая экипировка",
+            description: "Выберите один из следующих комплектов:",
+            choices: [
+                {
+                    name: "Святой рыцарь",
+                    items: [
+                        { type: "armor", key: "chain-mail" },
+                        { type: "armor", key: "shield" },
+                        { type: "weapon", key: "longsword" },
+                        { type: "weapon", key: "javelin", quantity: 6 },
+                        { type: "equipment-pack", key: "priest-pack" }
+                    ],
+                    gold: 9
+                },
+                {
+                    name: "Золото",
+                    items: [],
+                    gold: 150
+                }
+            ]
+        }
+    ],
 
     features: {
         1: [

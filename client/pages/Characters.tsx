@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, memo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useCharacter } from "@/store/character";
@@ -40,6 +40,23 @@ export default function Characters() {
     const [creating, setCreating] = useState(false);
     const [editing, setEditing] = useState<string | null>(null);
     const nav = useNavigate();
+
+    // Мемоизированные каталоги для быстрого поиска
+    const classCatalogMap = useMemo(() => {
+        const map = new Map();
+        CLASS_CATALOG.forEach(cls => {
+            map.set(cls.key.toLowerCase(), cls);
+        });
+        return map;
+    }, []);
+
+    const raceCatalogMap = useMemo(() => {
+        const map = new Map();
+        RACE_CATALOG.forEach(race => {
+            map.set(race.key.toLowerCase(), race);
+        });
+        return map;
+    }, []);
     
     // Безопасное получение useCharacter
     let initNewCharacter: (() => void) | null = null;
@@ -54,24 +71,71 @@ export default function Characters() {
 
     useEffect(() => {
         (async () => {
+            console.log('Characters: Начинаем загрузку персонажей...');
+            const startTime = performance.now();
+            
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
+                console.log('Characters: Пользователь не авторизован');
                 setCharacters([]);
                 setLoading(false);
                 return;
             }
 
-            const { data, error } = await supabase
+
+            console.log('Characters: Пользователь авторизован, загружаем персонажей...');
+            
+            // Добавляем таймаут для запроса
+            const queryPromise = supabase
                 .from("characters")
-                .select("*")
+                .select("id, created_at, updated_at, data")
                 .eq("user_id", user.id)
                 .order("created_at", { ascending: false });
+            
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+            );
+            
+            const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+            const endTime = performance.now();
+            console.log(`Characters: Запрос к БД выполнен за ${endTime - startTime}ms`);
 
             if (error) {
-                console.error("Ошибка загрузки:", error);
+                console.error("Characters: Ошибка загрузки:", error);
+                if (error.message?.includes('timeout')) {
+                    console.error("Characters: Запрос к БД превысил таймаут в 10 секунд!");
+                }
                 setCharacters([]);
             } else {
-                setCharacters(data || []);
+                console.log(`Characters: Загружено ${data?.length || 0} персонажей`);
+                
+                // Проверяем размер данных
+                if (data && data.length > 0) {
+                    const totalSize = JSON.stringify(data).length;
+                    console.log(`Characters: Общий размер данных: ${(totalSize / 1024).toFixed(2)} KB`);
+                }
+                
+                // Оптимизируем данные для отображения - извлекаем только нужные поля
+                const optimizedData = (data || []).map(char => {
+                    console.log('Characters: Обрабатываем персонажа:', char.id, 'data:', char.data);
+                    return {
+                        ...char,
+                        // Добавляем name из data.basics для совместимости
+                        name: char.data?.basics?.name || null,
+                        // Извлекаем нужные поля из data для отображения
+                        data: char.data ? {
+                            basics: char.data.basics,
+                            stats: char.data.stats,
+                            hpRolls: char.data.hpRolls,
+                            avatar: char.data.avatar
+                        } : null
+                    };
+                });
+                
+                console.log('Characters: Оптимизированные данные:', optimizedData);
+                
+                setCharacters(optimizedData);
             }
             setLoading(false);
         })();
@@ -139,9 +203,11 @@ export default function Characters() {
         setCharacters((prev) => prev.filter((c) => c.id !== id));
     };
 
+
     if (loading) {
         return <div className="p-4">Загрузка...</div>;
     }
+
 
     return (
         <div className="container mx-auto py-10">
@@ -170,127 +236,27 @@ export default function Characters() {
                         
                         const hpMax = calcMaxHPForCard(b, char.data.stats, char.data.hpRolls);
 
-                        const classInfo = CLASS_CATALOG.find(
-                            (c) => c.key.toLowerCase() === (b.class || '').toLowerCase()
-                        );
-                        const subclassInfo = classInfo?.subclasses.find(
+                        // Используем мемоизированные каталоги для быстрого поиска
+                        const classInfo = classCatalogMap.get((b.class || '').toLowerCase());
+                        const subclassInfo = classInfo?.subclasses?.find(
                             (s) => s.key.toLowerCase() === (b.subclass || '').toLowerCase()
                         );
-                        const raceInfo = RACE_CATALOG.find(
-                            (c) => c.key.toLowerCase() === (b.race || '').toLowerCase()
-                        );
+                        const raceInfo = raceCatalogMap.get((b.race || '').toLowerCase());
 
                         return (
-                            <div
+                            <CharacterCard
                                 key={char.id}
-                                className="group border bg-card shadow-sm transition hover:shadow-md flex flex-col"
-                            >
-                                {/* Верхняя часть с именем и инфой */}
-                                <div
-                                    className="p-5 flex items-center gap-4 relative bg-gray-400"
-                                    style={
-                                        classInfo?.bg
-                                            ? {
-                                                backgroundImage: `url(${classInfo.bg})`,
-                                                backgroundSize: "cover",
-                                                backgroundPosition: "center center",
-                                                color: "white",
-                                            }
-                                            : {}
-                                    }
-                                >
-                                    {classInfo?.bg && (
-                                        <div className="absolute inset-0 bg-black/10" />
-                                    )}
-
-                                    <div className="relative flex items-center gap-4">
-                                        {/* Портрет */}
-                                        {char.data.avatar ? (
-                                            <img
-                                                src={char.data.avatar}
-                                                alt="Портрет персонажа"
-                                                className="w-[90px] h-[90px] rounded-lg object-cover border-2 border-white/20"
-                                            />
-                                        ) : (
-                                            <div className="w-[90px] h-[90px] bg-gray-400/70 flex items-center justify-center text-4xl font-bold text-gray-100 font-monomakh rounded-lg">
-                                                {displayName.charAt(0).toUpperCase()}
-                                            </div>
-                                        )}
-
-                                        {/* Имя и инфа */}
-                                        <div>
-                                            <h1 
-                                                className={`text-4xl font-monomakh mb-1 ${!b.name ? 'text-gray-400 italic' : ''}`}
-                                                title={!b.name ? 'Персонаж без имени - нажмите EDIT для редактирования' : ''}
-                                            >
-                                                {displayName}
-                                            </h1>
-                                            <div className="text-sm text-gray-200 drop-shadow">
-                                                {raceInfo?.name || b.race } • {classInfo?.name || b.class}
-                                                {subclassInfo?.name ? ` • ${subclassInfo.name}` : ""} • Уровень {b.level}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Средний блок с параметрами */}
-                                {/* Узкая полоса-инфо */}
-                                <div className="w-full bg-gray-800 text-gray-100 text-xs flex justify-center gap-6 py-1">
-                                    <div>
-                                        <span className="uppercase opacity-70 mr-1">Здоровье:</span>
-                                        <span className="font-semibold">
-                                            {Math.max(0, b.hpCurrent ?? 0)} / {hpMax}
-                                        </span>
-                                    </div>
-
-                                    {char.created_at && (
-                                        <div>
-                                            <span className="uppercase opacity-70 mr-1">Создан:</span>
-                                            <span className="font-semibold">
-                                                {new Date(char.created_at).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Нижний блок с кнопками */}
-                                <div className="mt-auto w-full border-t">
-                                    <div className="flex w-full">
-                                        {/* Просмотр */}
-                                        <div
-                                            onClick={() => nav(`/characters/${char.id}`)}
-                                            role="button"
-                                            tabIndex={0}
-                                            onKeyDown={(e) => { if (e.key === "Enter") nav(`/characters/${char.id}`); }}
-                                            className="flex-1 flex items-center justify-center py-3 cursor-pointer transition-colors hover:bg-gray-200 focus:bg-gray-600 text-center"
-                                        >
-                                            <span className="uppercase font-medium">VIEW</span>
-                                        </div>
-                                        {/* Редактировать */}
-                                        <div
-                                            onClick={() => edit(char.id)}
-                                            role="button"
-                                            tabIndex={0}
-                                            onKeyDown={(e) => { if (e.key === "Enter") edit(char.id); }}
-                                            className={`flex-1 flex items-center justify-center py-3 cursor-pointer transition-colors hover:bg-gray-200 focus:bg-gray-600 text-center ${editing === char.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        >
-                                            <span className="uppercase font-medium">
-                                                {editing === char.id ? "ЗАГРУЗКА..." : "EDIT"}
-                                            </span>
-                                        </div>
-                                        {/* Удалить */}
-                                        <div
-                                            onClick={() => remove(char.id)}
-                                            role="button"
-                                            tabIndex={0}
-                                            onKeyDown={(e) => { if (e.key === "Enter") remove(char.id); }}
-                                            className="flex-1 flex items-center justify-center py-3 cursor-pointer transition-colors hover:bg-red-100 focus:bg-red-600 text-center"
-                                        >
-                                            <span className="uppercase font-medium text-red-500">DELETE</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                char={char}
+                                classInfo={classInfo}
+                                subclassInfo={subclassInfo}
+                                raceInfo={raceInfo}
+                                displayName={displayName}
+                                hpMax={hpMax}
+                                editing={editing}
+                                onEdit={edit}
+                                onRemove={remove}
+                                onView={(id) => nav(`/characters/${id}`)}
+                            />
                         );
                     })}
                 </div>
@@ -310,6 +276,143 @@ export default function Characters() {
         </div>
     );
 }
+
+// Мемоизированный компонент карточки персонажа
+const CharacterCard = memo(({ 
+    char, 
+    classInfo, 
+    subclassInfo, 
+    raceInfo, 
+    displayName, 
+    hpMax, 
+    editing, 
+    onEdit, 
+    onRemove, 
+    onView 
+}: {
+    char: SupabaseCharacter;
+    classInfo: any;
+    subclassInfo: any;
+    raceInfo: any;
+    displayName: string;
+    hpMax: number;
+    editing: string | null;
+    onEdit: (id: string) => void;
+    onRemove: (id: string) => void;
+    onView: (id: string) => void;
+}) => {
+    const b = char.data.basics;
+    
+    return (
+        <div className="group border bg-card shadow-sm transition hover:shadow-md flex flex-col">
+            {/* Верхняя часть с именем и инфой */}
+            <div
+                className="p-5 flex items-center gap-4 relative bg-gray-400"
+                style={
+                    classInfo?.bg
+                        ? {
+                            backgroundImage: `url(${classInfo.bg})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center center",
+                            color: "white",
+                        }
+                        : {}
+                }
+            >
+                {classInfo?.bg && (
+                    <div className="absolute inset-0 bg-black/10" />
+                )}
+
+                <div className="relative flex items-center gap-4">
+                    {/* Портрет */}
+                    {char.data.avatar ? (
+                        <img
+                            src={char.data.avatar}
+                            alt="Портрет персонажа"
+                            className="w-[90px] h-[90px] rounded-lg object-cover border-2 border-white/20"
+                            loading="lazy"
+                        />
+                    ) : (
+                        <div className="w-[90px] h-[90px] bg-gray-400/70 flex items-center justify-center text-4xl font-bold text-gray-100 font-monomakh rounded-lg">
+                            {displayName.charAt(0).toUpperCase()}
+                        </div>
+                    )}
+
+                    {/* Имя и инфа */}
+                    <div>
+                        <h1 
+                            className={`text-4xl font-monomakh mb-1 ${!b.name ? 'text-gray-400 italic' : ''}`}
+                            title={!b.name ? 'Персонаж без имени - нажмите EDIT для редактирования' : ''}
+                        >
+                            {displayName}
+                        </h1>
+                        <div className="text-sm text-gray-200 drop-shadow">
+                            {raceInfo?.name || b.race } • {classInfo?.name || b.class}
+                            {subclassInfo?.name ? ` • ${subclassInfo.name}` : ""} • Уровень {b.level}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Средний блок с параметрами */}
+            <div className="w-full bg-gray-800 text-gray-100 text-xs flex justify-center gap-6 py-1">
+                <div>
+                    <span className="uppercase opacity-70 mr-1">Здоровье:</span>
+                    <span className="font-semibold">
+                        {Math.max(0, b.hpCurrent ?? 0)} / {hpMax}
+                    </span>
+                </div>
+
+                {char.created_at && (
+                    <div>
+                        <span className="uppercase opacity-70 mr-1">Создан:</span>
+                        <span className="font-semibold">
+                            {new Date(char.created_at).toLocaleDateString()}
+                        </span>
+                    </div>
+                )}
+            </div>
+
+            {/* Нижний блок с кнопками */}
+            <div className="mt-auto w-full border-t">
+                <div className="flex w-full">
+                    {/* Просмотр */}
+                    <div
+                        onClick={() => onView(char.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === "Enter") onView(char.id); }}
+                        className="flex-1 flex items-center justify-center py-3 cursor-pointer transition-colors hover:bg-gray-200 focus:bg-gray-600 text-center"
+                    >
+                        <span className="uppercase font-medium">VIEW</span>
+                    </div>
+                    {/* Редактировать */}
+                    <div
+                        onClick={() => onEdit(char.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === "Enter") onEdit(char.id); }}
+                        className={`flex-1 flex items-center justify-center py-3 cursor-pointer transition-colors hover:bg-gray-200 focus:bg-gray-600 text-center ${editing === char.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <span className="uppercase font-medium">
+                            {editing === char.id ? "ЗАГРУЗКА..." : "EDIT"}
+                        </span>
+                    </div>
+                    {/* Удалить */}
+                    <div
+                        onClick={() => onRemove(char.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === "Enter") onRemove(char.id); }}
+                        className="flex-1 flex items-center justify-center py-3 cursor-pointer transition-colors hover:bg-red-100 focus:bg-red-600 text-center"
+                    >
+                        <span className="uppercase font-medium text-red-500">DELETE</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
 
 function calcMaxHPForCard(basics: Basics, stats?: Record<string, number>, hpRolls?: number[]) {
     const die: Record<string, number> = {

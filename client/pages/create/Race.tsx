@@ -169,22 +169,57 @@ export default function Race() {
             // сбрасываем локальное состояние подрасы
             setSubraceState(undefined);
 
-            // очищаем выборы для расы
-            setChosenAbilities("race", []);
-            setChosenSkills("race", []);
-            setChosenTools("race", []);
-            setChosenLanguages("race", []);
-            setChosenSpells("race", []);
-
-            // очищаем выборы для подрасы
-            setChosenAbilities("subrace", []);
-            setChosenSkills("subrace", []);
-            setChosenTools("subrace", []);
-            setChosenLanguages("subrace", []);
-            setChosenSpells("subrace", []);
-
-            // очищаем фиты (и их вложенные выборы тоже)
-            setChosenFeats([]);
+            // очищаем выборы для расы (все источники, начинающиеся с "race-")
+            const allAbilitiesKeys = Object.keys(draft.chosen.abilities || {});
+            const allSkillsKeys = Object.keys(draft.chosen.skills || {});
+            const allToolsKeys = Object.keys(draft.chosen.tools || {});
+            const allLanguagesKeys = Object.keys(draft.chosen.languages || {});
+            const allSpellsKeys = Object.keys(draft.chosen.spells || {});
+            
+            const raceSources = [...allAbilitiesKeys, ...allSkillsKeys, ...allToolsKeys, ...allLanguagesKeys, ...allSpellsKeys]
+                .filter(s => s.startsWith("race-"));
+            const subraceSources = [...allAbilitiesKeys, ...allSkillsKeys, ...allToolsKeys, ...allLanguagesKeys, ...allSpellsKeys]
+                .filter(s => s.startsWith("subrace-"));
+            const ancestrySources = [...allAbilitiesKeys, ...allSkillsKeys, ...allToolsKeys, ...allLanguagesKeys, ...allSpellsKeys]
+                .filter(s => s.startsWith("ancestry-"));
+            
+            // Очищаем все источники расы
+            raceSources.forEach(source => {
+                setChosenAbilities?.(source, []);
+                setChosenSkills?.(source, []);
+                setChosenTools?.(source, []);
+                setChosenLanguages?.(source, []);
+                setChosenSpells?.(source, []);
+            });
+            
+            // Очищаем все источники подрасы
+            subraceSources.forEach(source => {
+                setChosenAbilities?.(source, []);
+                setChosenSkills?.(source, []);
+                setChosenTools?.(source, []);
+                setChosenLanguages?.(source, []);
+                setChosenSpells?.(source, []);
+            });
+            
+            // Очищаем все источники наследия
+            ancestrySources.forEach(source => {
+                setChosenAbilities?.(source, []);
+                setChosenSkills?.(source, []);
+                setChosenTools?.(source, []);
+                setChosenLanguages?.(source, []);
+                setChosenSpells?.(source, []);
+            });
+            
+            // Очищаем таланты расы, подрасы и наследия
+            const allRaceFeats = (draft.chosen.feats || []).filter(feat => 
+                feat.startsWith("race-") || feat.startsWith("subrace-") || feat.startsWith("ancestry-")
+            );
+            if (allRaceFeats.length > 0) {
+                const remainingFeats = (draft.chosen.feats || []).filter(feat => 
+                    !feat.startsWith("race-") && !feat.startsWith("subrace-") && !feat.startsWith("ancestry-")
+                );
+                setChosenFeats?.(remainingFeats);
+            }
 
             Object.keys(draft.chosen.abilities).forEach((key) => {
                 if (key.startsWith("feat:")) setChosenAbilities(key, []);
@@ -451,7 +486,7 @@ export default function Race() {
                                                 key={`race-trait-${ti}`}
                                                 name={trait.name}
                                                 desc={trait.desc}
-                                                source="race"
+                                                source={`race-${draft.basics.race}-trait`}
                                                 idx={ti}
                                                 choices={trait.choices}
                                                 textMaxHeight={100}
@@ -633,14 +668,14 @@ export default function Race() {
                                     <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
                                         Черты подрасы
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4">
                                         {r.subraces.find((s) => s.key === subrace)?.traits?.map((trait, ti) => (
                                             <FeatureBlock
                                                 key={`subrace-trait-${ti}`}
                                                 name={trait.name}
                                                 desc={trait.desc}
 
-                                                source="subrace"
+                                                source={`subrace-${subrace}-trait`}
                                                 idx={ti}
                                                 choices={trait.choices}
                                                 textMaxHeight={100}
@@ -764,7 +799,7 @@ export default function Race() {
                                         {r.ancestries
                                             .sort((a, b) => String(a.name).localeCompare(String(b.name)))
                                             .map((ancestry) => {
-                                                const isSelected = subrace === ancestry.name;
+                                                const isSelected = subrace === ancestry.key;
                                                 const DamageIcon = ancestry.breathWeapon ? getDamageIcon(ancestry.breathWeapon.damageType) : null;
                                                 const damageText = getDamageForLevel(ancestry.breathWeapon?.damageByLevel, draft.basics.level || 1);
 

@@ -407,8 +407,9 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
             return {
                 description: item.desc,
                 cost: translateCurrency(item.cost),
-                weight: item.weight,
-                category: 'Снаряжение'
+                weight: typeof item.weight === 'number' ? item.weight : 0,
+                category: 'Снаряжение',
+                hasWeight: typeof item.weight === 'number'
             };
         }
         
@@ -417,8 +418,9 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
             return {
                 description: item.desc,
                 cost: translateCurrency(item.cost),
-                weight: item.weight,
-                category: 'Боеприпасы'
+                weight: typeof item.weight === 'number' ? item.weight : 0,
+                category: 'Боеприпасы',
+                hasWeight: typeof item.weight === 'number'
             };
         }
         
@@ -461,7 +463,7 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
             return {
                 description: getWeaponCategory(weapon),
                 cost: translateCurrency(weapon.cost),
-                weight: weapon.weight,
+                weight: typeof weapon.weight === 'number' ? weapon.weight : 0,
                 category: getWeaponCategory(weapon),
                 attackType: attackType,
                 attackRange: attackRange,
@@ -471,7 +473,8 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                 range: weapon.range,
                 hasProficiency: hasProficiency,
                 abilityName: abilityName,
-                mastery: weapon.mastery
+                mastery: weapon.mastery,
+                hasWeight: typeof weapon.weight === 'number'
             };
         }
         
@@ -494,13 +497,14 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
             return {
                 description: armorCategory,
                 cost: translateCurrency(armor.cost),
-                weight: armor.weight,
+                weight: typeof armor.weight === 'number' ? armor.weight : 0,
                 category: armorCategory,
                 ac: armor.baseAC,
                 maxDex: armor.maxDexBonus,
                 stealth: armor.disadvantageStealth,
                 armorCategory: armorCategory,
-                hasProficiency: true // TODO: проверить владение доспехом персонажа
+                hasProficiency: true, // TODO: проверить владение доспехом персонажа
+                hasWeight: typeof armor.weight === 'number'
             };
         }
         
@@ -509,8 +513,9 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
             return {
                 description: pack.description,
                 cost: translateCurrency(pack.cost),
-                weight: pack.weight,
-                category: 'Набор снаряжения'
+                weight: typeof pack.weight === 'number' ? pack.weight : 0,
+                category: 'Набор снаряжения',
+                hasWeight: typeof pack.weight === 'number'
             };
         }
         
@@ -520,10 +525,11 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
             return {
                 description: tool.desc,
                 cost: translateCurrency(tool.cost),
-                weight: tool.weight || 0,
+                weight: typeof tool.weight === 'number' ? tool.weight : 0,
                 category: categoryLabel,
                 utilize: tool.utilize,
-                ability: tool.ability
+                ability: tool.ability,
+                hasWeight: typeof tool.weight === 'number'
             };
         }
         
@@ -710,9 +716,11 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                                     ) : (
                                         /* Для других предметов показываем вес и стоимость */
                                         <>
-                                            <div className="text-muted-foreground">
-                                                <span className="font-medium text-foreground">Вес:</span> {itemInfo.weight} фнт.
-                                            </div>
+                                            {itemInfo.hasWeight && (
+                                                <div className="text-muted-foreground">
+                                                    <span className="font-medium text-foreground">Вес:</span> {itemInfo.weight} фнт.
+                                                </div>
+                                            )}
                                             <div className="text-muted-foreground">
                                                 <span className="font-medium text-foreground">Стоимость:</span> {itemInfo.cost}
                                             </div>
@@ -837,23 +845,38 @@ export default function EquipmentPick() {
         
         // Ищем в разных массивах
         let item = Gears.find(g => g.name === cleanName);
-        if (item) return item.weight;
+        if (item) {
+            // Если у предмета нет веса, возвращаем 0
+            return typeof item.weight === 'number' ? item.weight : 0;
+        }
         
         item = Ammunitions.find(a => a.name === cleanName);
-        if (item) return item.weight;
+        if (item) {
+            return typeof item.weight === 'number' ? item.weight : 0;
+        }
         
         const weapon = Weapons.find(w => w.name === cleanName);
-        if (weapon) return weapon.weight;
+        if (weapon) {
+            return typeof weapon.weight === 'number' ? weapon.weight : 0;
+        }
         
         const armor = Armors.find(a => a.name === cleanName);
-        if (armor) return armor.weight;
+        if (armor) {
+            return typeof armor.weight === 'number' ? armor.weight : 0;
+        }
         
         const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
-        if (pack) return pack.weight;
+        if (pack) {
+            return typeof pack.weight === 'number' ? pack.weight : 0;
+        }
         
         const tool = Tools.find(t => t.name === cleanName);
-        if (tool) return tool.weight || 0;
+        if (tool) {
+            return typeof tool.weight === 'number' ? tool.weight : 0;
+        }
         
+        // Отладочная информация
+        console.log(`Предмет не найден: "${cleanName}" (оригинал: "${itemName}")`);
         return 0;
     };
 
@@ -1073,7 +1096,7 @@ export default function EquipmentPick() {
                 return {
                     description: getWeaponCategory(weapon),
                     cost: translateCurrency(weapon.cost),
-                    weight: weapon.weight,
+                    weight: typeof weapon.weight === 'number' ? weapon.weight : 0,
                     category: getWeaponCategory(weapon),
                     attackType: attackType,
                     attackRange: attackRange,
@@ -1083,7 +1106,8 @@ export default function EquipmentPick() {
                     range: weapon.range,
                     hasProficiency: hasProficiency,
                     abilityName: abilityName,
-                    mastery: weapon.mastery
+                    mastery: weapon.mastery,
+                    hasWeight: typeof weapon.weight === 'number'
                 };
             }
         } else if (type === 'armor') {
@@ -1105,13 +1129,14 @@ export default function EquipmentPick() {
                 return {
                     description: armorCategory,
                     cost: translateCurrency(armor.cost),
-                    weight: armor.weight,
+                    weight: typeof armor.weight === 'number' ? armor.weight : 0,
                     category: armorCategory,
                     ac: armor.baseAC,
                     maxDex: armor.maxDexBonus,
                     stealth: armor.disadvantageStealth,
                     armorCategory: armorCategory,
-                    hasProficiency: true // TODO: проверить владение доспехом персонажа
+                    hasProficiency: true, // TODO: проверить владение доспехом персонажа
+                    hasWeight: typeof armor.weight === 'number'
                 };
             }
         } else if (type === 'gear') {
@@ -1120,8 +1145,9 @@ export default function EquipmentPick() {
                 return {
                     description: gear.desc,
                     cost: translateCurrency(gear.cost),
-                    weight: gear.weight,
-                    category: 'Снаряжение'
+                    weight: typeof gear.weight === 'number' ? gear.weight : 0,
+                    category: 'Снаряжение',
+                    hasWeight: typeof gear.weight === 'number'
                 };
             }
         } else if (type === 'ammunition') {
@@ -1130,8 +1156,9 @@ export default function EquipmentPick() {
                 return {
                     description: ammo.desc,
                     cost: translateCurrency(ammo.cost),
-                    weight: ammo.weight,
-                    category: 'Боеприпасы'
+                    weight: typeof ammo.weight === 'number' ? ammo.weight : 0,
+                    category: 'Боеприпасы',
+                    hasWeight: typeof ammo.weight === 'number'
                 };
             }
         } else if (type === 'tool') {
@@ -1141,10 +1168,11 @@ export default function EquipmentPick() {
                 return {
                     description: tool.desc,
                     cost: translateCurrency(tool.cost),
-                    weight: tool.weight || 0,
+                    weight: typeof tool.weight === 'number' ? tool.weight : 0,
                     category: categoryLabel,
                     utilize: tool.utilize,
-                    ability: tool.ability
+                    ability: tool.ability,
+                    hasWeight: typeof tool.weight === 'number'
                 };
             }
         }
@@ -1888,9 +1916,11 @@ export default function EquipmentPick() {
                                                                             ) : (
                                                                                 /* Для других предметов показываем вес и стоимость */
                                                                                 <>
-                                                                                    <div className="text-muted-foreground">
-                                                                                        <span className="font-medium text-foreground">Вес:</span> {itemDescription.weight} фнт.
-                                                                                    </div>
+                                                                                    {itemDescription.hasWeight && (
+                                                                                        <div className="text-muted-foreground">
+                                                                                            <span className="font-medium text-foreground">Вес:</span> {itemDescription.weight} фнт.
+                                                                                        </div>
+                                                                                    )}
                                                                                     <div className="text-muted-foreground">
                                                                                         <span className="font-medium text-foreground">Стоимость:</span> {itemDescription.cost}
                                                                                     </div>

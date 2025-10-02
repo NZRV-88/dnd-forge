@@ -32,7 +32,7 @@ export default function RaceRemoveModal({
                     {raceInfo && (
                         <div className="flex flex-col items-center gap-4 text-center">
                             <img
-                                src={`/assets/race-avatars/${raceInfo.key}.png`}
+                                src={raceInfo.avatar}
                                 alt={raceInfo.name}
                                 className="w-24 h-24 object-cover rounded-lg border-2 border-primary"
                                 onError={(e) => {

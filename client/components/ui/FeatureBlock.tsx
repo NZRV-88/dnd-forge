@@ -55,7 +55,7 @@ export default function FeatureBlock({
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Создаем уникальный ключ на основе уникального идентификатора
-  const featureKey = uniqueId || `${source}-${featureLevel || 'base'}-${idx}`; // уникальный ключ для этого блока
+  const featureKey = uniqueId || (featureLevel ? `${source}-${featureLevel}-${idx}` : `${source}-${idx}`); // уникальный ключ для этого блока
   
   // Временное логирование для отладки
 

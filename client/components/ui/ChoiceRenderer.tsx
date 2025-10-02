@@ -313,6 +313,11 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                     case "ability": {
                         // Если это flexible режим (например, +2/+1 или +1/+1/+1)
                         if (choice.abilityMode === "flexible") {
+                            console.log('ChoiceRenderer: ability flexible mode:', {
+                                source,
+                                choice,
+                                currentAbilities: draft.chosen.abilities?.[source] || []
+                            });
                             const sourceArray = draft.chosen.abilities?.[source] || [];
                             const maxSame = choice.maxSameChoice ?? 1; // по умолчанию каждая способность только 1 раз
                             
@@ -356,6 +361,11 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                                     i === idx ? value : (sourceArray[i] || "")
                                                 ) as (keyof Abilities)[];
                                                 
+                                                console.log('ChoiceRenderer: setChosenAbilities called:', {
+                                                    source,
+                                                    updated,
+                                                    choice
+                                                });
                                                 setChosenAbilities(source, updated);
                                             }}
                                         >
@@ -390,6 +400,11 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                             i === idx ? value : (sourceArray[i] || "")
                                         ) as (keyof Abilities)[];
                                         
+                                        console.log('ChoiceRenderer: setChosenAbilities called (non-flexible):', {
+                                            source,
+                                            updated,
+                                            choice
+                                        });
                                         setChosenAbilities(source, updated);
                                     }}
                                 >
@@ -836,6 +851,13 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                                     ...draft.chosen.feats.filter(f => !f.startsWith(featKey + ':')),
                                                     `${featKey}:${value}`,
                                                 ];
+                                                console.log('ChoiceRenderer: Сохраняем талант:', {
+                                                    source,
+                                                    featKey,
+                                                    value,
+                                                    newFeats,
+                                                    currentFeats: draft.chosen.feats
+                                                });
                                                 setChosenFeats(newFeats);
 
                                                 // Очищаем выборы предыдущего фита
