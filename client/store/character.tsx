@@ -369,6 +369,71 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 newChosenSkills[source] = filtered;
             }
 
+            // Очищаем ВСЕ выборы предыстории при смене
+            const newChosen = { ...d.chosen };
+            
+            // Очищаем выборы старой предыстории
+            if (d.basics.background) {
+                const oldBackgroundSource = `background-${d.basics.background}`;
+                
+                // Очищаем все типы выборов для старой предыстории
+                Object.keys(newChosen.skills).forEach(key => {
+                    if (key.startsWith(oldBackgroundSource)) {
+                        delete newChosen.skills[key];
+                    }
+                });
+                
+                Object.keys(newChosen.tools).forEach(key => {
+                    if (key.startsWith(oldBackgroundSource)) {
+                        delete newChosen.tools[key];
+                    }
+                });
+                
+                Object.keys(newChosen.toolProficiencies).forEach(key => {
+                    if (key.startsWith(oldBackgroundSource)) {
+                        delete newChosen.toolProficiencies[key];
+                    }
+                });
+                
+                Object.keys(newChosen.languages).forEach(key => {
+                    if (key.startsWith(oldBackgroundSource)) {
+                        delete newChosen.languages[key];
+                    }
+                });
+                
+                Object.keys(newChosen.spells).forEach(key => {
+                    if (key.startsWith(oldBackgroundSource)) {
+                        delete newChosen.spells[key];
+                    }
+                });
+                
+                Object.keys(newChosen.features).forEach(key => {
+                    if (key.startsWith(oldBackgroundSource)) {
+                        delete newChosen.features[key];
+                    }
+                });
+                
+                // Также очищаем особенности предыстории с ключами вида background-{название}-feature-{индекс}
+                Object.keys(newChosen.features).forEach(key => {
+                    if (key.includes(`${oldBackgroundSource}-feature-`)) {
+                        delete newChosen.features[key];
+                    }
+                });
+                
+                // Очищаем выборы характеристик для особенностей предыстории
+                Object.keys(newChosen.abilities).forEach(key => {
+                    if (key.includes(`${oldBackgroundSource}-feature-`)) {
+                        delete newChosen.abilities[key];
+                    }
+                });
+                
+                Object.keys(newChosen.fightingStyle || {}).forEach(key => {
+                    if (key.startsWith(oldBackgroundSource)) {
+                        delete newChosen.fightingStyle![key];
+                    }
+                });
+            }
+
             return {
                 ...d,
                 basics: {
@@ -376,7 +441,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                     background,
                 },
                 chosen: {
-                    ...d.chosen,
+                    ...newChosen,
                     skills: newChosenSkills,
                 },
             };

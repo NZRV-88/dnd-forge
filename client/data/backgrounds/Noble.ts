@@ -25,7 +25,7 @@ export const Noble: BackgroundInfo = {
       description: "Выберите один из вариантов экипировки",
       choices: [
         {
-          name: "Роскошная экипировка",
+          name: "Наследство рода",
           items: [
             { 
               choices: [
@@ -44,7 +44,7 @@ export const Noble: BackgroundInfo = {
           gold: 29 // 29 ЗМ
         },
         {
-          name: "Денежное жалование",
+          name: "Только золото",
           items: [], // Без предметов
           gold: 50 // 50 ЗМ
         }

@@ -9,6 +9,7 @@ export type Proficiency =
     | { type: "armor"; category?: ArmorCategory; key?: string }
     | { type: "weapon"; category?: WeaponCategory; key?: string }
     | { type: "tool"; category?: ToolCategory; key?: string } 
+    | { type: "tool-proficiency"; category?: ToolCategory; key?: string } 
     | { type: "skill"; key: string }
     | { type: "savingThrow"; key: keyof Abilities };
 

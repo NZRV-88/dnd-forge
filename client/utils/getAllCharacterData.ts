@@ -21,6 +21,7 @@ import { applyProficiencies, Proficiency } from "@/data/proficiencies";
 export function getAllCharacterData(draft: CharacterDraft) {
     const skills = new Set<string>();
     const tools = new Set<string>();
+    const toolProficiencies = new Set<string>();
     const languages = new Set<string>();
     const spells = new Set<string>();
     const feats = new Set<string>();
@@ -137,6 +138,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
     ----------------------------- */
     Object.values(draft.chosen.skills).flat().forEach(s => skills.add(s));
     Object.values(draft.chosen.tools).flat().forEach(t => tools.add(t));
+    Object.values(draft.chosen.toolProficiencies).flat().forEach(tp => toolProficiencies.add(tp));
     Object.values(draft.chosen.languages).flat().forEach(l => languages.add(l));
     Object.values(draft.chosen.spells).flat().forEach(sp => spells.add(sp));
     draft.chosen.feats.forEach(f => feats.add(f));
@@ -168,6 +170,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
     return {
         skills: Array.from(skills),
         tools: Array.from(tools),
+        toolProficiencies: Array.from(toolProficiencies),
         languages: Array.from(languages),
         spells: Array.from(spells),
         feats: Array.from(feats),

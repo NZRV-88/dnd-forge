@@ -587,8 +587,12 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                 ? getToolKeysByCategory(categoryOption as any) 
                                 : (choice.options || []);
 
-                            // Получаем все уже выбранные toolProficiencies (не путать с tools)
-                            const takenTools = takenExceptCurrent;
+                            // Получаем ВСЕ инструменты, которыми персонаж уже владеет из любых источников
+                            const allData = getAllCharacterData(draft);
+                            const allTakenTools = allData.toolProficiencies.filter(tool => tool && tool !== selected);
+                            
+                            // Также исключаем инструменты из текущего источника (кроме выбранного)
+                            const takenTools = [...allTakenTools, ...takenExceptCurrent];
 
                             return (
                                 <div key={choiceKey} className="space-y-2">

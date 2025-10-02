@@ -502,7 +502,7 @@ function generateNameFromSyllables(syllables: any, gender: string): string {
     return applyPhoneticRules(name);
 }
 
-function applyPhoneticRules(name: string): string {
+export function applyPhoneticRules(name: string): string {
     console.log(`applyPhoneticRules: Исходное имя: "${name}"`);
     
     name = name.replace(/(.)\1{2,}/g, '$1$1');
@@ -807,8 +807,22 @@ function applyPhoneticRules(name: string): string {
         }
     }
     
-    name = name.replace(/л{2,}/g, 'л');
-    name = name.replace(/р{2,}/g, 'р');
+    // НОВОЕ ПРАВИЛО: Запрещаем повторение двух одинаковых глухих/резких согласных подряд (гг, кк, дд, тт, чч и т.д.)
+    // НЕ обрабатываем: н, з, р, л - эти могут повторяться естественно
+    name = name.replace(/([бвгджкмпстфхцчшщ])\1/g, (match, consonant) => {
+        // Заменяем повторяющуюся согласную на альтернативную
+        const alternatives = {
+            'б': 'в', 'в': 'б', 'г': 'к', 'к': 'г', 'д': 'т', 'т': 'д',
+            'ж': 'ш', 'ш': 'ж', 'м': 'н', 'п': 'ф', 'ф': 'п', 'с': 'з',
+            'х': 'ц', 'ц': 'х', 'ч': 'ш', 'щ': 'ч'
+        };
+        const replacement = alternatives[consonant] || consonant;
+        return consonant + replacement;
+    });
+    
+    // Убираем старые правила для л и р - теперь они могут повторяться естественно
+    // name = name.replace(/л{2,}/g, 'л');
+    // name = name.replace(/р{2,}/g, 'р');
     name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
     name = name.replace(/^'+|'+$/g, '');
     

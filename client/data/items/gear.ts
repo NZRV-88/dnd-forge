@@ -135,6 +135,16 @@ export const Gears: Gear[] = [
         weight: 6,
     },
     {
+        key: "travelers-clothes",
+        source: "PH24",
+        name: "Дорожная одежда",
+        desc: "Одежда для путешествий - это прочная одежда, предназначенная для поездок в различных условиях.",
+        nameEn: "Travelers Clothes",
+        category: "adventuring-gear",
+        cost: "2 GP",
+        weight: 4,
+    },
+    {
         key: "ink-pen",
         source: "PH24",
         name: "Писчее перо",
