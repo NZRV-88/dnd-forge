@@ -68,7 +68,11 @@ export default function Start() {
 
         // Просто переходим к следующему шагу
         console.log('Start: Navigating to class page');
-        nav(`/create/${id}/class`);
+        if (id) {
+            nav(`/create/${id}/class`);
+        } else {
+            console.error('Start: No ID available for navigation');
+        }
     };
 
     const handleExit = async () => {

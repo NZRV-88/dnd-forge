@@ -19,11 +19,37 @@ export const Noble: BackgroundInfo = {
       desc: "Выберите владение одним игровым набором"
     }
   ],
-  equipment: [
-    "Набор изящной одежды",
-    "Перстень с печатью",
-    "Свидетельство знатности",
-    "25 зм"
+  equipmentChoices: [
+    {
+      name: "Экипировка дворянина",
+      description: "Выберите один из вариантов экипировки",
+      choices: [
+        {
+          name: "Роскошная экипировка",
+          items: [
+            { 
+              choices: [
+                {
+                  type: "tool",
+                  count: 1,
+                  options: ["gaming"],
+                  desc: "Выберите игровой набор"
+                }
+              ],
+              quantity: 1 
+            }, // Игровой набор (выбирается через choices)
+            { type: "gear", key: "fine-clothes", quantity: 1 }, // Отличная одежда
+            { type: "gear", key: "perfume", quantity: 1 } // Духи
+          ],
+          gold: 29 // 29 ЗМ
+        },
+        {
+          name: "Денежное жалование",
+          items: [], // Без предметов
+          gold: 50 // 50 ЗМ
+        }
+      ]
+    }
   ],
   feature: [
 

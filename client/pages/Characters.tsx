@@ -86,6 +86,7 @@ export default function Characters() {
             }
             // Ждем немного, чтобы драфт обновился
             await new Promise(resolve => setTimeout(resolve, 100));
+            // Переходим сразу на страницу класса для редактирования
             nav(`/create/${id}/class`);
         } finally {
             setEditing(null);
@@ -103,7 +104,15 @@ export default function Characters() {
         console.log('Characters: Creating new character with ID:', newId);
         
         try {
-            // Сначала очищаем драфт
+            // Сначала очищаем localStorage
+            console.log('Characters: Clearing localStorage before creating new character');
+            try {
+                localStorage.removeItem("characterDraft");
+            } catch {
+                // noop
+            }
+            
+            // Затем очищаем драфт
             console.log('Characters: Clearing draft before creating new character');
             initNewCharacter();
             
@@ -112,8 +121,8 @@ export default function Characters() {
             
             // Создаем нового персонажа
             await createNewCharacter(newId);
-            console.log('Characters: Character created, navigating to class page');
-            nav(`/create/${newId}/class`);
+            console.log('Characters: Character created, navigating to start page');
+            nav(`/create/${newId}/start`);
         } catch (error) {
             console.error('Characters: Error creating character:', error);
         } finally {
@@ -150,16 +159,25 @@ export default function Characters() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {characters.map((char) => {
                         const b = char.data.basics;
+                        
+                        // Пропускаем персонажей без базовых данных
+                        if (!b) {
+                            return null;
+                        }
+                        
+                        // Используем "Безымянный" если имя не задано
+                        const displayName = b.name || "Безымянный";
+                        
                         const hpMax = calcMaxHPForCard(b, char.data.stats, char.data.hpRolls);
 
                         const classInfo = CLASS_CATALOG.find(
-                            (c) => c.key.toLowerCase() === b.class.toLowerCase()
+                            (c) => c.key.toLowerCase() === (b.class || '').toLowerCase()
                         );
                         const subclassInfo = classInfo?.subclasses.find(
-                            (s) => s.key.toLowerCase() === b.subclass.toLowerCase()
+                            (s) => s.key.toLowerCase() === (b.subclass || '').toLowerCase()
                         );
                         const raceInfo = RACE_CATALOG.find(
-                            (c) => c.key.toLowerCase() === b.race.toLowerCase()
+                            (c) => c.key.toLowerCase() === (b.race || '').toLowerCase()
                         );
 
                         return (
@@ -195,14 +213,17 @@ export default function Characters() {
                                             />
                                         ) : (
                                             <div className="w-[90px] h-[90px] bg-gray-400/70 flex items-center justify-center text-4xl font-bold text-gray-100 font-monomakh rounded-lg">
-                                                {b.name ? b.name.charAt(0).toUpperCase() : "?"}
+                                                {displayName.charAt(0).toUpperCase()}
                                             </div>
                                         )}
 
                                         {/* Имя и инфа */}
                                         <div>
-                                            <h1 className="text-4xl font-monomakh mb-1">
-                                                {b.name || "Без имени"}
+                                            <h1 
+                                                className={`text-4xl font-monomakh mb-1 ${!b.name ? 'text-gray-400 italic' : ''}`}
+                                                title={!b.name ? 'Персонаж без имени - нажмите EDIT для редактирования' : ''}
+                                            >
+                                                {displayName}
                                             </h1>
                                             <div className="text-sm text-gray-200 drop-shadow">
                                                 {raceInfo?.name || b.race } • {classInfo?.name || b.class}

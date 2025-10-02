@@ -484,6 +484,24 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                             const selected = sourceArray[idx] ?? "";
                             const takenExceptCurrent = sourceArray.filter((_, i) => i !== idx);
 
+                            // Определяем, является ли опция категорией или конкретным инструментом
+                            const isCategory = (opt: string) => Object.keys(TOOL_CATEGORY_LABELS).includes(opt);
+                            
+                            // Получаем доступные инструменты
+                            const getAvailableTools = () => {
+                                if (!choice.options) return [];
+                                
+                                return choice.options.flatMap(opt => {
+                                    if (isCategory(opt)) {
+                                        return getToolKeysByCategory(opt as any);
+                                    } else {
+                                        return [opt];
+                                    }
+                                });
+                            };
+
+                            const availableTools = getAvailableTools();
+
                             return (
                                 <div key={choiceKey} className="space-y-2">
                                     <select
@@ -501,7 +519,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                         }}
                                     >
                                         <option value="">— Выберите инструмент —</option>
-                                        {choice.options
+                                        {availableTools
                                             ?.filter(opt => !takenExceptCurrent.includes(opt))
                                             .map((opt) => {
                                                 const tool = Tools.find(t => t.key === opt);
@@ -575,8 +593,8 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     >
                                         <option value="">
                                             {isCategory 
-                                                ? `— Выберите ${TOOL_CATEGORY_LABELS[categoryOption].toLowerCase()} —`
-                                                : "— Выберите инструмент —"
+                                                ? `— Выберите владение: ${TOOL_CATEGORY_LABELS[categoryOption]} —`
+                                                : "— Выберите владение инструментом —"
                                             }
                                         </option>
                                         {availableTools

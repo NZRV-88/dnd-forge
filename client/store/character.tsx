@@ -33,11 +33,38 @@ export type Basics = {
     background: string;
     equipment?: string[];
     gold?: number;
+    currency?: {
+        platinum: number;
+        gold: number;
+        electrum: number;
+        silver: number;
+        copper: number;
+    };
     isStartEquipmentAdded?: boolean;
     //backgroundBonuses?: Partial<Record<keyof Abilities, number>>;
     //backgroundSkills?: string[];
     //raceBonuses?: Partial<Record<keyof Abilities, number>>;
     alignment: string;
+};
+
+// Типы для надетого снаряжения
+export type EquippedItem = {
+    name: string;
+    type: 'weapon' | 'armor' | 'shield' | 'capacity';
+    slots: number; // количество слотов (1-2 для оружия, 1 для доспеха/щита)
+    isVersatile?: boolean; // для универсального оружия
+    versatileMode?: boolean; // используется ли в двуручном режиме
+    capacity?: number; // дополнительная грузоподъемность для предметов с capacity
+};
+
+export type EquippedGear = {
+    armor?: EquippedItem;
+    shield1?: EquippedItem; // щит в наборе I
+    shield2?: EquippedItem; // щит в наборе II
+    weaponSlot1: EquippedItem[]; // массив оружия в слоте I
+    weaponSlot2: EquippedItem[]; // массив оружия в слоте II
+    activeWeaponSlot: 1 | 2; // активный слот оружия (I или II)
+    capacityItem?: EquippedItem; // предмет с capacity (рюкзак и т.д.)
 };
 
 // Основной драфт персонажа
@@ -47,6 +74,7 @@ export type CharacterDraft = {
     stats: Abilities;
     asi: Record<number, AsiSelection>;
     avatar?: string | null;
+    equipped?: EquippedGear; // надетое снаряжение
 
     // Все выборы игрока (из рас, классов, фитов, подрас и т.п.)
     chosen: {
@@ -105,6 +133,19 @@ export type CharacterContextType = {
 
     setChosenFeats: (featKey: string[]) => void;
     removeChosenFeat: (featKey: string) => void;
+
+    // Функции для работы с надетым снаряжением
+    equipItem: (itemName: string, itemType: 'weapon' | 'armor' | 'shield', slots?: number, isVersatile?: boolean, versatileMode?: boolean) => void;
+    unequipItem: (itemName: string, itemType: 'weapon' | 'armor' | 'shield') => void;
+    toggleVersatileMode: (itemName: string) => void;
+    setActiveWeaponSlot: (slot: 1 | 2) => void;
+    
+    // Функции для работы с переносимым весом
+    calculateMaxCarryWeight: () => number;
+    calculateCurrentSpeed: (baseSpeed: number, currentWeight: number) => number;
+    isOverloaded: (currentWeight: number) => boolean;
+    equipCapacityItem: (itemName: string, capacity: number) => void;
+    unequipCapacityItem: () => void;
 
     setChosenFeatures: (source: string, features: string[]) => void;
     removeChosenFeature: (source: string, feature: string) => void;
@@ -271,7 +312,12 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         const newDraft = makeDefaultDraft();
         setDraft(newDraft);
         setIsLoading(false);
-        // Не удаляем localStorage, чтобы сохранить данные пользователя
+        // Очищаем localStorage для нового персонажа
+        try {
+            localStorage.removeItem("characterDraft");
+        } catch {
+            // noop
+        }
     };
 
     const setBasics = (updates: Partial<CharacterDraft["basics"]>) =>
@@ -470,6 +516,233 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             chosen: { ...d.chosen, feats: d.chosen.feats.filter(f => f !== featKey) },
         }));
 
+    // Функции для работы с надетым снаряжением
+    const equipItem = (itemName: string, itemType: 'weapon' | 'armor' | 'shield', slots: number = 1, isVersatile: boolean = false, versatileMode: boolean = false) => {
+        setDraft(d => {
+            const equipped = d.equipped || { weaponSlot1: [], weaponSlot2: [], activeWeaponSlot: 1 };
+            const newItem: EquippedItem = {
+                name: itemName,
+                type: itemType,
+                slots,
+                isVersatile,
+                versatileMode
+            };
+
+            switch (itemType) {
+                case 'armor':
+                    return { ...d, equipped: { ...equipped, armor: newItem } };
+                case 'shield':
+                    // Щит надевается в активное снаряжение
+                    const shieldCurrentSlot1 = Array.isArray(equipped.weaponSlot1) ? equipped.weaponSlot1 : [];
+                    const shieldCurrentSlot2 = Array.isArray(equipped.weaponSlot2) ? equipped.weaponSlot2 : [];
+                    const shieldTotalSlots1 = shieldCurrentSlot1.reduce((sum, w) => sum + w.slots, 0);
+                    const shieldTotalSlots2 = shieldCurrentSlot2.reduce((sum, w) => sum + w.slots, 0);
+                    
+                    // Проверяем, есть ли место в активном снаряжении
+                    if (equipped.activeWeaponSlot === 1) {
+                        if (shieldTotalSlots1 < 2) {
+                            // Есть место в снаряжении I
+                            return { ...d, equipped: { ...equipped, shield1: newItem } };
+                        } else if (shieldTotalSlots2 < 2) {
+                            // Нет места в снаряжении I, но есть в снаряжении II
+                            return { ...d, equipped: { ...equipped, shield2: newItem } };
+                        } else {
+                            // Нет места ни в одном снаряжении - заменяем активное
+                            return { ...d, equipped: { ...equipped, shield1: newItem } };
+                        }
+                    } else {
+                        if (shieldTotalSlots2 < 2) {
+                            // Есть место в снаряжении II
+                            return { ...d, equipped: { ...equipped, shield2: newItem } };
+                        } else if (shieldTotalSlots1 < 2) {
+                            // Нет места в снаряжении II, но есть в снаряжении I
+                            return { ...d, equipped: { ...equipped, shield1: newItem } };
+                        } else {
+                            // Нет места ни в одном снаряжении - заменяем активное
+                            return { ...d, equipped: { ...equipped, shield2: newItem } };
+                        }
+                    }
+                case 'weapon':
+                    // Логика: сначала заполняем активный слот до упора, потом другой слот
+                    const currentSlot1 = Array.isArray(equipped.weaponSlot1) ? equipped.weaponSlot1 : [];
+                    const currentSlot2 = Array.isArray(equipped.weaponSlot2) ? equipped.weaponSlot2 : [];
+                    const totalSlots1 = currentSlot1.reduce((sum, w) => sum + w.slots, 0);
+                    const totalSlots2 = currentSlot2.reduce((sum, w) => sum + w.slots, 0);
+                    
+                    // Щиты занимают слоты в соответствующих наборах
+                    const shieldSlots1 = equipped.shield1 ? 1 : 0;
+                    const shieldSlots2 = equipped.shield2 ? 1 : 0;
+                    const totalUsedSlots = totalSlots1 + totalSlots2 + shieldSlots1 + shieldSlots2;
+                    
+                    // Проверяем, не превышаем ли общий лимит в 4 слота
+                    if (totalUsedSlots + slots > 4) {
+                        console.warn('Превышен общий лимит слотов для оружия (4)');
+                        return d; // Не добавляем оружие, если превышен лимит
+                    }
+                    
+                    if (equipped.activeWeaponSlot === 1) {
+                        if (totalSlots1 + shieldSlots1 + slots <= 2) {
+                            // Помещается в слот I (с учетом щита)
+                            return { ...d, equipped: { ...equipped, weaponSlot1: [...currentSlot1, newItem] } };
+                        } else if (totalSlots2 + shieldSlots2 + slots <= 2) {
+                            // Не помещается в слот I, но помещается в слот II
+                            return { ...d, equipped: { ...equipped, weaponSlot2: [...currentSlot2, newItem] } };
+                        } else {
+                            // Не помещается ни в один слот - заменяем активный слот
+                            return { ...d, equipped: { ...equipped, weaponSlot1: [newItem] } };
+                        }
+                    } else {
+                        if (totalSlots2 + shieldSlots2 + slots <= 2) {
+                            // Помещается в слот II (с учетом щита)
+                            return { ...d, equipped: { ...equipped, weaponSlot2: [...currentSlot2, newItem] } };
+                        } else if (totalSlots1 + shieldSlots1 + slots <= 2) {
+                            // Не помещается в слот II, но помещается в слот I
+                            return { ...d, equipped: { ...equipped, weaponSlot1: [...currentSlot1, newItem] } };
+                        } else {
+                            // Не помещается ни в один слот - заменяем активный слот
+                            return { ...d, equipped: { ...equipped, weaponSlot2: [newItem] } };
+                        }
+                    }
+                default:
+                    return d;
+            }
+        });
+    };
+
+    const unequipItem = (itemName: string, itemType: 'weapon' | 'armor' | 'shield') => {
+        setDraft(d => {
+            const equipped = d.equipped || { weaponSlot1: [], weaponSlot2: [], activeWeaponSlot: 1 };
+            
+            switch (itemType) {
+                case 'armor':
+                    return { ...d, equipped: { ...equipped, armor: undefined } };
+                case 'shield':
+                    // Удаляем щит из обоих наборов
+                    return { ...d, equipped: { ...equipped, shield1: undefined, shield2: undefined } };
+                case 'weapon':
+                    // Удаляем оружие из соответствующего слота
+                    const currentSlot1 = Array.isArray(equipped.weaponSlot1) ? equipped.weaponSlot1 : [];
+                    const currentSlot2 = Array.isArray(equipped.weaponSlot2) ? equipped.weaponSlot2 : [];
+                    
+                    const weaponIndex1 = currentSlot1.findIndex(w => w.name === itemName);
+                    const weaponIndex2 = currentSlot2.findIndex(w => w.name === itemName);
+                    
+                    if (weaponIndex1 !== -1) {
+                        const newSlot1 = currentSlot1.filter((_, index) => index !== weaponIndex1);
+                        return { ...d, equipped: { ...equipped, weaponSlot1: newSlot1 } };
+                    } else if (weaponIndex2 !== -1) {
+                        const newSlot2 = currentSlot2.filter((_, index) => index !== weaponIndex2);
+                        return { ...d, equipped: { ...equipped, weaponSlot2: newSlot2 } };
+                    }
+                    return d;
+                default:
+                    return d;
+            }
+        });
+    };
+
+    const toggleVersatileMode = (itemName: string) => {
+        setDraft(d => {
+            const equipped = d.equipped || { weaponSlot1: [], weaponSlot2: [], activeWeaponSlot: 1 };
+            
+            // Ищем оружие в обоих слотах
+            const currentSlot1 = Array.isArray(equipped.weaponSlot1) ? equipped.weaponSlot1 : [];
+            const currentSlot2 = Array.isArray(equipped.weaponSlot2) ? equipped.weaponSlot2 : [];
+            
+            const weapon1 = currentSlot1.find(w => w.name === itemName);
+            const weapon2 = currentSlot2.find(w => w.name === itemName);
+            const weapon = weapon1 || weapon2;
+            
+            if (!weapon || !weapon.isVersatile) {
+                return d;
+            }
+
+            const newSlots = weapon.versatileMode ? 1 : 2;
+            const updatedWeapon = { ...weapon, versatileMode: !weapon.versatileMode, slots: newSlots };
+            
+            if (weapon1) {
+                return {
+                    ...d,
+                    equipped: {
+                        ...equipped,
+                        weaponSlot1: currentSlot1.map(w => w.name === itemName ? updatedWeapon : w)
+                    }
+                };
+            } else if (weapon2) {
+                return {
+                    ...d,
+                    equipped: {
+                        ...equipped,
+                        weaponSlot2: currentSlot2.map(w => w.name === itemName ? updatedWeapon : w)
+                    }
+                };
+            }
+            
+            return d;
+        });
+    };
+
+    const setActiveWeaponSlot = (slot: 1 | 2) => {
+        setDraft(d => {
+            const equipped = d.equipped || { weaponSlot1: [], weaponSlot2: [], activeWeaponSlot: 1 };
+            return {
+                ...d,
+                equipped: {
+                    ...equipped,
+                    activeWeaponSlot: slot
+                }
+            };
+        });
+    };
+
+    // Функции для работы с переносимым весом
+    const calculateMaxCarryWeight = () => {
+        const strength = draft.stats?.str || 10;
+        const baseCapacity = strength * 15; // Базовая формула D&D 5e
+        
+        // Добавляем capacity от надетых предметов
+        const equippedCapacity = draft.equipped?.capacityItem?.capacity || 0;
+        
+        return baseCapacity + equippedCapacity;
+    };
+
+    const calculateCurrentSpeed = (baseSpeed: number, currentWeight: number) => {
+        const maxWeight = calculateMaxCarryWeight();
+        
+        // Если вес превышает максимальный, скорость снижается до 5 футов
+        if (currentWeight > maxWeight) {
+            return 5;
+        }
+        
+        return baseSpeed;
+    };
+
+    const isOverloaded = (currentWeight: number) => {
+        const maxWeight = calculateMaxCarryWeight();
+        return currentWeight > maxWeight;
+    };
+
+    const equipCapacityItem = (itemName: string, capacity: number) => {
+        setDraft(d => {
+            const equipped = d.equipped || { weaponSlot1: [], weaponSlot2: [], activeWeaponSlot: 1 };
+            const newItem: EquippedItem = {
+                name: itemName,
+                type: 'capacity',
+                slots: 1,
+                capacity
+            };
+            
+            return { ...d, equipped: { ...equipped, capacityItem: newItem } };
+        });
+    };
+
+    const unequipCapacityItem = () => {
+        setDraft(d => {
+            const equipped = d.equipped || { weaponSlot1: [], weaponSlot2: [], activeWeaponSlot: 1 };
+            return { ...d, equipped: { ...equipped, capacityItem: undefined } };
+        });
+    };
+
     const setAbilitiesMode = (newMode: "array" | "roll" | "point-buy") => {
         setDraft((d) => ({ ...d, abilitiesMode: newMode }));
     };
@@ -654,11 +927,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            // Создаем новый draft с переданным ID, сохраняя текущие данные
-            const newDraft = {
-                ...draft, // Сохраняем текущие данные пользователя
-                id: id,
-            };
+            // Создаем новый чистый draft с переданным ID
+            const newDraft = makeDefaultDraft(id);
 
             console.log('createNewCharacter: Saving to Supabase, newDraft.id:', newDraft.id);
 
@@ -745,6 +1015,17 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenSpell,
         setChosenFeats,
         removeChosenFeat,
+
+        equipItem,
+        unequipItem,
+        toggleVersatileMode,
+        setActiveWeaponSlot,
+        
+        calculateMaxCarryWeight,
+        calculateCurrentSpeed,
+        isOverloaded,
+        equipCapacityItem,
+        unequipCapacityItem,
 
         saveToSupabase,
         loadFromSupabase,

@@ -10,13 +10,16 @@ import { useParams } from "react-router-dom";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState as useStateReact } from "react";
 import { CLASS_LABELS, getClassByKey } from "@/data/classes";
-import { BACKGROUND_LABELS } from "@/data/backgrounds";
+import { BACKGROUND_LABELS, getBackgroundByKey } from "@/data/backgrounds";
 import { Gears, Ammunitions } from "@/data/items/gear";
 import { Weapons } from "@/data/items/weapons";
 import { Armors } from "@/data/items/armors";
+import { Tools, getToolKeysByCategory, TOOL_CATEGORY_LABELS } from "@/data/items/tools";
 import { EQUIPMENT_PACKS } from "@/data/items/equipment-packs";
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
 import { getWeaponMasteryByKey } from "@/data/items";
+import EquipmentSlots from "@/components/ui/EquipmentSlots";
+import ChoiceRenderer from "@/components/ui/ChoiceRenderer";
 
 // Функция для перевода типов урона на русский
 const translateDamageType = (damageType: string): string => {
@@ -60,6 +63,18 @@ const translateWeaponProperties = (properties: string[]): string[] => {
             .replace(/gp/gi, 'ЗМ')
             .replace(/sp/gi, 'СМ')
             .replace(/cp/gi, 'ММ');
+    };
+
+    const translateAbility = (ability: string): string => {
+        const translations: Record<string, string> = {
+            'str': 'Сила',
+            'dex': 'Ловкость',
+            'con': 'Телосложение',
+            'int': 'Интеллект',
+            'wis': 'Мудрость',
+            'cha': 'Харизма'
+        };
+        return translations[ability] || ability;
     };
 
     // Функция для конвертации стоимости в медные монеты (ММ)
@@ -121,6 +136,13 @@ const getItemName = (type: string, key: string): string => {
         case "equipment-pack":
             const pack = EQUIPMENT_PACKS.find(p => p.key === key);
             return pack?.name || key;
+        case "tool":
+            // Если это категория инструментов (например, "gaming"), возвращаем название категории
+            if (key === "gaming") {
+                return "Игральный набор";
+            }
+            const tool = Tools.find(t => t.key === key);
+            return tool?.name || key;
         default:
             return key;
     }
@@ -138,6 +160,7 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     characterData?: any;
 }) => {
     const [isOpen, setIsOpen] = useStateReact(false);
+    const { equipItem, unequipItem, toggleVersatileMode, setActiveWeaponSlot, calculateMaxCarryWeight, equipCapacityItem, unequipCapacityItem } = useCharacter();
     
     // Получаем полные данные персонажа для расчета модификаторов
     const characterDataFull = characterData ? getAllCharacterData(characterData) : null;
@@ -146,6 +169,232 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     const match = itemName.match(/^(\d+x\s+)?(.+)$/);
     const quantity = match?.[1]?.trim() || '';
     const name = match?.[2] || itemName;
+    
+    // Определяем тип предмета и его состояние
+    const getItemType = (itemName: string): 'weapon' | 'armor' | 'shield' | 'capacity' | 'other' => {
+        const cleanName = itemName.replace(/^\d+x\s+/, '');
+        
+        // Проверяем оружие
+        const weapon = Weapons.find(w => w.name === cleanName);
+        if (weapon) return 'weapon';
+        
+        // Проверяем доспех
+        const armor = Armors.find(a => a.name === cleanName);
+        if (armor) {
+            if (armor.category === 'shield') return 'shield';
+            return 'armor';
+        }
+        
+        // Проверяем предметы с capacity
+        const gear = Gears.find(g => g.name === cleanName);
+        if (gear && gear.capacity) return 'capacity';
+        
+        return 'other';
+    };
+    
+    const itemType = getItemType(name);
+    const equipped = characterData?.equipped;
+    
+    // Проверяем, надет ли предмет
+    const isEquipped = () => {
+        if (!equipped || itemType === 'other') return false;
+        
+        let result = false;
+        switch (itemType) {
+            case 'armor':
+                result = equipped.armor?.name === name;
+                break;
+            case 'shield':
+                result = equipped.shield1?.name === name || equipped.shield2?.name === name;
+                break;
+            case 'weapon':
+                const slot1 = Array.isArray(equipped.weaponSlot1) ? equipped.weaponSlot1 : [];
+                const slot2 = Array.isArray(equipped.weaponSlot2) ? equipped.weaponSlot2 : [];
+                result = slot1.some(w => w.name === name) || slot2.some(w => w.name === name);
+                break;
+            case 'capacity':
+                result = equipped.capacityItem?.name === name;
+                break;
+            default:
+                result = false;
+        }
+        
+        // Отладочная информация
+        console.log(`isEquipped for ${name} (${itemType}):`, {
+            equipped: !!equipped,
+            itemType,
+            weaponSlot1: equipped?.weaponSlot1?.name,
+            weaponSlot2: equipped?.weaponSlot2?.name,
+            armor: equipped?.armor?.name,
+            shield1: equipped?.shield1?.name,
+            shield2: equipped?.shield2?.name,
+            result
+        });
+        
+        return result;
+    };
+    
+    const equippedItem = () => {
+        if (!equipped || itemType === 'other') return null;
+        
+        switch (itemType) {
+            case 'armor':
+                return equipped.armor;
+            case 'shield':
+                return equipped.shield1 || equipped.shield2 || null;
+            case 'weapon':
+                const slot1 = Array.isArray(equipped.weaponSlot1) ? equipped.weaponSlot1 : [];
+                const slot2 = Array.isArray(equipped.weaponSlot2) ? equipped.weaponSlot2 : [];
+                const weapon1 = slot1.find(w => w.name === name);
+                const weapon2 = slot2.find(w => w.name === name);
+                return weapon1 || weapon2 || null;
+            case 'capacity':
+                return equipped.capacityItem || null;
+            default:
+                return null;
+        }
+    };
+
+    const getWeaponSlot = () => {
+        if (itemType !== 'weapon' || !equipped) return null;
+        
+        const slot1 = Array.isArray(equipped.weaponSlot1) ? equipped.weaponSlot1 : [];
+        const slot2 = Array.isArray(equipped.weaponSlot2) ? equipped.weaponSlot2 : [];
+        
+        if (slot1.some(w => w.name === name)) return 1;
+        if (slot2.some(w => w.name === name)) return 2;
+        return null;
+    };
+
+    const isActiveWeaponSlot = () => {
+        if (itemType !== 'weapon' || !equipped) return false;
+        const weaponSlot = getWeaponSlot();
+        return weaponSlot === equipped.activeWeaponSlot;
+    };
+
+    const getShieldSlot = () => {
+        if (itemType !== 'shield') return null;
+        if (equipped?.shield1) return 1;
+        if (equipped?.shield2) return 2;
+        return null;
+    };
+    
+    const canEquip = () => {
+        if (itemType === 'other') return false;
+        
+        // Проверяем ограничения
+        if (itemType === 'armor' && equipped?.armor) return false;
+        if (itemType === 'shield' && (equipped?.shield1 || equipped?.shield2)) return false;
+        if (itemType === 'capacity' && equipped?.capacityItem) return false;
+        if (itemType === 'weapon') {
+            const weaponSlot1 = Array.isArray(equipped?.weaponSlot1) ? equipped.weaponSlot1 : [];
+            const weaponSlot2 = Array.isArray(equipped?.weaponSlot2) ? equipped.weaponSlot2 : [];
+            const totalSlots1 = weaponSlot1.reduce((sum, w) => sum + w.slots, 0);
+            const totalSlots2 = weaponSlot2.reduce((sum, w) => sum + w.slots, 0);
+            
+            // Щит занимает 1 слот из общих 4 слотов для оружия
+            const shieldSlots1 = equipped?.shield1 ? 1 : 0;
+            const shieldSlots2 = equipped?.shield2 ? 1 : 0;
+            const shieldSlots = shieldSlots1 + shieldSlots2;
+            const totalUsedSlots = totalSlots1 + totalSlots2 + shieldSlots;
+            
+            // Определяем количество слотов для нового оружия
+            const weapon = Weapons.find(w => w.name === name);
+            let requiredSlots = 1;
+            if (weapon?.properties?.includes('two-handed')) {
+                requiredSlots = 2;
+            }
+            
+            // Проверяем, не превышаем ли общий лимит в 4 слота
+            if (totalUsedSlots + requiredSlots > 4) {
+                return false; // Превышен общий лимит слотов
+            }
+            
+            // Проверяем, есть ли место в активном слоте
+            if (equipped?.activeWeaponSlot === 1) {
+                if (totalSlots1 + requiredSlots <= 2) return true; // Помещается в слот I
+                if (totalSlots2 + requiredSlots <= 2) return true; // Не помещается в слот I, но помещается в слот II
+                return false; // Не помещается ни в один слот
+            } else {
+                if (totalSlots2 + requiredSlots <= 2) return true; // Помещается в слот II
+                if (totalSlots1 + requiredSlots <= 2) return true; // Не помещается в слот II, но помещается в слот I
+                return false; // Не помещается ни в один слот
+            }
+        }
+        if (itemType === 'shield') {
+            // Щит можно надеть, если его еще нет и есть свободные слоты
+            if (equipped?.shield1 || equipped?.shield2) return false; // Щит уже надет
+            
+            const weaponSlot1 = Array.isArray(equipped?.weaponSlot1) ? equipped.weaponSlot1 : [];
+            const weaponSlot2 = Array.isArray(equipped?.weaponSlot2) ? equipped.weaponSlot2 : [];
+            const totalSlots1 = weaponSlot1.reduce((sum, w) => sum + w.slots, 0);
+            const totalSlots2 = weaponSlot2.reduce((sum, w) => sum + w.slots, 0);
+            
+            // Проверяем, есть ли место хотя бы в одном снаряжении
+            return totalSlots1 < 2 || totalSlots2 < 2;
+        }
+        
+        return true;
+    };
+    
+    const handleEquipToggle = () => {
+        if (itemType === 'other') return;
+        
+        if (isEquipped()) {
+            if (itemType === 'capacity') {
+                unequipCapacityItem();
+            } else {
+                unequipItem(name, itemType);
+            }
+        } else {
+            if (itemType === 'capacity') {
+                const gear = Gears.find(g => g.name === name);
+                if (gear?.capacity) {
+                    equipCapacityItem(name, gear.capacity);
+                }
+            } else {
+                // Определяем количество слотов для оружия
+                let slots = 1;
+                let isVersatile = false;
+                
+                if (itemType === 'weapon') {
+                    const weapon = Weapons.find(w => w.name === name);
+                    if (weapon?.properties?.includes('versatile')) {
+                        isVersatile = true;
+                    }
+                    if (weapon?.properties?.includes('two-handed')) {
+                        slots = 2;
+                    }
+                }
+                
+                equipItem(name, itemType, slots, isVersatile, false);
+            }
+        }
+    };
+    
+    const handleVersatileToggle = () => {
+        const currentWeapons = equipped?.weapons || [];
+        const otherWeapons = currentWeapons.filter(w => w.name !== name);
+        const totalOtherWeaponSlots = otherWeapons.reduce((sum, w) => sum + w.slots, 0);
+        const shieldSlots1 = equipped?.shield1 ? 1 : 0;
+        const shieldSlots2 = equipped?.shield2 ? 1 : 0;
+        const shieldSlots = shieldSlots1 + shieldSlots2;
+        const currentVersatileMode = equippedItem()?.versatileMode || false;
+        
+        if (currentVersatileMode) {
+            // Переключение с двуручного на одноручный режим
+            toggleVersatileMode(name);
+        } else {
+            // Переключение с одноручного на двуручный режим
+            const totalSlotsWithTwoHanded = totalOtherWeaponSlots + shieldSlots + 2;
+            
+            if (totalSlotsWithTwoHanded <= 4) {
+                toggleVersatileMode(name);
+            } else {
+                console.warn('Недостаточно слотов для двуручного режима');
+            }
+        }
+    };
     
     // Ищем описание предмета
     const getItemDescription = (itemName: string) => {
@@ -265,6 +514,19 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
             };
         }
         
+        const tool = Tools.find(t => t.name === cleanName);
+        if (tool) {
+            const categoryLabel = TOOL_CATEGORY_LABELS[tool.category] || tool.category;
+            return {
+                description: tool.desc,
+                cost: translateCurrency(tool.cost),
+                weight: tool.weight || 0,
+                category: categoryLabel,
+                utilize: tool.utilize,
+                ability: tool.ability
+            };
+        }
+        
         return {
             description: 'Описание не найдено',
             cost: 'Неизвестно',
@@ -289,8 +551,88 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                             <span className="font-medium">
                                 {name}
                             </span>
+                            {/* Римская цифра для оружия и щита */}
+                            {(itemType === 'weapon' || itemType === 'shield') && isEquipped() && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${
+                                    (itemType === 'weapon' && isActiveWeaponSlot()) || (itemType === 'shield' && getShieldSlot() === equipped?.activeWeaponSlot)
+                                        ? 'bg-primary text-primary-foreground' 
+                                        : 'bg-muted text-muted-foreground'
+                                }`}>
+                                    {itemType === 'weapon' 
+                                        ? (getWeaponSlot() === 1 ? 'I' : 'II')
+                                        : (getShieldSlot() === 1 ? 'I' : 'II')
+                                    }
+                                </span>
+                            )}
                         </div>
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center gap-2">
+                            {/* Слоты для оружия и щита */}
+                            {(itemType === 'weapon' || itemType === 'shield') && (
+                                <EquipmentSlots 
+                                    weaponSlot1={Array.isArray(equipped?.weaponSlot1) ? equipped.weaponSlot1 : []}
+                                    weaponSlot2={Array.isArray(equipped?.weaponSlot2) ? equipped.weaponSlot2 : []}
+                                    shield1={equipped?.shield1 || null}
+                                    shield2={equipped?.shield2 || null}
+                                    isVersatile={itemType === 'weapon' ? equippedItem()?.isVersatile : false}
+                                    versatileMode={itemType === 'weapon' ? equippedItem()?.versatileMode : false}
+                                    onVersatileToggle={itemType === 'weapon' ? handleVersatileToggle : undefined}
+                                    activeWeaponSlot={equipped?.activeWeaponSlot || 1}
+                                    onSlotClick={(slot) => setActiveWeaponSlot(slot)}
+                                />
+                            )}
+                            
+                            {/* Слот для доспеха */}
+                            {itemType === 'armor' && (
+                                <div className={`w-3 h-3 border border-gray-400 rounded-sm transition-colors ${
+                                    equipped?.armor ? 'bg-[#cf995f] ring-1 ring-[#cf995f]/50' : 'bg-transparent'
+                                }`}
+                                title={equipped?.armor ? `Доспех: ${equipped.armor.name}` : 'Свободно'}
+                                />
+                            )}
+                            
+                            
+                            {/* Кнопка надевания */}
+                            {(itemType !== 'other' && itemType !== 'capacity') && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEquipToggle();
+                                    }}
+                                    disabled={!isEquipped() && !canEquip()}
+                                    className={`w-16 px-1.5 py-0.5 text-[10px] rounded transition-colors shadow-inner text-center ${
+                                        isEquipped() 
+                                            ? 'bg-[#ffbd03] text-white hover:bg-[#d8a518]' 
+                                            : canEquip() 
+                                                ? 'bg-[#96bf6b] text-primary-foreground hover:bg-[#7ea55a]' 
+                                                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                    }`}
+                                    title={
+                                        !isEquipped() && !canEquip() && itemType === 'weapon'
+                                            ? 'Недостаточно слотов для двуручного оружия'
+                                            : undefined
+                                    }
+                                >
+                                    {isEquipped() ? 'СНЯТЬ' : 'НАДЕТЬ'}
+                                </button>
+                            )}
+                            
+                            {/* Кнопка для предметов с capacity */}
+                            {itemType === 'capacity' && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEquipToggle();
+                                    }}
+                                    className={`w-16 px-1.5 py-0.5 text-[10px] rounded transition-colors shadow-inner text-center ${
+                                        isEquipped() 
+                                            ? 'bg-[#ffbd03] text-white hover:bg-[#d8a518]' 
+                                            : 'bg-[#96bf6b] text-primary-foreground hover:bg-[#7ea55a]'
+                                    }`}
+                                >
+                                    {isEquipped() ? 'СНЯТЬ' : 'НАДЕТЬ'}
+                                </button>
+                            )}
+                            
                             {isOpen ? <ChevronUp className="w-6 h-6 text-primary" /> : <ChevronDown className="w-6 h-6 text-primary" />}
                         </div>
                     </div>
@@ -350,14 +692,32 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                                     </div>
                                 </>
                             ) : (
-                                /* Для других предметов показываем только вес и стоимость */
+                                /* Для других предметов показываем вес и стоимость, или utilize и ability для инструментов */
                                 <>
-                                    <div className="text-muted-foreground">
-                                        <span className="font-medium text-foreground">Вес:</span> {itemInfo.weight} фнт.
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        <span className="font-medium text-foreground">Стоимость:</span> {itemInfo.cost}
-                                    </div>
+                                    {itemInfo.utilize && itemInfo.ability ? (
+                                        /* Для инструментов показываем применение и характеристику */
+                                        <>
+                                            <div className="text-muted-foreground">
+                                                <span className="font-medium text-foreground">Применение:</span> {itemInfo.utilize}
+                                            </div>
+                                            <div className="text-muted-foreground">
+                                                <span className="font-medium text-foreground">Характеристика:</span> {translateAbility(itemInfo.ability)}
+                                            </div>
+                                            <div className="text-muted-foreground">
+                                                <span className="font-medium text-foreground">Стоимость:</span> {itemInfo.cost}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        /* Для других предметов показываем вес и стоимость */
+                                        <>
+                                            <div className="text-muted-foreground">
+                                                <span className="font-medium text-foreground">Вес:</span> {itemInfo.weight} фнт.
+                                            </div>
+                                            <div className="text-muted-foreground">
+                                                <span className="font-medium text-foreground">Стоимость:</span> {itemInfo.cost}
+                                            </div>
+                                        </>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -401,10 +761,9 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
 export default function EquipmentPick() {
     const { id } = useParams<{ id: string }>(); 
     const nav = useNavigate();
-    const { draft, setBasics } = useCharacter();
+    const { draft, setBasics, calculateMaxCarryWeight, isOverloaded } = useCharacter();
     const [selectedClassChoice, setSelectedClassChoice] = useState<number>(0);
-    const [backgroundMode, setBackgroundMode] = useState<"equipment" | "gold">("equipment");
-    const [gold, setGold] = useState(0);
+    const [selectedBackgroundChoice, setSelectedBackgroundChoice] = useState<number>(0);
     const [currency, setCurrency] = useState({
         platinum: 0,  // Платина
         gold: 0,      // Золото
@@ -432,9 +791,7 @@ export default function EquipmentPick() {
         if (draft.basics.equipment && draft.basics.equipment.length > 0) {
             setAddedInventory(draft.basics.equipment);
         }
-        if (draft.basics.gold) {
-            setGold(draft.basics.gold);
-        }
+        // gold теперь управляется через currency
         if (draft.basics.currency) {
             setCurrency(draft.basics.currency);
         }
@@ -461,6 +818,11 @@ export default function EquipmentPick() {
     // Получаем данные класса
     const classInfo = getClassByKey(draft.basics.class);
     const classEquipmentChoices = classInfo?.equipmentChoices?.[0];
+    
+    // Получаем данные предыстории
+    const backgroundInfo = getBackgroundByKey(draft.basics.background);
+    const backgroundEquipmentChoices = backgroundInfo?.equipmentChoices?.[0];
+    
 
     const toggleSection = (section: keyof typeof openSections) => {
         setOpenSections(prev => ({
@@ -488,6 +850,9 @@ export default function EquipmentPick() {
         
         const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
         if (pack) return pack.weight;
+        
+        const tool = Tools.find(t => t.name === cleanName);
+        if (tool) return tool.weight || 0;
         
         return 0;
     };
@@ -566,6 +931,96 @@ export default function EquipmentPick() {
         });
     };
 
+    // Сортировка предметов в инвентаре по категориям
+    const getSortedInventory = () => {
+        const sortedItems = [...addedInventory];
+        
+        // Отладочная информация - показываем все предметы в инвентаре
+        // console.log('=== ВСЕ ПРЕДМЕТЫ В ИНВЕНТАРЕ ===');
+        // console.log('addedInventory:', addedInventory);
+        // console.log('sortedItems:', sortedItems);
+        
+        // Функция для нормализации строк (замена ё на е и приведение к нижнему регистру)
+        const normalizeString = (str: string) => {
+            return str.toLowerCase().replace(/ё/g, 'е');
+        };
+        
+        // Функция для извлечения базового названия предмета (убираем количество)
+        const getBaseItemName = (itemName: string) => {
+            // Убираем количество в разных форматах:
+            // "Метательное копьё (8)" -> "Метательное копьё"
+            // "8x Метательное копьё" -> "Метательное копьё"
+            return itemName
+                .replace(/\s*\(\d+\)\s*$/, '') // убираем (8)
+                .replace(/^\d+x\s*/, '') // убираем 8x в начале
+                .trim();
+        };
+        
+        return sortedItems.sort((a, b) => {
+            // Определяем тип предмета по его названию
+            const getItemType = (itemName: string) => {
+                // Получаем базовое название предмета (без количества)
+                const baseItemName = getBaseItemName(itemName);
+                const normalizedItemName = normalizeString(baseItemName);
+                
+                // console.log(`Обрабатываем предмет: "${itemName}" -> базовое: "${baseItemName}" -> нормализованное: "${normalizedItemName}"`);
+                
+                // Проверяем доспехи
+                const armor = Armors.find(armor => normalizeString(armor.name) === normalizedItemName);
+                if (armor) return { type: 'armor', priority: 1 };
+                
+                // Проверяем оружие
+                const weapon = Weapons.find(weapon => normalizeString(weapon.name) === normalizedItemName);
+                if (weapon) {
+                    // console.log(`Найдено оружие: "${itemName}" -> "${weapon.name}"`);
+                    return { type: 'weapon', priority: 2 };
+                }
+                
+                // Проверяем щиты (щиты - это доспехи с категорией 'shield')
+                const shield = Armors.find(armor => normalizeString(armor.name) === normalizedItemName && armor.category === 'shield');
+                if (shield) return { type: 'shield', priority: 3 };
+                
+                // Проверяем инструменты
+                const tool = Tools.find(tool => normalizeString(tool.name) === normalizedItemName);
+                if (tool) return { type: 'tool', priority: 4 };
+                
+                // Проверяем снаряжение
+                const gear = Gears.find(gear => normalizeString(gear.name) === normalizedItemName);
+                if (gear) return { type: 'gear', priority: 5 };
+                
+                // Проверяем боеприпасы
+                const ammo = Ammunitions.find(ammo => normalizeString(ammo.name) === normalizedItemName);
+                if (ammo) return { type: 'ammunition', priority: 6 };
+                
+                // Отладочная информация для непонятных предметов
+                // console.log(`Неопознанный предмет: "${itemName}" (нормализовано: "${normalizedItemName}")`);
+                
+                // Дополнительная отладка для копья
+                // if (itemName.toLowerCase().includes('копь')) {
+                //     console.log('=== ОТЛАДКА КОПЬЯ ===');
+                //     console.log('Исходное название:', itemName);
+                //     console.log('Нормализованное:', normalizedItemName);
+                //     console.log('Доступные оружия с "копь":', Weapons.filter(w => w.name.toLowerCase().includes('копь')).map(w => w.name));
+                //     console.log('Доступные оружия с "javelin":', Weapons.filter(w => w.nameEn?.toLowerCase().includes('javelin')).map(w => ({ name: w.name, nameEn: w.nameEn })));
+                // }
+                
+                // Остальные предметы
+                return { type: 'other', priority: 7 };
+            };
+            
+            const typeA = getItemType(a);
+            const typeB = getItemType(b);
+            
+            // Сначала сортируем по приоритету типа
+            if (typeA.priority !== typeB.priority) {
+                return typeA.priority - typeB.priority;
+            }
+            
+            // Если тип одинаковый, сортируем по алфавиту
+            return a.localeCompare(b);
+        });
+    };
+
     // Получение предметов для текущей страницы
     const getCurrentPageItems = () => {
         const filteredItems = getFilteredItems();
@@ -596,7 +1051,7 @@ export default function EquipmentPick() {
                     if (weapon.type === 'ranged') {
                         abilityModifier = getAbilityModifier(draft.stats.dex || 10);
                         abilityName = 'ЛОВ';
-                    } else {
+        } else {
                         abilityModifier = getAbilityModifier(draft.stats.str || 10);
                         abilityName = 'СИЛ';
                     }
@@ -677,6 +1132,19 @@ export default function EquipmentPick() {
                     cost: translateCurrency(ammo.cost),
                     weight: ammo.weight,
                     category: 'Боеприпасы'
+                };
+            }
+        } else if (type === 'tool') {
+            const tool = Tools.find(t => t.key === key);
+            if (tool) {
+                const categoryLabel = TOOL_CATEGORY_LABELS[tool.category] || tool.category;
+                return {
+                    description: tool.desc,
+                    cost: translateCurrency(tool.cost),
+                    weight: tool.weight || 0,
+                    category: categoryLabel,
+                    utilize: tool.utilize,
+                    ability: tool.ability
                 };
             }
         }
@@ -773,11 +1241,14 @@ export default function EquipmentPick() {
 
     // Функция для добавления стартового инвентаря
     const addStartingInventory = () => {
+        const newItems: string[] = [];
+        let totalGold = 0;
+        
+        // Добавляем снаряжение класса
         if (classEquipmentChoices) {
-            const selectedChoice = classEquipmentChoices.choices[selectedClassChoice];
-            if (selectedChoice) {
-                const newItems: string[] = [];
-                selectedChoice.items.forEach(item => {
+            const selectedClassChoiceData = classEquipmentChoices.choices[selectedClassChoice];
+            if (selectedClassChoiceData) {
+                selectedClassChoiceData.items.forEach(item => {
                     const itemName = getItemName(item.type, item.key);
                     
                     // Если это набор снаряжения, добавляем все предметы из набора
@@ -786,54 +1257,103 @@ export default function EquipmentPick() {
                         if (pack) {
                             pack.items.forEach(packItem => {
                                 const packItemName = getItemName("gear", packItem.key);
-                                const fullName = `${packItem.quantity ? packItem.quantity + 'x ' : ''}${packItemName}`;
+                                const fullName = `${packItem.quantity && packItem.quantity > 1 ? packItem.quantity + 'x ' : ''}${packItemName}`;
                                 newItems.push(fullName);
                             });
                         }
                     } else {
                         // Обычный предмет
-                        const fullName = `${item.quantity ? item.quantity + 'x ' : ''}${itemName}`;
+                        const fullName = `${item.quantity && item.quantity > 1 ? item.quantity + 'x ' : ''}${itemName}`;
                         newItems.push(fullName);
                     }
                 });
-                setAddedInventory(prev => [...prev, ...newItems]);
                 
-                 // Добавляем золото к общему золоту
-                 if (selectedChoice.gold && selectedChoice.gold > 0) {
-                     setCurrency(prev => ({
-                         ...prev,
-                         gold: prev.gold + selectedChoice.gold
-                     }));
-                 }
-                
-                 // Сохраняем в драфт и устанавливаем флаг
-                 setBasics({ 
-                     equipment: [...addedInventory, ...newItems], 
-                     gold: gold + (selectedChoice.gold || 0),
-                     currency: currency,
-                     isStartEquipmentAdded: true
-                 });
+                // Добавляем золото класса
+                if (selectedClassChoiceData.gold && selectedClassChoiceData.gold > 0) {
+                    totalGold += selectedClassChoiceData.gold;
+                }
             }
         }
+        
+        // Добавляем снаряжение предыстории
+        if (backgroundEquipmentChoices) {
+            const selectedBackgroundChoiceData = backgroundEquipmentChoices.choices[selectedBackgroundChoice];
+            if (selectedBackgroundChoiceData) {
+                selectedBackgroundChoiceData.items.forEach(item => {
+                    // Проверяем, является ли предмет выбором или конкретным предметом
+                    if ('choices' in item) {
+                        // Это предмет с выбором - обрабатываем каждый выбор
+                        item.choices.forEach(choice => {
+                            if (choice.type === "tool") {
+                                const selectedTools = draft.chosen.tools?.["background-equipment"] || [];
+                                const selectedTool = selectedTools[0] || "dice-set";
+                                const itemName = getItemName("tool", selectedTool);
+                                const fullName = `${item.quantity && item.quantity > 1 ? item.quantity + 'x ' : ''}${itemName}`;
+                                newItems.push(fullName);
+                            }
+                            // Можно добавить другие типы выборов здесь
+                        });
+                    } else {
+                        // Это конкретный предмет
+                        const itemName = getItemName(item.type, item.key);
+                        
+                        // Если это набор снаряжения, добавляем все предметы из набора
+                        if (item.type === "equipment-pack") {
+                            const pack = EQUIPMENT_PACKS.find(p => p.key === item.key);
+                            if (pack) {
+                                pack.items.forEach(packItem => {
+                                    const packItemName = getItemName("gear", packItem.key);
+                                    const fullName = `${packItem.quantity && packItem.quantity > 1 ? packItem.quantity + 'x ' : ''}${packItemName}`;
+                                    newItems.push(fullName);
+                                });
+                            }
+                        } else {
+                            // Обычный предмет
+                            const fullName = `${item.quantity && item.quantity > 1 ? item.quantity + 'x ' : ''}${itemName}`;
+                            newItems.push(fullName);
+                        }
+                    }
+                });
+                
+                // Добавляем золото предыстории
+                if (selectedBackgroundChoiceData.gold && selectedBackgroundChoiceData.gold > 0) {
+                    totalGold += selectedBackgroundChoiceData.gold;
+                }
+            }
+        }
+        
+        // Обновляем инвентарь
+        setAddedInventory(prev => [...prev, ...newItems]);
+        
+        // Добавляем золото к общей валюте
+        if (totalGold > 0) {
+            const newCurrency = {
+                ...currency,
+                gold: currency.gold + totalGold
+            };
+            setCurrency(newCurrency);
+            updateCurrencyInDraft(newCurrency);
+        }
+        
+        // Сохраняем в драфт и устанавливаем флаг
+        const finalCurrency = totalGold > 0 
+            ? { ...currency, gold: currency.gold + totalGold }
+            : currency;
+        
+        setBasics({ 
+            equipment: [...addedInventory, ...newItems], 
+            gold: currency.gold + totalGold,
+            currency: finalCurrency,
+            isStartEquipmentAdded: true
+        });
     };
 
     // Сохраняем выбор и переходим далее
     const handleNext = () => {
-        let totalGold = gold; // Используем текущее золото
-        let equipment: string[] = [...addedInventory]; // Используем добавленный инвентарь
-
-        // Снаряжение предыстории
-        if (backgroundMode === "equipment") {
-            // Пока что добавляем заглушку для снаряжения предыстории
-            // equipment = [...equipment, ...(BACKGROUND_EQUIPMENT[draft.basics.background] || [])];
-        } else {
-            totalGold += 50; // Золото за предысторию
-        }
-
         // Сохраняем инвентарь в драфт персонажа
         setBasics({ 
-            equipment, 
-            gold: totalGold 
+            equipment: addedInventory, 
+            gold: currency.gold 
         });
         
         nav("/create/summary");
@@ -888,8 +1408,8 @@ export default function EquipmentPick() {
                                                     {classEquipmentChoices.choices.map((choice, index) => (
                                                         <div key={index} className="border rounded-lg p-3 bg-muted/30">
                                                             <label className="flex items-start gap-3 cursor-pointer">
-                                                                <input
-                                                                    type="radio"
+                        <input
+                            type="radio"
                                                                     checked={selectedClassChoice === index}
                                                                     onChange={() => setSelectedClassChoice(index)}
                                                                     className="mt-1"
@@ -900,7 +1420,16 @@ export default function EquipmentPick() {
                                                                         <div>
                                                                             {choice.items.map((item, itemIndex) => (
                                                                                 <span key={itemIndex}>
-                                                                                    {item.quantity ? `${item.quantity}x ` : ''}{getItemName(item.type, item.key)}
+                                                                                    {item.quantity && item.quantity > 1 ? `${item.quantity}x ` : ''}
+                                                                                    {'choices' in item ? 
+                                                                                        (item as any).choices.map((choice: any) => {
+                                                                                            if (choice.type === "tool") {
+                                                                                                return "Игральный набор";
+                                                                                            }
+                                                                                            return choice.desc || "Выбор";
+                                                                                        }).join(', ') :
+                                                                                        getItemName(item.type, item.key)
+                                                                                    }
                                                                                     {itemIndex < choice.items.length - 1 ? ', ' : ''}
                                                                                 </span>
                                                                             ))}
@@ -912,7 +1441,7 @@ export default function EquipmentPick() {
                                                                         )}
                                                                     </div>
                                                                 </div>
-                                                            </label>
+                    </label>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -929,41 +1458,78 @@ export default function EquipmentPick() {
                                         <h3 className="font-medium mb-3 text-sm text-muted-foreground uppercase tracking-wider">
                                             {BACKGROUND_LABELS[draft.basics.background]}: СТАРТОВОЕ СНАРЯЖЕНИЕ
                                         </h3>
-                                        <div className="mb-3 space-y-2">
-                    <label className="flex items-center gap-2">
+                                        
+                                        {backgroundEquipmentChoices ? (
+                                            <div>
+                                                <div className="mb-3 text-sm text-muted-foreground">
+                                                    {backgroundEquipmentChoices.description}
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {backgroundEquipmentChoices.choices.map((choice, index) => (
+                                                        <div key={index} className="border rounded-lg p-3 bg-muted/30">
+                                                            <label className="flex items-start gap-3 cursor-pointer">
                         <input
                             type="radio"
-                                                    checked={backgroundMode === "equipment"}
-                                                    onChange={() => setBackgroundMode("equipment")}
-                        />
-                                                Снаряжение предыстории
-                    </label>
-                    <label className="flex items-center gap-2">
-                        <input
-                            type="radio"
-                                                    checked={backgroundMode === "gold"}
-                                                    onChange={() => setBackgroundMode("gold")}
-                        />
-                                                Золотые монеты (50 ЗМ)
+                                                                    checked={selectedBackgroundChoice === index}
+                                                                    onChange={() => setSelectedBackgroundChoice(index)}
+                                                                    className="mt-1"
+                                                                />
+                                                                <div className="flex-1">
+                                                                    <div className="font-medium text-sm mb-2">{choice.name}</div>
+                                                                    <div className="text-xs text-muted-foreground">
+                                                                        <div>
+                                                                            {choice.items.map((item, itemIndex) => (
+                                                                                <span key={itemIndex}>
+                                                                                    {item.quantity && item.quantity > 1 ? `${item.quantity}x ` : ''}
+                                                                                    {'choices' in item ? 
+                                                                                        (item as any).choices.map((choice: any) => {
+                                                                                            if (choice.type === "tool") {
+                                                                                                return "Игральный набор";
+                                                                                            }
+                                                                                            return choice.desc || "Выбор";
+                                                                                        }).join(', ') :
+                                                                                        getItemName(item.type, item.key)
+                                                                                    }
+                                                                                    {itemIndex < choice.items.length - 1 ? ', ' : ''}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                        {/* Селект для предметов с выбором */}
+                                                                        {choice.items.some(item => 'choices' in item) && (
+                                                                            <div className="mt-2">
+                                                                                <ChoiceRenderer
+                                                                                    source="background-equipment"
+                                                                                    choices={choice.items
+                                                                                        .filter(item => 'choices' in item)
+                                                                                        .flatMap(item => (item as any).choices)
+                                                                                    }
+                                                                                    ci={0}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                        {choice.gold && choice.gold > 0 && (
+                                                                            <div className="font-medium text-foreground mt-3">
+                                                                                + {choice.gold} ЗМ
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                     </label>
                 </div>
-                                        {backgroundMode === "equipment" ? (
-                                            <div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    Снаряжение предыстории будет добавлено позже
+                                                    ))}
                                                 </div>
-                                            </div>
-                                        ) : (
+                    </div>
+                ) : (
                                             <div>
                                                 <div className="text-sm text-muted-foreground">
-                                                    Вместо снаряжения предыстории вы получите 50 золотых монет
+                                                    Варианты выбора снаряжения для этой предыстории не определены
                                                 </div>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Кнопка добавления стартового инвентаря */}
-                                    {classEquipmentChoices && (
+                                    {(classEquipmentChoices || backgroundEquipmentChoices) && (
                                         <div className="mt-6 pt-4 border-t border-border">
                                             <Button
                                                 onClick={addStartingInventory}
@@ -997,7 +1563,7 @@ export default function EquipmentPick() {
                                     <div className="flex items-center gap-2">
                                         {addedInventory.length > 0 && (
                                             <span className="text-xs text-muted-foreground">
-                                                Общий вес: {calculateTotalWeight()} фнт.
+                                                Общий вес: <span className={isOverloaded(calculateTotalWeight()) ? 'text-red-500 font-medium' : ''}>{calculateTotalWeight()}/{calculateMaxCarryWeight()}</span> фнт.
                                             </span>
                                         )}
                                         {openSections.inventory ? <ChevronUp className="w-6 h-6 text-primary" /> : <ChevronDown className="w-6 h-6 text-primary" />}
@@ -1008,14 +1574,18 @@ export default function EquipmentPick() {
                                 <div className="p-4">
                                     {addedInventory.length > 0 ? (
                                         <div className="space-y-2">
-                                            {addedInventory.map((item, index) => (
-                                                <EquipmentCard 
-                                                    key={index} 
-                                                    itemName={item} 
-                                                    onRemove={() => removeFromInventory(index)}
-                                                    characterData={draft}
-                                                />
-                                            ))}
+                                            {getSortedInventory().map((item, index) => {
+                                                // Находим оригинальный индекс в массиве addedInventory
+                                                const originalIndex = addedInventory.indexOf(item);
+                                                return (
+                                                    <EquipmentCard 
+                                                        key={`${item}-${originalIndex}`} 
+                                                        itemName={item} 
+                                                        onRemove={() => removeFromInventory(originalIndex)}
+                                                        characterData={draft}
+                                                    />
+                                                );
+                                            })}
                     </div>
                 ) : (
                                         <div className="text-sm text-muted-foreground">
@@ -1229,7 +1799,7 @@ export default function EquipmentPick() {
                                                                                  // Сохраняем в драфт
                                                                                  setBasics({
                                                                                      equipment: [...addedInventory, itemData.name],
-                                                                                     gold: gold,
+                                                                                     gold: currency.gold,
                                                                                      currency: currency
                                                                                  });
                                                                                  
@@ -1300,14 +1870,32 @@ export default function EquipmentPick() {
                                                                             </div>
                                                                         </>
                                                                     ) : (
-                                                                        /* Для других предметов показываем только вес и стоимость */
+                                                                        /* Для других предметов показываем вес и стоимость, или utilize и ability для инструментов */
                                                                         <>
-                                                                            <div className="text-muted-foreground">
-                                                                                <span className="font-medium text-foreground">Вес:</span> {itemDescription.weight} фнт.
-                                                                            </div>
-                                                                            <div className="text-muted-foreground">
-                                                                                <span className="font-medium text-foreground">Стоимость:</span> {itemDescription.cost}
-                                                                            </div>
+                                                                            {itemDescription.utilize && itemDescription.ability ? (
+                                                                                /* Для инструментов показываем применение и характеристику */
+                                                                                <>
+                                                                                    <div className="text-muted-foreground">
+                                                                                        <span className="font-medium text-foreground">Характеристика:</span> {translateAbility(itemDescription.ability)}
+                                                                                    </div>
+                                                                                    <div className="text-muted-foreground">
+                                                                                        <span className="font-medium text-foreground">Применение:</span> {itemDescription.utilize}
+                                                                                    </div>
+                                                                                    <div className="text-muted-foreground">
+                                                                                        <span className="font-medium text-foreground">Стоимость:</span> {itemDescription.cost}
+                                                                                    </div>
+                                                                                </>
+                                                                            ) : (
+                                                                                /* Для других предметов показываем вес и стоимость */
+                                                                                <>
+                                                                                    <div className="text-muted-foreground">
+                                                                                        <span className="font-medium text-foreground">Вес:</span> {itemDescription.weight} фнт.
+                                                                                    </div>
+                                                                                    <div className="text-muted-foreground">
+                                                                                        <span className="font-medium text-foreground">Стоимость:</span> {itemDescription.cost}
+                                                                                    </div>
+                                                                                </>
+                                                                            )}
                                                                         </>
                                                                     )}
                                                                 </div>
@@ -1378,9 +1966,9 @@ export default function EquipmentPick() {
                                                      <span className="font-medium">Платина (ПМ)</span>
                                                      <span className="text-xs text-muted-foreground">= 10 ЗМ</span>
                                                  </div>
-                                                 <input
-                                                     type="number"
-                                                     min={0}
+                        <input
+                            type="number"
+                            min={0}
                                                      className="w-16 rounded border bg-background px-1.5 py-0.5 text-xs outline-none focus:border-primary shadow-inner text-center"
                                                      value={currency.platinum}
                                                      onChange={(e) => {
@@ -1393,7 +1981,7 @@ export default function EquipmentPick() {
                                                          updateCurrencyInDraft(newCurrency);
                                                      }}
                                                  />
-                                             </div>
+                    </div>
                                          </div>
 
                                          {/* Золото */}
@@ -1402,7 +1990,7 @@ export default function EquipmentPick() {
                                                  <div className="flex items-center gap-2">
                                                      <span className="font-medium">Золото (ЗМ)</span>
                                                      <span className="text-xs text-muted-foreground">= 10 СМ</span>
-                                                 </div>
+            </div>
                                                  <input
                                                      type="number"
                                                      min={0}

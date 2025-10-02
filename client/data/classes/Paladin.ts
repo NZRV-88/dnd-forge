@@ -1,4 +1,4 @@
-import { ClassInfo } from "../types";
+import { ClassInfo } from "./types";
 import { FIGHTING_STYLES } from "@/data/classes/features/fightingStyles";
 
 export const Paladin: ClassInfo = {

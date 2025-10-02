@@ -65,6 +65,14 @@ const App = () => (
                                 }
                             />
                             <Route
+                                path="/create/:id/start"
+                                element={
+                                    <ProtectedRoute>
+                                        <Start />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
                                 path="/create/:id/abilities"
                                 element={
                                     <ProtectedRoute>
