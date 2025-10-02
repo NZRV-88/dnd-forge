@@ -24,7 +24,7 @@ export function createServer() {
   // Name generator API
   app.post("/api/name-generator", handleNameGenerator);
   
-  // Advanced name generator API (syllable-based)
+  // Advanced name generator API (syllable-based) - прокси к основному файлу
   app.post("/api/advanced-name-generator", handleAdvancedNameGenerator);
 
   return app;

@@ -17,13 +17,13 @@ interface NameGeneratorResponse {
 const RACE_SYLLABLES = {
     "elf": {
         prefixes: [
-            "Ал", "Аэ", "Ан", "Ам", "Ари", "Ара", "Аль", 
+            "Ал", "Аэ", "Ан", "Ам", "Ана", "Ари", "Ара", "Аль", 
             "Эл", "Эа", "Эн", "Эм", "Эри", "Эру", "Эль",
             "Ил", "Иа", "Ин", "Им", "Ири", "Иси", "Иль", 
             "Ол", "Оа", "Он", "Ом", "Ори", "Оро", "Оль",
             "Ул", "Уа", "Ун", "Ум", "Ури", "Уру",
-            "Ла", "Ле", "Ли", "Ло", "Лу", "Лю",
-            "Ра", "Ре", "Ри", "Ро", "Ру", "Рю",
+            "Ла", "Ле", "Ли", "Ло", "Лу",
+            "Ра", "Ре", "Ри", "Ро", "Ру",
             "На", "Не", "Ни", "Но", "Ну", "Нэ",
             "Са", "Се", "Си", "Со", "Су", "Сэ",
             "Та", "Те", "Ти", "То", "Ту", "Тэ",
@@ -48,15 +48,8 @@ const RACE_SYLLABLES = {
             "ар", "эр", "ир", "ор", "ур"
         ],
         suffixes: [
-            "ион", "иэль", "аэль", "риэль", "диэль", "тиэль", 
-            "виэль", "ниэль", "сиэль", "лиэль", "миэль", "рион",
-            "дион", "тион", "вион", "нион", "сион", "лион",
-            "анда", "энда", "инда", "онда", "унда", "анна",
-            "энна", "инна", "онна", "унна", "арил", "эрил",
-            "ирил", "орил", "урил", "арон", "эрон", "ирон",
-            "орон", "урон", "арис", "эрис", "ирис", "орис",
-            "рим", "дор", "линд", "ронд", "стиль", "винг", "тиль", "мир", "дил", "фин",
-            "ион", "иэль", "ронд", "вайн", "бет", "росс", "мар", "нор", "фэйн", "мор"
+            "он", "эль", "да", "на", "ил", "ис", "им", "дор", "линд", "ронд", "стиль", "винг", "тиль", "мир", "дил", "фин",
+            "вайн", "бет", "росс", "мар", "нор", "фэйн", "мор"
         ],
         femaleSuffixes: [
             "а", "иа", "эа", "иль", "эль", "иль", 
@@ -77,8 +70,7 @@ const RACE_SYLLABLES = {
             "умир", "адан", "эдан", "идан", "одан"
         ],
         starters: [
-            "Ай", "Эй", "Ий", "Ой", "Уй", "Ал", "Эл", 
-            "Ил", "Ол", "Ул", "Ар", "Эр", "Ир", "Ор", "Ур"
+            "Ал", "Эл", "Ил", "Ол", "Ул", "Ар", "Эр", "Ир", "Ор", "Ур"
         ],
         enders: [
             "эль", "иль", "аль", "оль", "уль", "ан", 
@@ -105,7 +97,7 @@ const RACE_SYLLABLES = {
         suffixes: [
             "ард", "берт", "вин", "гард", "дел", "ерт", "фрид", "хард",
             "иль", "киль", "линд", "мунд", "нор", "ольф", "рик", "сон",
-            "ульф", "вард", "хельм", "цель", "шер", "эрт", "юст", "ярд",
+            "ульф", "вард", "хельм", "цель", "шер", "эрт", "ярд",
             "сон", "сен", "ович", "евич", "ов", "ев", "ин", "ын",
             "ский", "цкий", "ской", "цкой", "иль", "оль", "аль", "ель",
             "ман", "нер", "лер", "мер", "вер", "дер", "тер", "бер",
@@ -137,7 +129,7 @@ const RACE_SYLLABLES = {
         ],
         middles: [
             "ад", "ин", "ан", "ун", "ен", "он", "ян", "эн", "инн", "анн", "унн",
-            "ар", "ур", "ор", "ер", "ир", "яр", "юр", "орр", "арр", "урр",
+            "ар", "ур", "ор", "ер", "ир", "яр", "орр", "арр", "урр",
             "ли", "ри", "ни", "ди", "ти", "ви", "ми", "би", "пи", "ки",
             "гар", "дар", "нар", "тар", "вар", "мар", "ргар", "лдар", "ннар",
             "ан", "ен", "ин", "он", "ун", "ар", "ер", "ир", "ор", "ур",
@@ -511,23 +503,320 @@ function generateNameFromSyllables(syllables: any, gender: string): string {
 }
 
 function applyPhoneticRules(name: string): string {
+    console.log(`applyPhoneticRules: Исходное имя: "${name}"`);
+    
     name = name.replace(/(.)\1{2,}/g, '$1$1');
     name = name.replace(/[бвгджзклмнпрстфхцчшщ]{4,}/g, (match) => {
         return match.substring(0, 3);
     });
     // Убираем неудобные сочетания гласных (более 2 подряд) - НОВОЕ ПРАВИЛО
+    // (дублирование удалено - правило есть ниже)
+    
+    // НОВОЕ ПРАВИЛО: Запрещаем повторение согласных через одну букву (гтг, бкб, днд)
+    name = name.replace(/([бвгджзклмнпрстфхцчшщ])[аеёиоуыэюя]([бвгджзклмнпрстфхцчшщ])\1/g, (match, consonant1, vowel, consonant2) => {
+        // Заменяем повторяющуюся согласную на другую
+        const alternatives = {
+            'б': 'в', 'в': 'б', 'г': 'к', 'к': 'г', 'д': 'т', 'т': 'д',
+            'з': 'с', 'с': 'з', 'ж': 'ш', 'ш': 'ж', 'л': 'р', 'р': 'л',
+            'м': 'н', 'н': 'м', 'п': 'ф', 'ф': 'п', 'х': 'ц', 'ц': 'х'
+        };
+        const replacement = alternatives[consonant1] || 'л';
+        return consonant1 + vowel + replacement;
+    });
+    
+    // НОВОЕ ПРАВИЛО: Убираем 3+ одинаковых согласных подряд (Гиминннм -> Гиминм или Гиминанм)
+    name = name.replace(/([бвгджзклмнпрстфхцчшщ])\1{2,}/g, (match, consonant) => {
+        // Случайно выбираем: убрать лишние или вставить гласную
+        if (Math.random() < 0.5) {
+            // Убираем лишние согласные (оставляем максимум 2)
+            return consonant + consonant;
+        } else {
+            // Вставляем гласную между согласными
+            const vowels = ['а', 'е', 'и', 'о', 'у', 'э', 'ю', 'я'];
+            const randomVowel = vowels[Math.floor(Math.random() * vowels.length)];
+            return consonant + randomVowel + consonant;
+        }
+    });
+    
+    // НОВОЕ ПРАВИЛО: Смягчаем сочетания типа "энрль", "амрль" - вставляем гласную между согласными
+    name = name.replace(/([аеёиоуыэюя])([бвгджзклмнпрстфхцчшщ]{3,})/g, (match, vowel, consonants) => {
+        // Если после гласной идет 3+ согласных подряд, вставляем гласную между ними
+        const vowels = ['а', 'е', 'и', 'о', 'у', 'э', 'ю', 'я'];
+        const randomVowel = vowels[Math.floor(Math.random() * vowels.length)];
+        
+        // Вставляем гласную после второй согласной
+        const firstTwo = consonants.substring(0, 2);
+        const rest = consonants.substring(2);
+        return vowel + firstTwo + randomVowel + rest;
+    });
+    
+    // НОВОЕ ПРАВИЛО: Запрещаем повторяющиеся пары букв подряд (льль, рррр, нннн)
+    name = name.replace(/([а-яё])\1{3,}/g, (match, letter) => {
+        // Оставляем максимум 2 одинаковые буквы подряд
+        return letter + letter;
+    });
+    
+    // НОВОЕ ПРАВИЛО: Запрещаем 3 гласные подряд (максимум 2)
     name = name.replace(/[аеёиоуыэюя]{3,}/g, (match) => {
         return match.substring(0, 2);
     });
+    
+    // НОВОЕ ПРАВИЛО: Запрещаем 2 буквы "ю" в имени
+    name = name.replace(/ю.*ю/g, (match) => {
+        // Заменяем вторую "ю" на случайную гласную
+        const vowels = ['а', 'е', 'и', 'о', 'у', 'э', 'я'];
+        const randomVowel = vowels[Math.floor(Math.random() * vowels.length)];
+        return match.replace(/ю$/, randomVowel);
+    });
+    
+    // НОВОЕ ПРАВИЛО: Повторение гласных может быть только один раз в имени (Гаармаар -> Гаармар)
+    const vowelPairs = ['аа', 'ее', 'ии', 'оо', 'уу', 'ээ', 'юю', 'яя', 'ёё'];
+    let vowelPairCount = 0;
+    let foundPair = '';
+    
+    // Считаем количество повторяющихся гласных
+    for (const pair of vowelPairs) {
+        const matches = name.match(new RegExp(pair, 'g'));
+        if (matches) {
+            vowelPairCount += matches.length;
+            if (matches.length > 0) {
+                foundPair = pair;
+            }
+        }
+    }
+    
+    // Если найдено больше одного повторения гласных, убираем лишние
+    if (vowelPairCount > 1) {
+        // Оставляем только первое вхождение повторяющихся гласных
+        const firstPairIndex = name.indexOf(foundPair);
+        if (firstPairIndex !== -1) {
+            // Заменяем все остальные повторения на одиночные гласные
+            name = name.replace(new RegExp(foundPair, 'g'), (match, offset) => {
+                return offset === firstPairIndex ? match : match[0];
+            });
+        }
+    }
+    
+    // НОВОЕ ПРАВИЛО: Мягкий знак может быть только в конце имени (из середины убирать)
+    // Проверяем, есть ли мягкий знак в середине имени
+    if (name.length > 1 && name.includes('ь')) {
+        const lastChar = name[name.length - 1];
+        if (lastChar === 'ь') {
+            // Если мягкий знак в конце - оставляем
+            // Убираем мягкий знак из середины
+            name = name.replace(/ь(?!$)/g, '');
+        } else {
+            // Если мягкий знак не в конце - убираем все мягкие знаки
+            name = name.replace(/ь/g, '');
+        }
+    }
+    
+    // НОВОЕ ПРАВИЛО: Убираем повторяющиеся пары букв (Уророиннааль -> Уроиннааль)
+    const allPairs = ['аа', 'ее', 'ии', 'оо', 'уу', 'ээ', 'юю', 'яя', 'ёё', 'бб', 'вв', 'гг', 'дд', 'жж', 'зз', 'кк', 'лл', 'мм', 'нн', 'пп', 'рр', 'сс', 'тт', 'фф', 'хх', 'цц', 'чч', 'шш', 'щщ'];
+    
+    for (const pair of allPairs) {
+        const regex = new RegExp(pair + '.*' + pair, 'g');
+        if (regex.test(name)) {
+            // Найдена повторяющаяся пара - оставляем только первое вхождение
+            name = name.replace(regex, (match) => {
+                const firstIndex = match.indexOf(pair);
+                return match.substring(0, firstIndex + 2) + match.substring(firstIndex + 2).replace(new RegExp(pair, 'g'), pair[0]);
+            });
+        }
+    }
+    
+    // НОВОЕ ПРАВИЛО: После двойной согласной не может быть двойной гласной (и наоборот)
+    const consonantPairs = ['бб', 'вв', 'гг', 'дд', 'жж', 'зз', 'кк', 'лл', 'мм', 'нн', 'пп', 'рр', 'сс', 'тт', 'фф', 'хх', 'цц', 'чч', 'шш', 'щщ'];
+    const vowelPairsForConsonantRule = ['аа', 'ее', 'ии', 'оо', 'уу', 'ээ', 'юю', 'яя', 'ёё'];
+    
+    // Проверяем сочетания двойная согласная + двойная гласная
+    for (const consonantPair of consonantPairs) {
+        for (const vowelPair of vowelPairsForConsonantRule) {
+            const pattern = consonantPair + vowelPair;
+            if (name.includes(pattern)) {
+                // Заменяем двойную гласную на одиночную
+                name = name.replace(pattern, consonantPair + vowelPair[0]);
+            }
+        }
+    }
+    
+    // Проверяем сочетания двойная гласная + двойная согласная
+    for (const vowelPair of vowelPairsForConsonantRule) {
+        for (const consonantPair of consonantPairs) {
+            const pattern = vowelPair + consonantPair;
+            if (name.includes(pattern)) {
+                // Заменяем двойную согласную на одиночную
+                name = name.replace(pattern, vowelPair + consonantPair[0]);
+            }
+        }
+    }
+    
+    // НОВОЕ ПРАВИЛО: Убираем похожие слоги (Эрурулаон -> Эрулаон)
+    // Ищем повторяющиеся слоги (согласная + гласная) и одиночные гласные
+    const syllables = name.match(/[бвгджзклмнпрстфхцчшщ][аеёиоуыэюя]/g);
+    const singleVowels = name.match(/[аеёиоуыэюя]/g);
+    
+    // Обрабатываем слоги согласная + гласная
+    if (syllables && syllables.length > 1) {
+        // Группируем слоги по похожести (одинаковые согласные или гласные)
+        const similarGroups = new Map();
+        
+        for (const syllable of syllables) {
+            const consonant = syllable[0];
+            const vowel = syllable[1];
+            
+            // Создаем ключ для похожих слогов (по согласной или по гласной)
+            const consonantKey = `consonant_${consonant}`;
+            const vowelKey = `vowel_${vowel}`;
+            
+            if (!similarGroups.has(consonantKey)) {
+                similarGroups.set(consonantKey, []);
+            }
+            if (!similarGroups.has(vowelKey)) {
+                similarGroups.set(vowelKey, []);
+            }
+            
+            similarGroups.get(consonantKey).push(syllable);
+            similarGroups.get(vowelKey).push(syllable);
+        }
+        
+        // Находим группы с повторяющимися слогами
+        for (const [key, group] of similarGroups) {
+            if (group.length > 1) {
+                // Находим все вхождения повторяющихся слогов
+                const uniqueSyllables = [...new Set(group)];
+                for (const syllable of uniqueSyllables) {
+                    const regex = new RegExp(syllable as string, 'g');
+                    const matches = name.match(regex);
+                    if (matches && matches.length > 1) {
+                        // Оставляем только первое вхождение слога
+                        let firstFound = false;
+                        name = name.replace(regex, (match) => {
+                            if (!firstFound) {
+                                firstFound = true;
+                                return match;
+                            } else {
+                                return ''; // Убираем повторяющиеся слоги
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
+    // Обрабатываем одиночные гласные (убираем повторяющиеся)
+    if (singleVowels && singleVowels.length > 1) {
+        const vowelGroups = new Map();
+        
+        for (const vowel of singleVowels) {
+            if (!vowelGroups.has(vowel)) {
+                vowelGroups.set(vowel, []);
+            }
+            vowelGroups.get(vowel).push(vowel);
+        }
+        
+        // Убираем повторяющиеся одиночные гласные
+        for (const [vowel, group] of vowelGroups) {
+            if (group.length > 1) {
+                const regex = new RegExp(vowel, 'g');
+                const matches = name.match(regex);
+                if (matches && matches.length > 1) {
+                    // Оставляем только первое вхождение гласной
+                    let firstFound = false;
+                    name = name.replace(regex, (match) => {
+                        if (!firstFound) {
+                            firstFound = true;
+                            return match;
+                        } else {
+                            return ''; // Убираем повторяющиеся гласные
+                        }
+                    });
+                }
+            }
+        }
+    }
+    
+    // ДОПОЛНИТЕЛЬНОЕ ПРАВИЛО: Убираем повторяющиеся слоги в разных частях имени
+    // Ищем слоги длиной 2-3 символа и убираем повторяющиеся
+    const allSyllables = name.match(/[бвгджзклмнпрстфхцчшщ][аеёиоуыэюя][бвгджзклмнпрстфхцчшщ]?/g);
+    if (allSyllables && allSyllables.length > 1) {
+        const syllableCount = new Map();
+        
+        // Считаем количество каждого слога
+        for (const syllable of allSyllables) {
+            if (!syllableCount.has(syllable)) {
+                syllableCount.set(syllable, 0);
+            }
+            syllableCount.set(syllable, syllableCount.get(syllable) + 1);
+        }
+        
+        // Убираем повторяющиеся слоги
+        for (const [syllable, count] of syllableCount) {
+            if (count > 1) {
+                const regex = new RegExp(syllable, 'g');
+                const matches = name.match(regex);
+                if (matches && matches.length > 1) {
+                    // Оставляем только первое вхождение слога
+                    let firstFound = false;
+                    name = name.replace(regex, (match) => {
+                        if (!firstFound) {
+                            firstFound = true;
+                            return match;
+                        } else {
+                            return ''; // Убираем повторяющиеся слоги
+                        }
+                    });
+                }
+            }
+        }
+    }
+    
+    // ДОПОЛНИТЕЛЬНОЕ ПРАВИЛО: Убираем повторяющиеся слоги длиной 2 символа
+    // Ищем слоги согласная + гласная и убираем повторяющиеся
+    const twoCharSyllables = name.match(/[бвгджзклмнпрстфхцчшщ][аеёиоуыэюя]/g);
+    if (twoCharSyllables && twoCharSyllables.length > 1) {
+        const syllableCount = new Map();
+        
+        // Считаем количество каждого слога
+        for (const syllable of twoCharSyllables) {
+            if (!syllableCount.has(syllable)) {
+                syllableCount.set(syllable, 0);
+            }
+            syllableCount.set(syllable, syllableCount.get(syllable) + 1);
+        }
+        
+        // Убираем повторяющиеся слоги
+        for (const [syllable, count] of syllableCount) {
+            if (count > 1) {
+                const regex = new RegExp(syllable, 'g');
+                const matches = name.match(regex);
+                if (matches && matches.length > 1) {
+                    // Оставляем только первое вхождение слога
+                    let firstFound = false;
+                    name = name.replace(regex, (match) => {
+                        if (!firstFound) {
+                            firstFound = true;
+                            return match;
+                        } else {
+                            return ''; // Убираем повторяющиеся слоги
+                        }
+                    });
+                }
+            }
+        }
+    }
+    
     name = name.replace(/л{2,}/g, 'л');
     name = name.replace(/р{2,}/g, 'р');
     name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
     name = name.replace(/^'+|'+$/g, '');
     
+    console.log(`applyPhoneticRules: Финальное имя: "${name}"`);
     return name;
 }
 
-function generateCyrillicFantasyName(race?: string, characterClass?: string, gender: string = "any"): string {
+export function generateCyrillicFantasyName(race?: string, characterClass?: string, gender: string = "any"): string {
     let actualGender = gender;
     if (gender === "any") {
         actualGender = Math.random() > 0.5 ? "male" : "female";
