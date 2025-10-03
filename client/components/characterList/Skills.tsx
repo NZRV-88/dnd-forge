@@ -66,16 +66,29 @@ export default function Skills({
       className="relative w-[310px] min-h-[600px]"
     >
       {/* Контент */}
-      <div className="flex flex-col divide-y-2 divide-neutral-700 px-12 pt-3 pb-8">
-        {sortedSkills.map(([key, { ability, ru }]) => {
+      <div 
+        className="flex flex-col px-12 pt-3 pb-8"
+        style={{
+          borderTop: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+        }}
+      >
+        {sortedSkills.map(([key, { ability, ru }], index) => {
           const value = stats[ability] || 0;
           const bonus = mod(value) + (profSet.has(key) ? proficiencyBonus : 0);
 
           return (
-            <div
-              key={key}
-              className="grid grid-cols-[0px_35px_minmax(0,1fr)_10px] items-center py-[3px] text-sm"
-            >
+            <React.Fragment key={key}>
+              {index > 0 && (
+                <div 
+                  className="h-px my-1"
+                  style={{
+                    backgroundColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                  }}
+                />
+              )}
+              <div
+                className="grid grid-cols-[0px_35px_minmax(0,1fr)_10px] items-center py-[3px] text-sm"
+              >
               {/* Владение */}
               {onToggleProf ? (
                 <button
@@ -134,6 +147,7 @@ export default function Skills({
                 </span>
               </div>
             </div>
+            </React.Fragment>
           );
         })}
       </div>
