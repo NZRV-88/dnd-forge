@@ -702,6 +702,16 @@ export const Gears: Gear[] = [
         cost: "5 CP",
         weight: 7,
     },
+    {
+        key: "holy-symbol",
+        source: "PH24",
+        name: "Священный символ",
+        desc: "Священный символ украшается самоцветами или раскрашивается для проведения божественной магии; Жрецы и Паладины могут использовать его в качестве Заклинательной фокусировки.",
+        nameEn: "Holy Symbol",
+        category: "adventuring-gear",
+        cost: "5 GP",
+        weight: 1,
+    },
 ];
 
 export const Ammunitions: Ammunition[] = [

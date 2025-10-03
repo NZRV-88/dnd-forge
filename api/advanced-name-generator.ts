@@ -506,8 +506,11 @@ export function applyPhoneticRules(name: string): string {
     console.log(`applyPhoneticRules: Исходное имя: "${name}"`);
     
     name = name.replace(/(.)\1{2,}/g, '$1$1');
-    name = name.replace(/[бвгджзклмнпрстфхцчшщ]{4,}/g, (match) => {
-        return match.substring(0, 3);
+    
+    // НОВОЕ ПРАВИЛО: Запрещаем 3 согласные подряд (максимум 2)
+    name = name.replace(/[бвгджзклмнпрстфхцчшщ]{3,}/g, (match) => {
+        // Если 3+ согласных подряд, оставляем максимум 2
+        return match.substring(0, 2);
     });
     // Убираем неудобные сочетания гласных (более 2 подряд) - НОВОЕ ПРАВИЛО
     // (дублирование удалено - правило есть ниже)

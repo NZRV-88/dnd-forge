@@ -10,7 +10,7 @@ export const Wayfarer: BackgroundInfo = {
   proficiencies: [  
     { type: "skill", key: "insight" },
     { type: "skill", key: "stealth" },
-    { type: "tool-proficiency", key: "thieves-tools" },
+    { type: "tool-proficiency", key: "thieve" },
 ],
 equipmentChoices: [
   {
@@ -32,6 +32,7 @@ equipmentChoices: [
             quantity: 1 
           }, 
           { type: "weapon", key: "dagger", quantity: 2 }, 
+          { type: "tool", key: "thieve", quantity: 1 },
           { type: "gear", key: "bedroll", quantity: 1 },
           { type: "gear", key: "pouch", quantity: 2 },
           { type: "gear", key: "travelers-clothes", quantity: 1 },

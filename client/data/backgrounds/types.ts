@@ -12,7 +12,7 @@ export type SourceKey = keyof typeof SOURCES;
 // Типы для экипировки предыстории
 export type BackgroundEquipmentItem = 
     | {
-        type: "weapon" | "armor" | "gear" | "tool" | "equipment-pack";
+        type: "weapon" | "armor" | "gear" | "ammunition" | "tool" | "equipment-pack";
         key: string;
         quantity?: number;
     }

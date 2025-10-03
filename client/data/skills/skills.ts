@@ -19,7 +19,7 @@ export const SKILLS: Skill[] = [
         desc: "Балансирование, прыжки с акробатикой, уклонение от захвата."
     },
     {
-        key: "sleight_of_hand",
+        key: "sleight-of-hand",
         name: "Ловкость рук",
         nameEn: "Sleight of Hand",
         ability: "DEX",
@@ -50,7 +50,7 @@ export const SKILLS: Skill[] = [
     },
     {
         key: "investigation",
-        name: "Анализ",
+        name: "Расследование",
         nameEn: "Investigation",
         ability: "INT",
         desc: "Поиск улик, анализ улик, решение головоломок."

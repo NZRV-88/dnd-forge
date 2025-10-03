@@ -17,7 +17,7 @@ export function BackgroundTraitsTable({ backgroundInfo, choices, source, showCho
 
   // Группируем владения по типам
   const skillProfs = backgroundInfo.proficiencies?.filter(p => p.type === "skill") || [];
-  const toolProfs = backgroundInfo.proficiencies?.filter(p => p.type === "tool") || [];
+  const toolProfs = backgroundInfo.proficiencies?.filter(p => p.type === "tool" || p.type === "tool-proficiency") || [];
 
   // Получаем названия навыков
   const skillNames = skillProfs.map(prof => getProficiencyName(prof));

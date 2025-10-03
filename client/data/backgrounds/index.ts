@@ -13,6 +13,9 @@ export * from "./Entertainer";
 export * from "./FolkHero";
 export * from "./Urchin";
 export * from "./Wayfarer";
+export * from "./Scribe";
+export * from "./Guide";
+export * from "./Artisan";
 
 import type { BackgroundInfo } from "./types";
 import { Sage } from "./Sage";
@@ -29,6 +32,9 @@ import { Entertainer } from "./Entertainer";
 import { FolkHero } from "./FolkHero";
 import { Urchin } from "./Urchin";
 import { Wayfarer } from "./Wayfarer";
+import { Scribe } from "./Scribe";
+import { Guide } from "./Guide";
+import { Artisan } from "./Artisan";
 
 export const BACKGROUND_CATALOG: BackgroundInfo[] = [
   Acolyte,
@@ -44,7 +50,10 @@ export const BACKGROUND_CATALOG: BackgroundInfo[] = [
   Sailor,
   Soldier,
   Urchin,
-  Wayfarer
+  Wayfarer,
+  Scribe,
+  Guide,
+  Artisan
 ];
 
 export const BACKGROUND_LABELS: Record<string, string> = {
@@ -59,9 +68,12 @@ export const BACKGROUND_LABELS: Record<string, string> = {
   outlander: "Чужеземец",
   sage: "Мудрец",
   sailor: "Моряк",
+  scribe: "Писарь",
   soldier: "Воин",
   urchin: "Бездомный",
-  wayfarer: "Бродяга"
+  wayfarer: "Бродяга",
+  guide: "Проводник",
+  artisan: "Ремесленник"
 };
 
 export const getBackgroundByKey = (key: string): BackgroundInfo | undefined => {

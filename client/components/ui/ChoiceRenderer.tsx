@@ -430,7 +430,12 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                             let available: Spell[] = Spells;
                             
                             if ((choice as any).spellClass !== undefined) {
-                                available = available.filter(s => s.classes?.includes((choice as any).spellClass));
+                                const spellClasses = Array.isArray((choice as any).spellClass) 
+                                    ? (choice as any).spellClass 
+                                    : [(choice as any).spellClass];
+                                available = available.filter(s => 
+                                    s.classes && spellClasses.some((cls: string) => s.classes?.includes(cls))
+                                );
                             }
                             
                             if ((choice as any).spellLevel !== undefined) {
@@ -801,7 +806,8 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                 // Исключаем "Увеличение характеристик" для не-ASI источников
                                 availableFeats = ALL_FEATS.filter(feat => 
                                     feat.key !== "ability-score-improvement" && 
-                                    !allSelectedFeats.includes(feat.key)
+                                    !allSelectedFeats.includes(feat.key) &&
+                                    !feat.isHidden // Исключаем скрытые черты
                                 );
                             } else {
                                 // Для ASI показываем "Увеличение характеристик" (можно переиспользовать) 
@@ -827,8 +833,9 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     .filter(Boolean);
                                 
                                 availableFeats = ALL_FEATS.filter(feat => 
-                                    feat.key === "ability-score-improvement" || 
-                                    !asiSelectedFeats.includes(feat.key)
+                                    (feat.key === "ability-score-improvement" || 
+                                    !asiSelectedFeats.includes(feat.key)) &&
+                                    !feat.isHidden // Исключаем скрытые черты
                                 );
                             }
 

@@ -26,18 +26,30 @@ export const TOOL_CATEGORY_LABELS: Record<string, string> = {
 
 export const Tools: Tool[] = [
     // Обычные инструменты
-    { key: "thieves-tools", 
-        name: "Воровские инструменты", 
-        nameEn: "Thieves' Tools", 
+    {
+        key: "thieve",
+        name: "Воровские инструменты",
+        nameEn: "Thieves' Tools",
         desc: "Этот изящный набор отмычек, щупов и зеркал на длинной ручке является продолжением рук вора. С их помощью тихая дверь становится входом в сокровищницу, а хитрый замок — всего лишь забавной головоломкой.",
         cost: "25 gp",
         weight: 1,
         type: "Tool",
         ability: "dex",
         utilize: "Взломайте замок (15 СЛ) или обезвредьте ловушку (15 СЛ)",
-        category: "kit" 
+        category: "kit"
     },
-    //{ key: "navigator", name: "Набор навигатора", nameEn: "Navigator's Tools", category: "kit" },
+    {
+        key: "navigator",
+        name: "Набор навигатора",
+        nameEn: "Navigator's Tools",
+        desc: "Этот набор инструментов, состоящий из компаса, лопаты, длинной веревки и подзорной трубы, позволяет вам ориентироваться на суше и воде.",
+        category: "kit",
+        cost: "25 gp",
+        weight: 2,
+        type: "Tool",
+        ability: "wis",
+        utilize: "Проложите курс (10 СЛ) или определите местоположение по звёздам (15 СЛ)",
+    },
 
     // Музыкальные инструменты
     {
@@ -116,7 +128,32 @@ export const Tools: Tool[] = [
     //// Ремесленные инструменты
     //{ key: "alchemist", name: "Инструменты алхимика", nameEn: "Alchemist's Supplies", category: "artisan" },
     //{ key: "potter", name: "Набор гончара", nameEn: "Potter's Tools", category: "artisan" },
-    //{ key: "calligrapher", name: "Набор каллиграфа", nameEn: "Calligrapher's Supplies", category: "artisan" },
+    {
+        key: "herbalism",
+        name: "Набор травника",
+        nameEn: "Herbalism Kit",
+        desc: `Ваши руки знают тайный язык растений и их целебные свойства. Этот набор — ваша лаборатория, позволяющая создавать лечебные отвары и противоядия даже в глухой чаще, используя лишь то, что предлагает лес.\n\nПерсонаж, владеющий набором для травничества, может создать зелье исцеления. Для этого нужно использовать этот набор и 25 ЗМ сырья в течение 1 дня (8 часов работы).`,
+        cost: "5 gp",
+        weight: 3,
+        type: "Tool",
+        ability: "int",
+        utilize: "Определите растение (СЛ 10)",
+        craft: ["antitoxin", "candle", "healers-kit"],
+        category: "artisan"
+    },
+    {
+        key: "calligrapher",
+        name: "Набор каллиграфа",
+        nameEn: "Calligrapher's Supplies",
+        desc: "Ваше перо танцует по пергаменту, превращая чернила в изящные буквы и сложные узоры. Вы владеете искусством, где каждый штрих может скрепить договор, подделать документ или сохранить историю для потомков.",
+        cost: "10 gp",
+        weight: 5,
+        type: "Tool",
+        ability: "dex",
+        utilize: "Пишите текст с впечатлающим росчерком, который защитит его от подделки (СЛ 15)",
+        craft: ["ink"],
+        category: "artisan"
+    },
     {
         key: "mason",
         name: "Инструменты каменщика",
@@ -130,8 +167,32 @@ export const Tools: Tool[] = [
         craft: ["block-and-tile"],
         category: "artisan"
     },
-    //{ key: "cartographer", name: "Набор картографа", nameEn: "Cartographer's Tools", category: "artisan" },
-    //{ key: "leatherworker", name: "Набор кожевника", nameEn: "Leatherworker's Tools", category: "artisan" },
+    {
+        key: "cartographer", 
+        name: "Инструменты картографа",
+        nameEn: "Cartographer's Tools", 
+        desc: "В этом кожаном тубусе хранятся белые листы пергамента, заостренные угли и набор точных измерительных инструментов. С их помощью можно запечатлеть очертания береговой линии, изгибы подземных тоннелей или маршрут через незнакомые земли. Каждая линия, нанесенная рукой мастера, способна превратить неизвестность в понятный и надежный путь.",
+        cost: "15 gp",
+        weight: 6,
+        type: "Tool",
+        ability: "wis",
+        utilize: "Нарисуйте карту небольшой области (СЛ 15)",
+        craft: ["map"],
+        category: "artisan"
+    },
+    { 
+        key: "leatherworker", 
+        name: "Набор кожевника", 
+        nameEn: "Leatherworker's Tools", 
+        desc: "В этом практичном комплекте собраны все инструменты для работы с кожей: от острых скребков до прочных нитей. С его помощью можно превратить сырую шкуру в эластичную кожу, а затем сшить прочную упряжь, удобную обувь или тиснёный пояс. Каждый предмет в умелых руках становится частью долговечной вещи, способной пережить любые дорожные тяготы.",
+        cost: "5 gp",
+        weight: 5,
+        type: "Tool",
+        ability: "dex",
+        utilize: "Добавьте рисунок на кожаное изделие (СЛ 10)",
+        craft: ["sling", "whip", "hide-armor", "leather-armor", "studded-leather-armor", "backpack", "crossbow-bolt-case", "map-or-scroll-case", "parchment", "pouch", "quiver", "waterskin"],
+        category: "artisan" 
+    },
     {
         key: "smith",
         name: "Инструменты кузнеца",
@@ -155,7 +216,7 @@ export const Tools: Tool[] = [
         type: "Tool",
         ability: "int",
         utilize: "Обнаружение отравленного напитка (СЛ 15) или идентификация алкоголя (СЛ 10)",
-        craft: ["antitoxin"], 
+        craft: ["antitoxin"],
         category: "artisan"
     },
     {
@@ -254,6 +315,10 @@ export function getToolByKey(key: string): Tool | undefined {
 
 export function getToolName(key: string, lang: "ru" | "en" = "ru"): string {
     const tool = getToolByKey(key);
-    if (!tool) return key;
+    if (!tool) {
+        console.log(`getToolName: Инструмент с ключом "${key}" не найден`);
+        return key;
+    }
+    console.log(`getToolName: Найден инструмент "${key}" -> "${tool.name}" (ru) / "${tool.nameEn}" (en)`);
     return lang === "en" ? tool.nameEn : tool.name;
 }

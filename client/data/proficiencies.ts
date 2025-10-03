@@ -40,6 +40,7 @@ export function applyProficiencies(
                 }
                 break;
             case "tool":
+            case "tool-proficiency":
                 if (prof.key && setters.setTools) {
                     setters.setTools([...new Set([...current.tools, prof.key])]);
                 }
@@ -85,7 +86,8 @@ export function getProficiencyName(prof: Proficiency, lang: "ru" | "en" = "ru"):
             return lang === "en" ? skill.nameEn : skill.name;
         }
 
-        case "tool": {
+        case "tool":
+        case "tool-proficiency": {
             if (prof.key) {
                 return getToolName(prof.key, lang);
             }
