@@ -1,12 +1,11 @@
 import type { Proficiency } from "@/data/proficiencies";
-import type { SOURCES } from "@/data/sources";
 import type { ChoiceOption } from "@/data/shared/choices";
 import type { Weapon } from "@/data/items/weapons";
 import type { Armor } from "@/data/items/armors";
 import type { Gear } from "@/data/items/gear";
 import type { Tool } from "@/data/items/tools";
 import type { EquipmentPack } from "@/data/items/equipment-packs";
-
+import type { SOURCES } from "@/data/sources";
 export type SourceKey = keyof typeof SOURCES;
 
 // Типы для экипировки предыстории

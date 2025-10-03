@@ -255,7 +255,7 @@ export default function Characters() {
                                 editing={editing}
                                 onEdit={edit}
                                 onRemove={remove}
-                                onView={(id) => nav(`/characters/${id}`)}
+                                onView={(id) => nav(`/character-list/${id}`)}
                             />
                         );
                     })}

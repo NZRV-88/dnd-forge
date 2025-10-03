@@ -1,4 +1,5 @@
 import React from "react";
+import DynamicFrame from "@/components/ui/DynamicFrame";
 
 type Props = {
   proficiencyBonus: number;
@@ -8,21 +9,18 @@ type Props = {
 };
 
 export default function ProficiencySpeed({ proficiencyBonus, speed, initiative, ac }: Props) {
-  const frameUrl = "/frames/profFrame.svg";
-
   return (
     <div className="space-y-3 -mt-[9px]">
       {/* Верхний ряд */}
       <div className="flex gap-3 justify-center">
         {/* Бонус мастерства */}
-        <div
+        <DynamicFrame
+          frameType="prof"
+          size="custom"
           className="relative flex flex-col items-center justify-center text-center"
           style={{
             width: "120px",       // подгон под характеристики
             height: "140px",      // та же высота, что у abilityFrame
-            backgroundImage: `url('${frameUrl}')`,
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
           }}
         >
           <div className="absolute top-7 text-[10px] font-bold text-gray-400">
@@ -34,17 +32,16 @@ export default function ProficiencySpeed({ proficiencyBonus, speed, initiative, 
           <div className="absolute bottom-7 text-[10px] font-bold text-gray-400">
             МАСТЕРСТВА
           </div>
-        </div>
+        </DynamicFrame>
 
         {/* Скорость передвижения */}
-        <div
+        <DynamicFrame
+          frameType="prof"
+          size="custom"
           className="relative flex flex-col items-center justify-center text-center"
           style={{
             width: "120px",
             height: "140px",
-            backgroundImage: `url('${frameUrl}')`,
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
           }}
         >
           <div className="absolute top-7 text-[10px] font-bold text-gray-400">
@@ -56,7 +53,7 @@ export default function ProficiencySpeed({ proficiencyBonus, speed, initiative, 
           <div className="absolute bottom-7 text-[10px] font-bold text-gray-400">
             ПЕРЕДВИЖЕНИЯ
           </div>
-        </div>
+        </DynamicFrame>
       </div>
     </div>
   );

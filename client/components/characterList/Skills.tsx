@@ -1,4 +1,6 @@
 import React from "react";
+import DynamicFrame from "@/components/ui/DynamicFrame";
+import { useFrameColor } from "@/contexts/FrameColorContext";
 
 type Props = {
   stats: Record<string, number>;
@@ -55,10 +57,16 @@ export default function Skills({
     a.ru.localeCompare(b.ru, "ru")
   );
 
+  const { frameColor } = useFrameColor();
+
   return (
-    <div className="frame-border relative w-[300px] min-h-[600px]">
+    <DynamicFrame
+      frameType="skills"
+      size="custom"
+      className="relative w-[310px] min-h-[600px]"
+    >
       {/* Контент */}
-      <div className="flex flex-col divide-y divide-neutral-700 -mt-1">
+      <div className="flex flex-col divide-y-2 divide-neutral-700 px-12 pt-3 pb-8">
         {sortedSkills.map(([key, { ability, ru }]) => {
           const value = stats[ability] || 0;
           const bonus = mod(value) + (profSet.has(key) ? proficiencyBonus : 0);
@@ -66,13 +74,13 @@ export default function Skills({
           return (
             <div
               key={key}
-              className="grid grid-cols-[30px_50px_minmax(0,1fr)_60px] items-center py-1 text-sm"
+              className="grid grid-cols-[0px_35px_minmax(0,1fr)_10px] items-center py-[3px] text-sm"
             >
               {/* Владение */}
               {onToggleProf ? (
                 <button
                   onClick={() => onToggleProf(key)}
-                  className="w-4 h-4 rounded-full flex items-center justify-center focus:outline-none"
+                  className="w-4 h-4 rounded-full flex items-center justify-center focus:outline-none -ml-6"
                 >
                   {profSet.has(key) ? (
                     <span className="w-3 h-3 rounded-full bg-[#B59E54] block hover:bg-yellow-400/70"></span>
@@ -95,7 +103,7 @@ export default function Skills({
 
               {/* Название */}
               <div
-                className="text-white whitespace-nowrap overflow-hidden text-ellipsis"
+                className="text-white whitespace-nowrap overflow-hidden text-ellipsis pr-4"
                 title={ru}
               >
                 {ru}
@@ -106,8 +114,23 @@ export default function Skills({
                 className="flex justify-center"
                 onClick={() => onRoll(`Проверка: ${ru}`, ability, bonus)}
               >
-                <span className="px-2 py-0.5 w-10 border border-[#B59E54] rounded text-white-400 font-bold text-sm hover:bg-[#B59E54]/20 ml-3">
-                  {bonus >= 0 ? `+${bonus}` : bonus}
+                <span 
+                  className="flex items-center justify-center w-10 h-8 border-2 rounded-md font-bold text-sm cursor-pointer transition-colors min-w-10 min-h-8 ml-2"
+                  style={{
+                    borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                    backgroundColor: 'transparent',
+                    width: '40px',
+                    height: '32px'
+                  }}
+                  onMouseEnter={(e) => {
+                    const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                    e.currentTarget.style.backgroundColor = `${lightColor}20`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  {bonus > 0 ? `+${bonus}` : bonus}
                 </span>
               </div>
             </div>
@@ -115,10 +138,10 @@ export default function Skills({
         })}
       </div>
 
-      {/* Заголовок снизу */}
-      <div className="text-center text-gray-400 text-xs font-bold uppercase mt-4">
+      {/* Заголовок снизу - внутри рамки, но с абсолютным позиционированием */}
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center text-gray-400 text-xs font-bold uppercase">
         НАВЫКИ
       </div>
-    </div>
+    </DynamicFrame>
   );
 }

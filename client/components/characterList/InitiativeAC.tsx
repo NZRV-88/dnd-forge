@@ -1,4 +1,6 @@
 import React from "react";
+import DynamicFrame from "@/components/ui/DynamicFrame";
+import { useFrameColor } from "@/contexts/FrameColorContext";
 
 type Props = {
   initiative: number;
@@ -8,41 +10,50 @@ type Props = {
 };
 
 export default function InitiativeAC({ initiative, dex, ac, onRoll }: Props) {
-  const initiativeFrameUrl = "/frames/initiativeFrame.svg";
-  const acFrameUrl = "/frames/ACFrame.svg";
+  const { frameColor } = useFrameColor();
 
   return (
 	<div className="flex flex-row items-start space-x-4">
 	  {/* Инициатива */}
-	  <div
-		onClick={() => onRoll("Инициатива", "dex", initiative)} 
-		className="relative flex flex-col items-center justify-center text-center"
+	  <DynamicFrame
+		frameType="initiative"
+		size="custom"
+		className="relative flex flex-col items-center justify-center text-center cursor-pointer"
 		style={{
 		  width: "120px",
 		  height: "140px",
-		  backgroundImage: `url('${initiativeFrameUrl}')`,
-		  backgroundSize: "100% 100%",
-		  backgroundRepeat: "no-repeat",
 		}}
+		onClick={() => onRoll("Инициатива", "dex", initiative)}
 	  >
 		<div className="absolute top-7 text-[10px] font-bold text-gray-400 -mt-3">
 		  ИНИЦИАТИВА
 		</div>
 		<div 
-			className="w-16 h-12 inset-0 flex items-center justify-center text-2xl font-bold border-2 border-[#B59E54] rounded-md bg-neutral-800 hover:bg-[#B59E54]/20">
+			className="w-16 h-12 inset-0 flex items-center justify-center text-2xl font-bold border-2 rounded-md transition-colors"
+			style={{
+				borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+				backgroundColor: 'transparent'
+			}}
+			onMouseEnter={(e) => {
+				const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+				e.currentTarget.style.backgroundColor = `${lightColor}20`;
+			}}
+			onMouseLeave={(e) => {
+				e.currentTarget.style.backgroundColor = 'transparent';
+			}}
+		>
 		  {initiative >= 0 ? `+${initiative}` : initiative}
 		</div>
-	  </div>
+	  </DynamicFrame>
 
 	  {/* Класс брони */}
-	  <div
+	  <DynamicFrame
+		frameType="ac"
+		size="custom"
 		className="relative flex flex-col items-center justify-center text-center"
 		style={{
 		  width: "120px",
 		  height: "140px",
-		  backgroundImage: `url('${acFrameUrl}')`,
-		  backgroundSize: "100% 100%",
-		  backgroundRepeat: "no-repeat",
 		}}
 	  >
 		<div className="absolute top-10 text-[10px] font-bold text-gray-400">
@@ -54,7 +65,7 @@ export default function InitiativeAC({ initiative, dex, ac, onRoll }: Props) {
 		<div className="absolute bottom-9 text-[10px] font-bold text-gray-400">
 		  БРОНИ
 		</div>
-	  </div>
+	  </DynamicFrame>
 	</div>
   );
 }

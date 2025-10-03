@@ -21,8 +21,10 @@ import AbilitiesPick from "./pages/create/Abilities";
 import EquipmentPick from "./pages/create/Equipment";
 import Summary from "./pages/create/Summary";
 import CharacterView from "./pages/CharacterView";
+import CharacterList from "./pages/CharacterList";
 import LoginPage from "./pages/auth/LoginPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { FrameColorProvider } from "@/contexts/FrameColorContext";
 
 const queryClient = new QueryClient();
 
@@ -32,8 +34,9 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-                <CharacterProvider>
-                    <Layout>
+                <FrameColorProvider>
+                    <CharacterProvider>
+                        <Layout>
                         <Routes>
                             <Route path="/" element={<Index />} />
                             <Route path="/login" element={<LoginPage />} />
@@ -121,11 +124,20 @@ const App = () => (
                                 }
                             />
                             <Route path="/characters/:id" element={<CharacterView />} />
+                            <Route 
+                                path="/character-list/:id" 
+                                element={
+                                    <ProtectedRoute>
+                                        <CharacterList />
+                                    </ProtectedRoute>
+                                } 
+                            />
                             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                             <Route path="*" element={<NotFound />} />
                         </Routes>
-                    </Layout>
-                </CharacterProvider>
+                        </Layout>
+                    </CharacterProvider>
+                </FrameColorProvider>
             </BrowserRouter>
         </TooltipProvider>
     </QueryClientProvider>

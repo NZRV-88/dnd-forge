@@ -1,3 +1,6 @@
+import type { SOURCES } from "@/data/sources";
+export type SourceKey = keyof typeof SOURCES;
+
 export interface Damage {
     dice: string;
     type: string;
@@ -24,7 +27,9 @@ export type Scaling = CantripScaling | SlotScaling;
 
 export interface Spell {
     key: string;
+    source: SourceKey;
     name: string;
+    nameEn?: string;
     level: number;         // 0 = заговор, 1+ = заклинание
     school: string;
     desc: string;
@@ -42,5 +47,5 @@ export interface Spell {
     classes?: string[];
     subclasses?: string[];
     isLegacy?: boolean;
-    source?: string;
+
 }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import DynamicFrame from "@/components/ui/DynamicFrame";
 
 interface HealthBlockProps {
   curHp: number;
@@ -46,12 +47,11 @@ export default function HealthBlock({
   };
 
   return (
-    <div
+    <DynamicFrame
+      frameType="health"
+      size="custom"
       className="relative p-3 text-gray-300"
       style={{
-        backgroundImage: "url('/frames/healthFrame.svg')",
-        backgroundSize: "100% 100%",
-        backgroundRepeat: "no-repeat",
         width: "94%",    // можно поставить фикс, напр. 360px
         height: "139px",  // подогнать под viewBox healthFrame.svg
         display: "grid",
@@ -187,6 +187,6 @@ export default function HealthBlock({
         <div />
         <div />
       </div>
-    </div>
+    </DynamicFrame>
   );
 }

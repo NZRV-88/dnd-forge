@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import STFrame from "@src/assets/frames/STFrame.svg?react";
-import PSModeFrame from "@src/assets/frames/PSModeFrame.svg?react";
+import DynamicFrame from "@/components/ui/DynamicFrame";
 import { Settings, X } from "lucide-react";
 
 type Props = {
@@ -94,33 +93,44 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
     const investigation = baseInvestigation + modifiers.investigation;
 
     return (
-        <div className="relative p-4 text-gray-300 w-[300px]">
-            <STFrame className="absolute inset-0 w-full h-full pointer-events-none" />
-
+        <DynamicFrame
+            frameType="st"
+            size="custom"
+            className="relative p-4 text-gray-300 w-[300px]"
+        >
             <div className="relative z-10 space-y-2">
                 {/* Чувства */}
-                <div className="relative w-full h-[40px] flex items-center">
-                    <PSModeFrame className="absolute inset-0 w-full h-full pointer-events-none" />
-                    <div className="relative w-[60px] flex items-center justify-center -ml-[7px]">
-                        <span className="font-bold text-sm">{perception}</span>
-                    </div>
-                    <span className="uppercase text-sm font-semibold ml-3">ВОСПРИЯТИЕ</span>
+                <div className="relative w-full h-[35px] flex items-center px-2">
+                    <DynamicFrame
+                        frameType="senses"
+                        size="custom"
+                        className="w-full h-full pointer-events-none"
+                        style={{ width: "100%", height: "35px" }}
+                    />
+                    <span className="absolute left-3 top-0 h-full flex items-center justify-center font-bold text-sm z-10 w-8">{perception}</span>
+                    <span className="absolute left-16 top-1/2 transform -translate-y-1/2 uppercase text-xs font-semibold z-10">ВОСПРИЯТИЕ</span>
                 </div>
 
-                <div className="relative w-full h-[40px] flex items-center">
-                    <PSModeFrame className="absolute inset-0 w-full h-full pointer-events-none" />
-                    <div className="relative w-[60px] flex items-center justify-center -ml-[7px]">
-                        <span className="font-bold text-sm">{insight}</span>
-                    </div>
-                    <span className="uppercase text-sm font-semibold ml-3">ПРОНИЦАТЕЛЬНОСТЬ</span>
+                <div className="relative w-full h-[35px] flex items-center px-2">
+                    <DynamicFrame
+                        frameType="senses"
+                        size="custom"
+                        className="w-full h-full pointer-events-none"
+                        style={{ width: "100%", height: "35px" }}
+                    />
+                    <span className="absolute left-3 top-0 h-full flex items-center justify-center font-bold text-sm z-10 w-8">{insight}</span>
+                    <span className="absolute left-16 top-1/2 transform -translate-y-1/2 uppercase text-xs font-semibold z-10">ПРОНИЦАТЕЛЬНОСТЬ</span>
                 </div>
 
-                <div className="relative w-full h-[40px] flex items-center">
-                    <PSModeFrame className="absolute inset-0 w-full h-full pointer-events-none" />
-                    <div className="relative w-[60px] flex items-center justify-center -ml-[7px]">
-                        <span className="font-bold text-sm">{investigation}</span>
-                    </div>
-                    <span className="uppercase text-sm font-semibold ml-3">РАССЛЕДОВАНИЕ</span>
+                <div className="relative w-full h-[35px] flex items-center px-2">
+                    <DynamicFrame
+                        frameType="senses"
+                        size="custom"
+                        className="w-full h-full pointer-events-none"
+                        style={{ width: "100%", height: "35px" }}
+                    />
+                    <span className="absolute left-3 top-0 h-full flex items-center justify-center font-bold text-sm z-10 w-8">{investigation}</span>
+                    <span className="absolute left-16 top-1/2 transform -translate-y-1/2 uppercase text-xs font-semibold z-10">РАССЛЕДОВАНИЕ</span>
                 </div>
 
                 {/* Зрения по центру */}
@@ -252,6 +262,6 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
                     </div>
                 </div>
             )}
-        </div>
+        </DynamicFrame>
     );
 }
