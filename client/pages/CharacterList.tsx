@@ -21,6 +21,7 @@ import { CLASS_CATALOG } from "@/data/classes";
 import { getEffectiveSpeed } from "@/data/races/types"; 
 import { supabase } from "@/lib/supabaseClient";
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
+import { Armors } from "@/data/items/armors";
 
 const LIST_KEY = "dnd-ru-characters";
 
@@ -222,8 +223,103 @@ export default function CharacterList() {
         return 2;
     })();
 
+    // Расчет класса брони с учетом доспехов и щитов
+    const calculateAC = () => {
+        const baseAC = 10; // Базовый AC без доспехов
+        const dexMod = Math.floor(((finalStats as any).dex || 10) - 10) / 2;
+        
+        if (!char?.equipped) return baseAC + dexMod;
+        
+        const { armor, shield1, shield2 } = char.equipped;
+        let totalAC = baseAC;
+        
+        console.log('Debug AC calculation:');
+        console.log('- baseAC:', baseAC);
+        console.log('- dexMod:', dexMod);
+        console.log('- armor:', armor);
+        console.log('- shield1:', shield1);
+        console.log('- shield2:', shield2);
+        
+        // Добавляем AC от доспехов - ищем полные данные по имени
+        if (armor) {
+            const armorData = Armors.find(a => a.name === armor.name);
+            if (armorData) {
+                totalAC = armorData.baseAC || baseAC;
+                console.log('- armor baseAC:', armorData.baseAC);
+                console.log('- armor category:', armorData.category);
+                console.log('- totalAC after armor:', totalAC);
+            } else {
+                console.log('- armor data not found for:', armor.name);
+                totalAC = baseAC;
+            }
+        }
+        
+        // Добавляем модификатор ловкости (если доспех это позволяет)
+        if (!armor) {
+            totalAC += dexMod;
+            console.log('- added full dexMod:', dexMod);
+        } else {
+            const armorData = Armors.find(a => a.name === armor.name);
+            if (armorData) {
+                if (armorData.category === 'light') {
+                    totalAC += dexMod;
+                    console.log('- added full dexMod:', dexMod);
+                } else if (armorData.category === 'medium') {
+                    const maxDex = armorData.maxDexBonus !== undefined ? armorData.maxDexBonus : 2;
+                    const dexBonus = Math.min(dexMod, maxDex);
+                    totalAC += dexBonus;
+                    console.log('- added limited dexMod:', dexBonus, '(max:', maxDex, ')');
+                } else if (armorData.category === 'heavy') {
+                    const maxDex = armorData.maxDexBonus !== undefined ? armorData.maxDexBonus : 0;
+                    const dexBonus = Math.min(dexMod, maxDex);
+                    totalAC += dexBonus;
+                    console.log('- added limited dexMod:', dexBonus, '(max:', maxDex, ')');
+                }
+            } else {
+                // Если данные доспеха не найдены, добавляем полный модификатор ловкости
+                totalAC += dexMod;
+                console.log('- armor data not found, added full dexMod:', dexMod);
+            }
+        }
+        
+        // Добавляем бонус от щита
+        if (shield1) {
+            totalAC += 2; // Стандартный бонус щита
+            console.log('- added shield1 bonus: +2');
+        }
+        if (shield2) {
+            totalAC += 2; // Второй щит (если есть)
+            console.log('- added shield2 bonus: +2');
+        }
+        
+        console.log('- final totalAC:', totalAC);
+        return totalAC;
+    };
+
     // universal addRoll function: any child can call it
-    const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "") => {
+    // Функция для парсинга кубиков урона (например, "1d8+3" или "1d8 +3" -> { dice: "1d8", modifier: 3 })
+    const parseDamageDice = (damageString: string) => {
+        const match = damageString.match(/^(\d+d\d+)\s*([+-]\d+)?$/);
+        if (match) {
+            const dice = match[1]; // "1d8"
+            const modifier = match[2] ? parseInt(match[2]) : 0; // "+3" или "-1"
+            return { dice, modifier };
+        }
+        return { dice: "1d4", modifier: 0 }; // По умолчанию
+    };
+
+    // Функция для броска кубика урона
+    const rollDamageDice = (diceString: string) => {
+        const { dice, modifier } = parseDamageDice(diceString);
+        const [numDice, diceSize] = dice.split('d').map(Number);
+        let total = 0;
+        for (let i = 0; i < numDice; i++) {
+            total += Math.floor(Math.random() * diceSize) + 1;
+        }
+        return { diceRoll: total, finalResult: total + modifier };
+    };
+
+    const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "", damageString?: string) => {
         const d20 = Math.floor(Math.random() * 20) + 1;
         const total = d20 + bonus;
         
@@ -234,11 +330,42 @@ export default function CharacterList() {
             entry = `ИНИЦИАТИВА: БРОСОК: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
         } else if (type === "Навык") {
             entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (type === "Атака") {
+            // Для атак: название оружия uppercase: ПОПАДАНИЕ: бросок
+            entry = `${desc.toUpperCase()}: ПОПАДАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (type === "Урон") {
+            // Для урона: используем правильный кубик урона
+            if (damageString) {
+                const { diceRoll, finalResult } = rollDamageDice(damageString);
+                const { dice, modifier } = parseDamageDice(damageString);
+                if (modifier !== 0) {
+                    entry = `${desc.toUpperCase()}: УРОН: ${dice}${modifier >= 0 ? '+' : ''}${modifier} = ${diceRoll}${modifier >= 0 ? '+' : ''}${modifier} = ${finalResult}`;
+                } else {
+                    entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${diceRoll} = ${finalResult}`;
+                }
+            } else {
+                // Fallback на d20 если нет строки урона
+                entry = `${desc.toUpperCase()}: УРОН: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+            }
+        } else if (type === "Заклинание") {
+            // Для заклинаний: название заклинания uppercase: ЗАКЛИНАНИЕ: бросок
+            entry = `${desc.toUpperCase()}: ЗАКЛИНАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
         } else {
             // Для характеристик
             entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
         }
         setRollLog((prev) => [entry, ...prev].slice(0, 200));
+    };
+
+    // Функция переключения активного слота оружия
+    const switchWeaponSlot = (slot: number) => {
+        setChar((prev: any) => ({
+            ...prev,
+            equipped: {
+                ...prev.equipped,
+                activeWeaponSlot: slot
+            }
+        }));
     };
 
     // Save changes back to Supabase
@@ -344,7 +471,7 @@ export default function CharacterList() {
                             proficiencyBonus={proficiencyBonus} 
                             speed={speed}
                             initiative={initiative}
-                            ac={b.ac ?? 10}
+                            ac={calculateAC()}
                         />
                     </div>
 
@@ -380,14 +507,14 @@ export default function CharacterList() {
                         <div className="flex-1 pt-0 pb-0">
                             <Skills
                                 stats={finalStats}
-                                profs={char.skillProfs}
+                                profs={characterData?.skills || []}
                                 proficiencyBonus={proficiencyBonus}
                                 onRoll={addRoll}
-                          //      {/*profs={char.skills}   // ✅ теперь всегда из char*/}
                                 onToggleProf={(skillKey) => {
-                                    const updated = char.skills.includes(skillKey)
-                                        ? char.skills.filter((s: string) => s !== skillKey)
-                                        : [...char.skills, skillKey];
+                                    const currentSkills = characterData?.skills || [];
+                                    const updated = currentSkills.includes(skillKey)
+                                        ? currentSkills.filter((s: string) => s !== skillKey)
+                                        : [...currentSkills, skillKey];
 
                                     setChar((prev: any) => ({ ...prev, skills: updated }));
                                 }}
@@ -401,7 +528,7 @@ export default function CharacterList() {
                         <div className="-mt-4">
                             <InitiativeAC
                                 initiative={initiative}
-                                ac={b.ac ?? 10}
+                                ac={calculateAC()}
                                 dex={(finalStats as any).dex ?? 0}
                                 onRoll={addRoll}
                             />
@@ -414,6 +541,11 @@ export default function CharacterList() {
                                 equipped={char?.equipped}
                                 stats={finalStats}
                                 proficiencyBonus={proficiencyBonus}
+                                classKey={char?.basics?.class}
+                                level={char?.basics?.level}
+                                onRoll={addRoll}
+                                onSwitchWeaponSlot={switchWeaponSlot}
+                                characterData={characterData}
                             />
                         </div>
                     </div>

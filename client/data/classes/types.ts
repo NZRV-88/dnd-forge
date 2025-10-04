@@ -40,7 +40,8 @@ export type Feature = {
     spells?: string[];              // Заклинания от класса
     preparedSpells?: ClassSpell[];   
     bonus?: Bonus[]; 
-    source?: string
+    source?: string;
+    extraAttack?: number;           // Количество дополнительных атак
 };
 export type Bonus = {
     key: string;

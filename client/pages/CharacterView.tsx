@@ -209,8 +209,30 @@ export default function CharacterView() {
     // skill profs set (normalized)
     const skillProfs: string[] = Array.isArray(char.skills) ? char.skills : [];
 
+    // Функция для парсинга кубиков урона (например, "1d8+3" или "1d8 +3" -> { dice: "1d8", modifier: 3 })
+    const parseDamageDice = (damageString: string) => {
+        const match = damageString.match(/^(\d+d\d+)\s*([+-]\d+)?$/);
+        if (match) {
+            const dice = match[1]; // "1d8"
+            const modifier = match[2] ? parseInt(match[2]) : 0; // "+3" или "-1"
+            return { dice, modifier };
+        }
+        return { dice: "1d4", modifier: 0 }; // По умолчанию
+    };
+
+    // Функция для броска кубика урона
+    const rollDamageDice = (diceString: string) => {
+        const { dice, modifier } = parseDamageDice(diceString);
+        const [numDice, diceSize] = dice.split('d').map(Number);
+        let total = 0;
+        for (let i = 0; i < numDice; i++) {
+            total += Math.floor(Math.random() * diceSize) + 1;
+        }
+        return { diceRoll: total, finalResult: total + modifier };
+    };
+
     // universal addRoll function: any child can call it
-    const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "") => {
+    const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "", damageString?: string) => {
         const d20 = Math.floor(Math.random() * 20) + 1;
         const total = d20 + bonus;
         
@@ -221,6 +243,26 @@ export default function CharacterView() {
             entry = `ИНИЦИАТИВА: БРОСОК: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
         } else if (type === "Навык") {
             entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (type === "Атака") {
+            // Для атак: название оружия uppercase: ПОПАДАНИЕ: бросок
+            entry = `${desc.toUpperCase()}: ПОПАДАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (type === "Урон") {
+            // Для урона: используем правильный кубик урона
+            if (damageString) {
+                const { diceRoll, finalResult } = rollDamageDice(damageString);
+                const { dice, modifier } = parseDamageDice(damageString);
+                if (modifier !== 0) {
+                    entry = `${desc.toUpperCase()}: УРОН: ${dice}${modifier >= 0 ? '+' : ''}${modifier} = ${diceRoll}${modifier >= 0 ? '+' : ''}${modifier} = ${finalResult}`;
+                } else {
+                    entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${diceRoll} = ${finalResult}`;
+                }
+            } else {
+                // Fallback на d20 если нет строки урона
+                entry = `${desc.toUpperCase()}: УРОН: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+            }
+        } else if (type === "Заклинание") {
+            // Для заклинаний: название заклинания uppercase: ЗАКЛИНАНИЕ: бросок
+            entry = `${desc.toUpperCase()}: ЗАКЛИНАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
         } else {
             // Для характеристик
             entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
@@ -354,14 +396,14 @@ export default function CharacterView() {
                     <div className="space-y-4">
                         <Skills
                             stats={finalStats}
-                            profs={char.skillProfs}
+                            profs={characterData?.skills || []}
                             proficiencyBonus={proficiencyBonus}
                             onRoll={addRoll}
-                      //      {/*profs={char.skills}   // ✅ теперь всегда из char*/}
                             onToggleProf={(skillKey) => {
-                                const updated = char.skills.includes(skillKey)
-                                    ? char.skills.filter((s: string) => s !== skillKey)
-                                    : [...char.skills, skillKey];
+                                const currentSkills = characterData?.skills || [];
+                                const updated = currentSkills.includes(skillKey)
+                                    ? currentSkills.filter((s: string) => s !== skillKey)
+                                    : [...currentSkills, skillKey];
 
                                 setChar((prev: any) => ({ ...prev, skills: updated }));
                             }}

@@ -36,7 +36,7 @@ export interface Spell {
     isCombat: boolean;
     isRitual?: boolean;
     castingTime: string;
-    range: string;
+    range: number;
     components: string[];  // В, С, М
     duration: string;
     area?: string;
