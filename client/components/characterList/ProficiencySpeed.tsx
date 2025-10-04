@@ -10,7 +10,7 @@ type Props = {
 
 export default function ProficiencySpeed({ proficiencyBonus, speed, initiative, ac }: Props) {
   return (
-    <div className="space-y-3 -mt-[9px]">
+    <div className="flex items-start justify-center pt-3">
       {/* Верхний ряд */}
       <div className="flex gap-3 justify-center">
         {/* Бонус мастерства */}
@@ -20,7 +20,7 @@ export default function ProficiencySpeed({ proficiencyBonus, speed, initiative, 
           className="relative flex flex-col items-center justify-center text-center"
           style={{
             width: "120px",       // подгон под характеристики
-            height: "140px",      // та же высота, что у abilityFrame
+            height: "139px",      // такая же высота, как у HealthBlock
           }}
         >
           <div className="absolute top-7 text-[10px] font-bold text-gray-400">
@@ -41,7 +41,7 @@ export default function ProficiencySpeed({ proficiencyBonus, speed, initiative, 
           className="relative flex flex-col items-center justify-center text-center"
           style={{
             width: "120px",
-            height: "140px",
+            height: "139px",      // такая же высота, как у HealthBlock
           }}
         >
           <div className="absolute top-7 text-[10px] font-bold text-gray-400">

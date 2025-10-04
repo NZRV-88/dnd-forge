@@ -110,7 +110,7 @@ export default function SavingThrows({ stats, onRoll }: Props) {
                     '--hover-bg': `${hexColor}80`
                   } as React.CSSProperties}
                   onClick={() =>
-                    onRoll(`Спасбросок ${label}`, key, value, "Спасбросок")
+                    onRoll(label, key, value, "Спасбросок")
                   }
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = `${hexColor}20`;

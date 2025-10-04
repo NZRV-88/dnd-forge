@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import DynamicFrame from "@/components/ui/DynamicFrame";
 import { useFrameColor } from "@/contexts/FrameColorContext";
 import { Settings, X } from "lucide-react";
+import { getToolName } from "@/data/items/tools";
 
 type ProficienciesData = {
     armor: string[];
@@ -18,6 +18,33 @@ interface ProficienciesProps {
         languages?: string[];
     };
 }
+
+// Функция для определения категорий владений
+// Переводим языки на русский
+const translateLanguages = (languages: string[]) => {
+    const translations: { [key: string]: string } = {
+        'common': 'Общий',
+        'dwarvish': 'Дварфский',
+        'elvish': 'Эльфийский',
+        'giant': 'Гигантский',
+        'gnomish': 'Гномий',
+        'goblin': 'Гоблинский',
+        'halfling': 'Полуросличий',
+        'orc': 'Орочий',
+        'abyssal': 'Бездны',
+        'celestial': 'Небесный',
+        'draconic': 'Драконий',
+        'deep speech': 'Глубинная речь',
+        'infernal': 'Адский',
+        'primordial': 'Первородный',
+        'sylvan': 'Лесной',
+        'undercommon': 'Подземный общий'
+    };
+    
+    return languages.map(lang => 
+        translations[lang.toLowerCase()] || lang
+    );
+};
 
 export default function Proficiencies({ data }: ProficienciesProps) {
     const { frameColor } = useFrameColor();
@@ -52,31 +79,178 @@ export default function Proficiencies({ data }: ProficienciesProps) {
         localStorage.setItem("proficiencies", JSON.stringify(proficiencies));
     }, [proficiencies]);
 
-    const renderBlock = (title: string, items: string[]) => {
+    // Переводим категории на русский
+    const translateArmorCategories = (armor: string[]) => {
+        const translations: { [key: string]: string } = {
+            'light': 'Легкая броня',
+            'medium': 'Средняя броня', 
+            'heavy': 'Тяжелая броня',
+            'shield': 'Щиты'
+        };
+        
+        return armor.map(item => 
+            translations[item.toLowerCase()] || item
+        );
+    };
+
+    // Создаем обратный словарь для поиска источников
+    const getArmorSource = (translatedItem: string) => {
+        const reverseTranslations: { [key: string]: string } = {
+            'Легкая броня': 'light',
+            'Средняя броня': 'medium',
+            'Тяжелая броня': 'heavy',
+            'Щиты': 'shield'
+        };
+        const originalKey = reverseTranslations[translatedItem];
+        return originalKey ? data?.proficiencySources?.armors?.[originalKey] : undefined;
+    };
+
+    const translateWeaponCategories = (weapons: string[]) => {
+        const translations: { [key: string]: string } = {
+            'simple': 'Простое оружие',
+            'martial': 'Воинское оружие'
+        };
+        
+        return weapons.map(item => 
+            translations[item.toLowerCase()] || item
+        );
+    };
+
+    const getWeaponSource = (translatedItem: string) => {
+        const reverseTranslations: { [key: string]: string } = {
+            'Простое оружие': 'simple',
+            'Воинское оружие': 'martial'
+        };
+        const originalKey = reverseTranslations[translatedItem];
+        return originalKey ? data?.proficiencySources?.weapons?.[originalKey] : undefined;
+    };
+
+    const translateToolCategories = (tools: string[]) => {
+        const categoryTranslations: { [key: string]: string } = {
+            'artisan': 'Ремесленные инструменты',
+            'musical': 'Музыкальные инструменты',
+            'gaming': 'Игровые наборы'
+        };
+        
+        return tools.map(item => {
+            const lowerItem = item.toLowerCase();
+            
+            // Если это категория, переводим её
+            if (categoryTranslations[lowerItem]) {
+                return categoryTranslations[lowerItem];
+            }
+            
+            // Если это конкретный инструмент, используем getToolName
+            return getToolName(item, "ru");
+        });
+    };
+
+    const getToolSource = (translatedItem: string) => {
+        const reverseTranslations: { [key: string]: string } = {
+            'Ремесленные инструменты': 'artisan',
+            'Музыкальные инструменты': 'musical',
+            'Игровые наборы': 'gaming'
+        };
+        
+        // Сначала проверяем категории
+        const originalKey = reverseTranslations[translatedItem];
+        if (originalKey) {
+            return data?.proficiencySources?.tools?.[originalKey];
+        }
+        
+        // Если это не категория, ищем по оригинальному ключу среди всех инструментов
+        const allTools = data?.proficiencySources?.tools || {};
+        for (const [key, source] of Object.entries(allTools)) {
+            const translatedKey = getToolName(key, "ru");
+            if (translatedKey === translatedItem) {
+                return source;
+            }
+        }
+        
+        return undefined;
+    };
+
+    const categories = {
+        armor: translateArmorCategories(proficiencies.armor),
+        weapons: translateWeaponCategories(proficiencies.weapons),
+        tools: translateToolCategories(proficiencies.tools),
+        languages: translateLanguages(proficiencies.languages)
+    };
+
+
+    const renderBlock = (title: string, items: string[], isLast: boolean = false, getSourceFn?: (item: string) => string | undefined) => {
         if (!items || items.length === 0) return null;
         return (
-            <div className="flex justify-between text-sm">
-                <span className="text-gray-300 font-semibold">{title}</span>
-                <span className="text-gray-200">{items.join(", ")}</span>
+            <div className="mb-4">
+                <div className="text-gray-400 font-semibold uppercase text-sm mb-2">
+                    {title}
+                </div>
+                <div className="text-gray-200 text-sm mb-2">
+                    {items.map((item, index) => {
+                        const source = getSourceFn ? getSourceFn(item) : undefined;
+                        return (
+                            <span key={item}>
+                                <span 
+                                    className="cursor-help relative group"
+                                    title={source || `Владение: ${item}`}
+                                >
+                                    {item}
+                                    {/* Красивый tooltip */}
+                                    {source && (
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
+                                            <div className="text-white font-semibold">{source}</div>
+                                            {/* Стрелочка */}
+                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                                        </div>
+                                    )}
+                                </span>
+                                {index < items.length - 1 && ", "}
+                            </span>
+                        );
+                    })}
+                </div>
+                {!isLast && (
+                    <div 
+                        className="h-px"
+                        style={{
+                            backgroundColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                        }}
+                    />
+                )}
             </div>
         );
     };
 
     return (
-        <DynamicFrame
-            frameType="prof"
-            size="custom"
-            className="relative p-4 text-gray-300 w-[300px]"
+        <div
+            className="relative text-gray-300 w-[300px] h-[400px]"
+            style={{
+                backgroundImage: "url('/frames/proficiencyFrame.svg')",
+                backgroundSize: "100% auto",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+            }}
         >
-            <div className="relative z-10 space-y-2">
-                {renderBlock("Броня", proficiencies.armor)}
-                {renderBlock("Оружие", proficiencies.weapons)}
-                {renderBlock("Инструменты", proficiencies.tools)}
-                {renderBlock("Языки", proficiencies.languages)}
+            {/* Контент внутри рамки */}
+            <div className="relative z-10 px-4 pt-8 pb-6 pl-6">
+                {renderBlock("БРОНЯ", categories.armor, false, getArmorSource)}
+                {renderBlock("ОРУЖИЕ", categories.weapons, false, getWeaponSource)}
+                {renderBlock("ИНСТРУМЕНТЫ", categories.tools, false, getToolSource)}
+                {renderBlock("ЯЗЫКИ", categories.languages, true, (translatedItem) => {
+                    // Ищем по переведенному названию среди всех языков
+                    const allLanguages = data?.proficiencySources?.languages || {};
+                    for (const [key, source] of Object.entries(allLanguages)) {
+                        const translatedKey = translateLanguages([key])[0];
+                        if (translatedKey === translatedItem) {
+                            return source;
+                        }
+                    }
+                    return undefined;
+                })}
             </div>
 
-            {/* Заголовок + шестерёнка */}
-            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold mt-4">
+            {/* Заголовок + шестерёнка снизу */}
+            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold -mt-1">
                 ВЛАДЕНИЯ
                 <button
                     onClick={() => setIsOpen(true)}
@@ -147,6 +321,6 @@ export default function Proficiencies({ data }: ProficienciesProps) {
                     </div>
                 </div>
             )}
-        </DynamicFrame>
+        </div>
     );
 }

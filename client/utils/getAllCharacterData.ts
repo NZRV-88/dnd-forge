@@ -2,6 +2,7 @@ import { CharacterDraft } from "@/store/character";
 import { getFixedRaceData } from "@/utils/getFixedRaceData";
 import { getFixedClassData } from "@/utils/getFixedClassData";
 import { getFixedBackgroundData } from "@/utils/getFixedBackgroundData";
+import { getBackgroundByKey } from "@/data/backgrounds";
 import { getClassByKey } from "@/data/classes";
 import { getFeatByKey } from "@/data/feats";
 import { Abilities } from "@/data/abilities";
@@ -34,13 +35,41 @@ export function getAllCharacterData(draft: CharacterDraft) {
     let speed: number | undefined;
     let initiativeBonus: number | undefined;
 
+    // Отслеживание источников владений
+    const proficiencySources: {
+        skills: Record<string, string>;
+        tools: Record<string, string>;
+        weapons: Record<string, string>;
+        armors: Record<string, string>;
+        languages: Record<string, string>;
+    } = {
+        skills: {},
+        tools: {},
+        weapons: {},
+        armors: {},
+        languages: {}
+    };
+
     /* -----------------------------
        Race / Subrace
     ----------------------------- */
     const raceFixed = getFixedRaceData(draft.basics.race, draft.basics.subrace);
-    raceFixed.proficiencies.skills.forEach(s => skills.add(s));
-    raceFixed.proficiencies.tools.forEach(t => tools.add(t));
-    raceFixed.languages.forEach(l => languages.add(l));
+    const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
+    const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+    const raceSource = subraceName ? `${raceName} (${subraceName})` : raceName;
+    
+    raceFixed.proficiencies.skills.forEach(s => {
+        skills.add(s);
+        proficiencySources.skills[s] = raceSource;
+    });
+    raceFixed.proficiencies.tools.forEach(t => {
+        tools.add(t);
+        proficiencySources.tools[t] = raceSource;
+    });
+    raceFixed.languages.forEach(l => {
+        languages.add(l);
+        proficiencySources.languages[l] = raceSource;
+    });
     raceFixed.spells.forEach(sp => spells.add(sp));
     speed = raceFixed.speed;
     for (const [k, v] of Object.entries(raceFixed.abilityBonuses)) {
@@ -52,10 +81,24 @@ export function getAllCharacterData(draft: CharacterDraft) {
        Class
     ----------------------------- */
     const classFixed = getFixedClassData(draft.basics.class);
-    classFixed.proficiencies.skills.forEach(s => skills.add(s));
-    classFixed.proficiencies.tools.forEach(t => tools.add(t));
-    classFixed.proficiencies.weapons.forEach(w => weapons.add(w));
-    classFixed.proficiencies.armors.forEach(a => armors.add(a));
+    const className = getClassByKey(draft.basics.class)?.name || "Класс";
+    
+    classFixed.proficiencies.skills.forEach(s => {
+        skills.add(s);
+        proficiencySources.skills[s] = className;
+    });
+    classFixed.proficiencies.tools.forEach(t => {
+        tools.add(t);
+        proficiencySources.tools[t] = className;
+    });
+    classFixed.proficiencies.weapons.forEach(w => {
+        weapons.add(w);
+        proficiencySources.weapons[w] = className;
+    });
+    classFixed.proficiencies.armors.forEach(a => {
+        armors.add(a);
+        proficiencySources.armors[a] = className;
+    });
     classFixed.proficiencies.savingThrows.forEach(s => savingThrows.add(s));
 
     /* -----------------------------
@@ -65,6 +108,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
         feats.add(featKey);
         const feat = getFeatByKey(featKey);
         if (!feat) continue;
+        const featName = feat.name;
 
         if (feat.effect) {
             for (const bonus of feat.effect) {
@@ -94,34 +138,56 @@ export function getAllCharacterData(draft: CharacterDraft) {
                     initiativeBonus = (initiativeBonus ?? 0) + bonus.initiative;
                 }
 
-                // Владения через applyProficiencies
+                // Владения через applyProficiencies (сохраняем категории как есть)
                 if (bonus.proficiencies) {
                     const profs: Proficiency[] = bonus.proficiencies
                         .map(mapKeyToProficiency)
                         .filter((p): p is Proficiency => p !== null);
 
-                    const current = {
-                        skills: [] as string[],
-                        tools: [] as string[],
-                        weapons: [] as string[],
-                        armors: [] as string[],
-                        savingThrows: [] as string[],
-                    };
-                    const setters = {
-                        setSkills: (arr: string[]) => (current.skills = arr),
-                        setTools: (arr: string[]) => (current.tools = arr),
-                        setWeapons: (arr: string[]) => (current.weapons = arr),
-                        setArmors: (arr: string[]) => (current.armors = arr),
-                        setSavingThrows: (arr: string[]) => (current.savingThrows = arr),
-                    };
-
-                    applyProficiencies(profs, current, setters);
-
-                    current.skills.forEach(s => skills.add(s));
-                    current.tools.forEach(t => tools.add(t));
-                    current.weapons.forEach(w => weapons.add(w));
-                    current.armors.forEach(a => armors.add(a));
-                    current.savingThrows.forEach(s => savingThrows.add(s));
+                    profs.forEach((prof: Proficiency) => {
+                        switch (prof.type) {
+                            case "skill":
+                                if (prof.key) {
+                                    skills.add(prof.key);
+                                    proficiencySources.skills[prof.key] = featName;
+                                }
+                                break;
+                            case "tool":
+                            case "tool-proficiency":
+                                if (prof.key) {
+                                    tools.add(prof.key);
+                                    proficiencySources.tools[prof.key] = featName;
+                                } else if (prof.category) {
+                                    // Сохраняем категорию как есть, не разворачиваем
+                                    tools.add(prof.category);
+                                    proficiencySources.tools[prof.category] = featName;
+                                }
+                                break;
+                            case "weapon":
+                                if (prof.key) {
+                                    weapons.add(prof.key);
+                                    proficiencySources.weapons[prof.key] = featName;
+                                } else if (prof.category) {
+                                    // Сохраняем категорию как есть, не разворачиваем
+                                    weapons.add(prof.category);
+                                    proficiencySources.weapons[prof.category] = featName;
+                                }
+                                break;
+                            case "armor":
+                                if (prof.key) {
+                                    armors.add(prof.key);
+                                    proficiencySources.armors[prof.key] = featName;
+                                } else if (prof.category) {
+                                    // Сохраняем категорию как есть, не разворачиваем
+                                    armors.add(prof.category);
+                                    proficiencySources.armors[prof.category] = featName;
+                                }
+                                break;
+                            case "savingThrow":
+                                if (prof.key) savingThrows.add(prof.key);
+                                break;
+                        }
+                    });
                 }
                 // Навыки (feat может просто дать владение напрямую)
                 if (bonus.skills) {
@@ -134,12 +200,161 @@ export function getAllCharacterData(draft: CharacterDraft) {
     }
 
     /* -----------------------------
+       Subclass (подкласс)
+    ----------------------------- */
+    if (draft.basics.subclass) {
+        const classInfo = getClassByKey(draft.basics.class);
+        if (classInfo?.subclasses) {
+            const subclass = classInfo.subclasses.find(sc => sc.key === draft.basics.subclass);
+            if (subclass) {
+                const subclassName = subclass.name || `${classInfo.name} (${subclass.key})`;
+                
+                // Обрабатываем владения из подкласса
+                if (subclass.features) {
+                    Object.entries(subclass.features).forEach(([level, features]) => {
+                        features.forEach((feature, featureIdx) => {
+                            if (feature.proficiencies) {
+                                feature.proficiencies.forEach((prof: Proficiency) => {
+                                    switch (prof.type) {
+                                        case "skill":
+                                            if (prof.key) {
+                                                skills.add(prof.key);
+                                                proficiencySources.skills[prof.key] = subclassName;
+                                            }
+                                            break;
+                                        case "tool":
+                                        case "tool-proficiency":
+                                            if (prof.key) {
+                                                tools.add(prof.key);
+                                                proficiencySources.tools[prof.key] = subclassName;
+                                            } else if (prof.category) {
+                                                tools.add(prof.category);
+                                                proficiencySources.tools[prof.category] = subclassName;
+                                            }
+                                            break;
+                                        case "weapon":
+                                            if (prof.key) {
+                                                weapons.add(prof.key);
+                                                proficiencySources.weapons[prof.key] = subclassName;
+                                            } else if (prof.category) {
+                                                weapons.add(prof.category);
+                                                proficiencySources.weapons[prof.category] = subclassName;
+                                            }
+                                            break;
+                                        case "armor":
+                                            if (prof.key) {
+                                                armors.add(prof.key);
+                                                proficiencySources.armors[prof.key] = subclassName;
+                                            } else if (prof.category) {
+                                                armors.add(prof.category);
+                                                proficiencySources.armors[prof.category] = subclassName;
+                                            }
+                                            break;
+                                        case "language":
+                                            if (prof.key) {
+                                                languages.add(prof.key);
+                                                proficiencySources.languages[prof.key] = subclassName;
+                                            }
+                                            break;
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+            }
+        }
+    }
+
+    /* -----------------------------
        Chosen (игрок)
     ----------------------------- */
-    Object.values(draft.chosen.skills).flat().forEach(s => skills.add(s));
-    Object.values(draft.chosen.tools).flat().forEach(t => tools.add(t));
-    Object.values(draft.chosen.toolProficiencies).flat().forEach(tp => toolProficiencies.add(tp));
-    Object.values(draft.chosen.languages).flat().forEach(l => languages.add(l));
+    // Обрабатываем выбранные навыки с учетом источника
+    Object.entries(draft.chosen.skills).forEach(([source, skillList]) => {
+        skillList.forEach(s => {
+            skills.add(s);
+            // Для навыков из расы учитываем подрасу
+            if (source === "race" || source.startsWith("subrace")) {
+                const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
+                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+                proficiencySources.skills[s] = subraceName ? `${raceName} (${subraceName})` : raceName;
+            } else if (source.startsWith("background")) {
+                // Все источники, начинающиеся с "background" - это предыстория
+                const background = getBackgroundByKey(draft.basics.background);
+                const backgroundName = background?.name || "Предыстория";
+                proficiencySources.skills[s] = backgroundName;
+            } else {
+                proficiencySources.skills[s] = source === "class" ? "Класс" : 
+                                            source === "subclass" ? "Подкласс" : 
+                                            source === "background" ? "Предыстория" : "Игрок";
+            }
+        });
+    });
+    
+    // Обрабатываем выбранные инструменты с учетом источника
+    Object.entries(draft.chosen.tools).forEach(([source, toolList]) => {
+        toolList.forEach(t => {
+            tools.add(t);
+            // Для инструментов из расы учитываем подрасу
+            if (source === "race") {
+                const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
+                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+                proficiencySources.tools[t] = subraceName ? `${raceName} (${subraceName})` : raceName;
+            } else if (source.startsWith("background")) {
+                // Все источники, начинающиеся с "background" - это предыстория
+                const background = getBackgroundByKey(draft.basics.background);
+                const backgroundName = background?.name || "Предыстория";
+                proficiencySources.tools[t] = backgroundName;
+            } else {
+                proficiencySources.tools[t] = source === "class" ? "Класс" : 
+                                            source === "subclass" ? "Подкласс" : 
+                                            source === "background" ? "Предыстория" : "Игрок";
+            }
+        });
+    });
+    
+    Object.entries(draft.chosen.toolProficiencies).forEach(([source, toolList]) => {
+        toolList.forEach(tp => {
+            toolProficiencies.add(tp);
+            // Для инструментов из расы учитываем подрасу
+            if (source === "race") {
+                const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
+                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+                proficiencySources.tools[tp] = subraceName ? `${raceName} (${subraceName})` : raceName;
+            } else if (source.startsWith("background")) {
+                // Все источники, начинающиеся с "background" - это предыстория
+                const background = getBackgroundByKey(draft.basics.background);
+                const backgroundName = background?.name || "Предыстория";
+                proficiencySources.tools[tp] = backgroundName;
+            } else {
+                proficiencySources.tools[tp] = source === "class" ? "Класс" : 
+                                            source === "subclass" ? "Подкласс" : 
+                                            source === "background" ? "Предыстория" : "Игрок";
+            }
+        });
+    });
+    
+    // Обрабатываем выбранные языки с учетом источника
+    Object.entries(draft.chosen.languages).forEach(([source, langList]) => {
+        langList.forEach(l => {
+            languages.add(l);
+            // Для языков из расы учитываем подрасу
+            if (source === "race" || source.startsWith("subrace")) {
+                const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
+                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+                proficiencySources.languages[l] = subraceName ? `${raceName} (${subraceName})` : raceName;
+            } else if (source.startsWith("background")) {
+                // Все источники, начинающиеся с "background" - это предыстория
+                const background = getBackgroundByKey(draft.basics.background);
+                const backgroundName = background?.name || "Предыстория";
+                proficiencySources.languages[l] = backgroundName;
+            } else {
+                proficiencySources.languages[l] = source === "class" ? "Класс" : 
+                                                source === "subclass" ? "Подкласс" : 
+                                                source === "background" ? "Предыстория" : "Игрок";
+            }
+        });
+    });
     Object.values(draft.chosen.spells).flat().forEach(sp => spells.add(sp));
     draft.chosen.feats.forEach(f => feats.add(f));
 
@@ -153,6 +368,24 @@ export function getAllCharacterData(draft: CharacterDraft) {
        Background bonuses
     ----------------------------- */
     const backgroundFixed = getFixedBackgroundData(draft.basics.background);
+    const backgroundName = backgroundFixed.name || "Предыстория";
+    
+    // Обрабатываем владения из предыстории
+    if (backgroundFixed.proficiencies) {
+        backgroundFixed.proficiencies.skills?.forEach(s => {
+            skills.add(s);
+            proficiencySources.skills[s] = backgroundName;
+        });
+        backgroundFixed.proficiencies.tools?.forEach(t => {
+            tools.add(t);
+            proficiencySources.tools[t] = backgroundName;
+        });
+        backgroundFixed.proficiencies.languages?.forEach(l => {
+            languages.add(l);
+            proficiencySources.languages[l] = backgroundName;
+        });
+    }
+    
     for (const [k, v] of Object.entries(backgroundFixed.abilityBonuses)) {
         abilityBonuses[k as keyof Abilities] = (abilityBonuses[k as keyof Abilities] || 0) + v;
     }
@@ -167,6 +400,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
         }
     }
 
+    
     return {
         skills: Array.from(skills),
         tools: Array.from(tools),
@@ -181,6 +415,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
         abilityMax,
         speed,
         initiativeBonus,
+        proficiencySources,
     };
 }
 

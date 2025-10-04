@@ -66,11 +66,8 @@ export default function Skills({
       className="relative w-[310px] min-h-[600px]"
     >
       {/* Контент */}
-      <div 
+      <div
         className="flex flex-col px-12 pt-3 pb-8"
-        style={{
-          borderTop: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
-        }}
       >
         {sortedSkills.map(([key, { ability, ru }], index) => {
           const value = stats[ability] || 0;
@@ -87,7 +84,7 @@ export default function Skills({
                 />
               )}
               <div
-                className="grid grid-cols-[0px_35px_minmax(0,1fr)_10px] items-center py-[3px] text-sm"
+                className="grid grid-cols-[0px_35px_minmax(0,1fr)_10px] items-center py-[1px] text-sm"
               >
               {/* Владение */}
               {onToggleProf ? (
@@ -125,7 +122,7 @@ export default function Skills({
               {/* Бонус */}
               <div
                 className="flex justify-center"
-                onClick={() => onRoll(`Проверка: ${ru}`, ability, bonus)}
+                onClick={() => onRoll(ru, ability, bonus, "Навык")}
               >
                 <span 
                   className="flex items-center justify-center w-10 h-8 border-2 rounded-md font-bold text-sm cursor-pointer transition-colors min-w-10 min-h-8 ml-2"

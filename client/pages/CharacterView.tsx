@@ -213,7 +213,18 @@ export default function CharacterView() {
     const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "") => {
         const d20 = Math.floor(Math.random() * 20) + 1;
         const total = d20 + bonus;
-        const entry = `${desc} (${abilityKey.toUpperCase()}${type ? `, ${type}` : ""}): 🎲 ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        
+        let entry = "";
+        if (type === "Спасбросок") {
+            entry = `${desc.toUpperCase()}: СПАС: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (desc === "Инициатива") {
+            entry = `ИНИЦИАТИВА: БРОСОК: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (type === "Навык") {
+            entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else {
+            // Для характеристик
+            entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        }
         setRollLog((prev) => [entry, ...prev].slice(0, 200));
     };
 
@@ -333,7 +344,7 @@ export default function CharacterView() {
                     <div className="space-y-4">
                         <SavingThrows
                             stats={finalStats}
-                            onRoll={(label, ability, value) => addRoll(label, ability, value)}
+                            onRoll={(label, ability, value, type) => addRoll(label, ability, value, type)}
                         />
                         <PassiveSenses stats={finalStats} />
                         {/*<Proficiencies profs={char.profs || {}} />*/}

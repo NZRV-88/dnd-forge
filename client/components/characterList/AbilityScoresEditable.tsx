@@ -1,5 +1,6 @@
 import React from "react";
 import DynamicFrame from "@/components/ui/DynamicFrame";
+import { useFrameColor } from "@/contexts/FrameColorContext";
 
 type Props = {
   stats: Record<string, number>;
@@ -21,6 +22,8 @@ const formatMod = (v: number) => {
 };
 
 export default function AbilityScoresEditable({ stats, onRoll }: Props) {
+  const { frameColor } = useFrameColor();
+  
   return (
     <div className="flex justify-between w-[620px] mx-auto">
         {Object.entries(ABILITIES).map(([key, { ru, short }]) => {
@@ -47,37 +50,41 @@ export default function AbilityScoresEditable({ stats, onRoll }: Props) {
                 {short}
               </div>
 
-              {/* Значение характеристики в центре */}
+              {/* Модификатор в центре с рамкой */}
               <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center border-2 rounded-md w-[70px] h-[35px] -mt-[3px] flex items-center justify-center z-20 cursor-pointer"
                 style={{
                   fontSize: "24px",
                   fontWeight: "bold",
                   color: "#F5F5F5",
+                  textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+                  borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                  backgroundColor: 'transparent'
+                }}
+                onClick={() => onRoll(ru, key, Math.floor((value - 10) / 2))}
+                onMouseEnter={(e) => {
+                  const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                  e.currentTarget.style.backgroundColor = `${lightColor}20`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                title={`Бросок ${ru}`}
+              >
+                {mod}
+              </div>
+
+              {/* Значение характеристики внизу */}
+              <div
+                className="absolute bottom-[17%] left-1/2 -translate-x-1/2 text-center font-bold text-gray-400"
+                style={{
+                  fontSize: "14px",
                   textShadow: "1px 1px 2px rgba(0,0,0,0.8)"
                 }}
               >
                 {value}
               </div>
 
-              {/* Модификатор внизу */}
-              <div
-                className="absolute bottom-[20%] left-1/2 -translate-x-1/2 text-center font-bold"
-                style={{
-                  fontSize: "14px",
-                  color: "#F5F5F5",
-                  textShadow: "1px 1px 2px rgba(0,0,0,0.8)"
-                }}
-              >
-                {mod}
-              </div>
-
-              {/* Кнопка броска */}
-              <button
-                onClick={() => onRoll(`${ru} (${short})`, key, Math.floor((value - 10) / 2))}
-                className="absolute inset-0 w-full h-full opacity-0 hover:opacity-20 transition-opacity bg-gray-200 rounded"
-                title={`Бросок ${ru}`}
-              />
             </DynamicFrame>
           );
         })}

@@ -12,6 +12,7 @@ import Skills from "@/components/characterList/Skills";
 import PassiveSenses from "@/components/characterList/PassiveSenses";
 import Proficiencies from "@/components/characterList/Proficiencies";
 import InitiativeAC from "@/components/characterList/InitiativeAC";
+import Attacks from "@/components/characterList/Attacks";
 import RollLog from "@/components/characterList/RollLog";
 import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
@@ -225,7 +226,18 @@ export default function CharacterList() {
     const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "") => {
         const d20 = Math.floor(Math.random() * 20) + 1;
         const total = d20 + bonus;
-        const entry = `${desc} (${abilityKey.toUpperCase()}${type ? `, ${type}` : ""}): 🎲 ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        
+        let entry = "";
+        if (type === "Спасбросок") {
+            entry = `${desc.toUpperCase()}: СПАС: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (desc === "Инициатива") {
+            entry = `ИНИЦИАТИВА: БРОСОК: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (type === "Навык") {
+            entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else {
+            // Для характеристик
+            entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        }
         setRollLog((prev) => [entry, ...prev].slice(0, 200));
     };
 
@@ -320,18 +332,23 @@ export default function CharacterList() {
 
                 {/* ROW 1 */}
                 <div className="grid gap-4 mb-6 grid-cols-1 lg:grid-cols-[620px_240px_320px]">
-                    <div>
+                    <div className="pt-3">
                         <AbilityScoresEditable
                             stats={finalStats}
                             onRoll={addRoll}
                         />
                     </div>
 
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                        {/*<ProficiencySpeed proficiencyBonus={proficiencyBonus} speed={speed} />*/}
+                    <div>
+                        <ProficiencySpeed 
+                            proficiencyBonus={proficiencyBonus} 
+                            speed={speed}
+                            initiative={initiative}
+                            ac={b.ac ?? 10}
+                        />
                     </div>
 
-                    <div>
+                    <div className="pt-3">
                         <HealthBlock
                             curHp={curHp}
                             setCurHp={setCurHp}
@@ -342,44 +359,63 @@ export default function CharacterList() {
                     </div>
                 </div>
 
-                {/* ROW 2: SavingThrows + Skills под характеристиками */}
-                <div className="grid gap-4 mb-6 -mt-4 grid-cols-1 lg:grid-cols-[300px_300px_240px]">
+                {/* ROW 2: SavingThrows + Skills + Initiative/AC + Attacks */}
+                <div className="grid gap-4 mb-6 -mt-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-[300px_300px_1fr]">
                     {/* Saving Throws (лево) */}
-                    <div className="space-y-4">
+                    <div className="flex flex-col">
                         <SavingThrows
                             stats={finalStats}
-                            onRoll={(label, ability, value) => addRoll(label, ability, value)}
+                            onRoll={(label, ability, value, type) => addRoll(label, ability, value, type)}
                         />
-                        <PassiveSenses stats={finalStats} />
-                        <Proficiencies data={characterData} />
+                        <div className="mt-4">
+                            <PassiveSenses stats={finalStats} />
+                        </div>
+                        <div className="">
+                            <Proficiencies data={characterData} />
+                        </div>
                     </div>
 
                     {/* Skills (право от спасбросков) */}
-                    <div className="space-y-4">
-                        <Skills
-                            stats={finalStats}
-                            profs={char.skillProfs}
-                            proficiencyBonus={proficiencyBonus}
-                            onRoll={addRoll}
-                      //      {/*profs={char.skills}   // ✅ теперь всегда из char*/}
-                            onToggleProf={(skillKey) => {
-                                const updated = char.skills.includes(skillKey)
-                                    ? char.skills.filter((s: string) => s !== skillKey)
-                                    : [...char.skills, skillKey];
+                    <div className="flex flex-col justify-between">
+                        <div className="flex-1 pt-0 pb-0">
+                            <Skills
+                                stats={finalStats}
+                                profs={char.skillProfs}
+                                proficiencyBonus={proficiencyBonus}
+                                onRoll={addRoll}
+                          //      {/*profs={char.skills}   // ✅ теперь всегда из char*/}
+                                onToggleProf={(skillKey) => {
+                                    const updated = char.skills.includes(skillKey)
+                                        ? char.skills.filter((s: string) => s !== skillKey)
+                                        : [...char.skills, skillKey];
 
-                                setChar((prev: any) => ({ ...prev, skills: updated }));
-                            }}
-                        />
+                                    setChar((prev: any) => ({ ...prev, skills: updated }));
+                                }}
+                            />
+                        </div>
                     </div>
 
-                    {/* Initiative + AC */}
-                    <div className="-mt-4">
-                        <InitiativeAC
-                            initiative={initiative}
-                            ac={b.ac ?? 10}
-                            dex={(finalStats as any).dex ?? 0}
-                            onRoll={addRoll}
-                        />
+                    {/* Правая колонка: Initiative/AC + Attacks */}
+                    <div className="flex flex-col gap-4">
+                        {/* Initiative + AC */}
+                        <div className="-mt-4">
+                            <InitiativeAC
+                                initiative={initiative}
+                                ac={b.ac ?? 10}
+                                dex={(finalStats as any).dex ?? 0}
+                                onRoll={addRoll}
+                            />
+                        </div>
+
+                        {/* Attacks (под инициативой/AC) */}
+                        <div>
+                            <Attacks 
+                                attacks={[]} 
+                                equipped={char?.equipped}
+                                stats={finalStats}
+                                proficiencyBonus={proficiencyBonus}
+                            />
+                        </div>
                     </div>
                 </div>
 
