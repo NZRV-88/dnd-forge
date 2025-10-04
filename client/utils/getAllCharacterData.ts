@@ -416,6 +416,8 @@ export function getAllCharacterData(draft: CharacterDraft) {
         speed,
         initiativeBonus,
         proficiencySources,
+        equipment: draft.basics?.equipment || [],
+        currency: draft.basics?.currency || null,
     };
 }
 

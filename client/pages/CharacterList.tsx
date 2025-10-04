@@ -408,6 +408,14 @@ export default function CharacterList() {
         }));
     };
 
+    // Функция обновления экипировки
+    const updateEquipped = (newEquipped: any) => {
+        setChar((prev: any) => ({
+            ...prev,
+            equipped: newEquipped
+        }));
+    };
+
     // Save changes back to Supabase
     const saveAll = async () => {
         try {
@@ -527,7 +535,7 @@ export default function CharacterList() {
                 </div>
 
                 {/* ROW 2: SavingThrows + Skills + Initiative/AC + Attacks */}
-                <div className="grid gap-4 mb-6 -mt-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-[300px_300px_1fr]">
+                <div className="grid gap-4 mb-6 -mt-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-[300px_300px_600px]">
                     {/* Saving Throws (лево) */}
                     <div className="flex flex-col">
                         <SavingThrows
@@ -585,6 +593,7 @@ export default function CharacterList() {
                                 level={char?.basics?.level}
                                 onRoll={addRoll}
                                 onSwitchWeaponSlot={switchWeaponSlot}
+                                onUpdateEquipped={updateEquipped}
                                 characterData={characterData}
                             />
                         </div>
