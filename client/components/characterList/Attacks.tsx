@@ -18,7 +18,7 @@ type Props = {
   proficiencyBonus?: number;
   classKey?: string;
   level?: number;
-  onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string) => void;
+  onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number) => void;
   onSwitchWeaponSlot?: (slot: number) => void;
   characterData?: any;
 };
@@ -28,6 +28,7 @@ type ActionType = "attack" | "action" | "bonus" | "reaction";
 
 export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, characterData }: Props) {
   const { frameColor } = useFrameColor();
+  const [criticalHits, setCriticalHits] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabType>("actions");
   const [activeActionType, setActiveActionType] = useState<ActionType>("attack");
 
@@ -85,15 +86,125 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       Math.floor((stats.str - 10) / 2);
     
     const modifierStr = abilityModifier >= 0 ? `+${abilityModifier}` : abilityModifier.toString();
-    return `${baseDamage} ${modifierStr}`;
+    
+    // Проверяем, есть ли критическое попадание для этого оружия
+    const weaponKey = `${weapon.name}-${weapon.slot}`;
+    const isCritical = criticalHits[weaponKey];
+    
+    if (isCritical) {
+      // Удваиваем количество кубиков для критического урона
+      const doubledDamage = baseDamage.replace(/(\d+)d(\d+)/, (match, num, size) => {
+        return `${parseInt(num) * 2}d${size}`;
+      });
+      return `${doubledDamage}${modifierStr}`;
+    }
+    
+    return `${baseDamage}${modifierStr}`;
   };
 
   const allWeapons = getAllWeapons();
+
+  // Функция для обработки атаки с проверкой критического попадания
+  const handleAttack = (weapon: any, ability: string, bonus: number, isSpell: boolean = false) => {
+    // Бросаем d20 для атаки
+    const attackRoll = Math.floor(Math.random() * 20) + 1;
+    const isCritical = attackRoll === 20;
+    
+    // Обновляем состояние критических попаданий
+    if (isCritical) {
+      const key = isSpell ? `spell-${weapon}` : `${weapon.name}-${weapon.slot}`;
+      setCriticalHits(prev => ({ ...prev, [key]: true }));
+    }
+    
+    // Вызываем оригинальную функцию onRoll с результатом броска
+    if (onRoll) {
+      // Передаем результат броска через параметры
+      onRoll(isSpell ? weapon : weapon.name, ability, bonus, "Атака", undefined, attackRoll);
+    }
+  };
+
+  // Функция для обработки урона с сбросом критического попадания
+  const handleDamage = (weapon: any, ability: string, modifier: number, damage: string, isSpell: boolean = false) => {
+    const key = isSpell ? `spell-${weapon}` : `${weapon.name}-${weapon.slot}`;
+    const isCritical = criticalHits[key];
+    
+    // Сбрасываем критическое попадание при клике на урон
+    if (isCritical) {
+      setCriticalHits(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+    }
+    
+    // Вызываем оригинальную функцию onRoll
+    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, "Урон", damage);
+  };
 
   // Функция для получения русского названия заклинания
   const getSpellName = (spellKey: string) => {
     const spell = Cantrips.find(s => s.key === spellKey);
     return spell?.name || spellKey;
+  };
+
+  // Функция для получения иконки типа урона
+  const getDamageIcon = (damageType?: string) => {
+    switch (damageType) {
+      case "Огонь":
+        return "🔥";
+      case "Лед":
+        return "❄️";
+      case "Молния":
+        return "⚡";
+      case "Кислота":
+        return "🧪";
+      case "Яд":
+        return "☠️";
+      case "Некротический":
+        return "💀";
+      case "Излучение":
+        return "☀️";
+      case "Психический":
+        return "🧠";
+      case "Силовой":
+        return "💫";
+      case "Гром":
+        return "💥";
+      case "Духовный":
+        return "✨";
+      default:
+        return "🔮";
+    }
+  };
+
+  // Функция для получения цвета типа урона
+  const getDamageColor = (damageType?: string) => {
+    switch (damageType) {
+      case "Огонь":
+        return { border: "#EF4444", bg: "#EF444420", text: "#FCA5A5" }; // Красный
+      case "Лед":
+        return { border: "#3B82F6", bg: "#3B82F620", text: "#93C5FD" }; // Синий
+      case "Молния":
+        return { border: "#60A5FA", bg: "#60A5FA20", text: "#93C5FD" }; // Голубой
+      case "Кислота":
+        return { border: "#10B981", bg: "#10B98120", text: "#6EE7B7" }; // Зеленый
+      case "Яд":
+        return { border: "#8B5CF6", bg: "#8B5CF620", text: "#C4B5FD" }; // Фиолетовый
+      case "Некротический":
+        return { border: "#6B7280", bg: "#6B728020", text: "#D1D5DB" }; // Серый
+      case "Излучение":
+        return { border: "#F97316", bg: "#F9731620", text: "#FDBA74" }; // Оранжевый
+      case "Психический":
+        return { border: "#EC4899", bg: "#EC489920", text: "#F9A8D4" }; // Розовый
+      case "Силовой":
+        return { border: "#C0C0C0", bg: "#C0C0C020", text: "#E5E7EB" }; // Серебряный
+      case "Гром":
+        return { border: "#F59E0B", bg: "#F59E0B20", text: "#FCD34D" }; // Желтый
+      case "Духовный":
+        return { border: "#F59E0B", bg: "#F59E0B20", text: "#FCD34D" }; // Золотой
+      default:
+        return { border: "#A855F7", bg: "#A855F720", text: "#C4B5FD" }; // Фиолетовый по умолчанию
+    }
   };
 
   // Функция для получения данных заклинания
@@ -149,9 +260,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             {/* Подменю типов действий */}
             <div 
               className="flex gap-1 mb-2"
-              style={{
-                borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20`
-              }}
             >
               {actionTypes.map((actionType) => {
                 const isActive = activeActionType === actionType.key;
@@ -187,9 +295,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             {activeActionType === "attack" && (
               <div className="mt-5">
                 <div 
-                  className="text-xs font-semibold uppercase mb-2 flex items-center justify-between"
+                  className="text-xs font-semibold uppercase mb-4 flex items-center justify-between pb-2"
                   style={{
-                    borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20`
+                    borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}60`
                   }}
                 >
                   <div className="flex items-center">
@@ -203,7 +311,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     <div className="flex gap-1 ml-2">
                       <button
                         onClick={() => onSwitchWeaponSlot?.(1)}
-                        className={`px-3 py-1 text-xs font-semibold rounded transition-all duration-200 w-8 flex items-center justify-center ${
+                        className={`px-3 py-1 text-sm font-semibold rounded transition-all duration-200 w-[25px] h-[25px] flex items-center justify-center ${
                           (equipped?.activeWeaponSlot || 1) === 1 
                             ? 'text-white' 
                             : 'text-gray-500 hover:text-gray-300'
@@ -219,7 +327,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       </button>
                       <button
                         onClick={() => onSwitchWeaponSlot?.(2)}
-                        className={`px-3 py-1 text-xs font-semibold rounded transition-all duration-200 w-8 flex items-center justify-center ${
+                        className={`px-3 py-1 text-sm font-semibold rounded transition-all duration-200 w-[25px] h-[25px] flex items-center justify-center ${
                           (equipped?.activeWeaponSlot || 1) === 2 
                             ? 'text-white' 
                             : 'text-gray-500 hover:text-gray-300'
@@ -244,7 +352,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               {activeActionType === "attack" && (
                 <div>
                   {/* Заголовки таблицы */}
-                  <div className="grid gap-2 text-xs font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
+                  <div className="grid gap-2 text-sm font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
                        style={{ 
                          gridTemplateColumns: '2fr 1fr 1fr 1fr',
                          borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20` 
@@ -289,10 +397,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         
                         return (
                           <div key={`weapon-${action.index}`}>
-                            <div className={`grid gap-2 text-xs py-1 items-center ${!weapon.isActive ? 'opacity-60' : ''}`}
+                            <div className={`grid gap-2 text-sm py-1 items-center ${!weapon.isActive ? 'opacity-60' : ''}`}
                                  style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr' }}>
                               <div className="text-gray-200 truncate flex items-center justify-start">
-                                <span className="text-xs text-gray-500 mr-1 w-3 inline-block text-center">{weapon.slot === 1 ? 'I' : 'II'}</span>
+                                <span className="text-sm text-gray-500 mr-1 w-3 inline-block text-center">{weapon.slot === 1 ? 'I' : 'II'}</span>
                                 {weapon.name}
                               </div>
                               <div className="text-gray-300 flex items-center justify-center">{range}</div>
@@ -302,40 +410,66 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
                                   backgroundColor: 'transparent'
                                 }}
-                                onClick={() => onRoll?.(weapon.name, weaponData?.type === 'ranged' ? 'dex' : 'str', attackBonus, "Атака")}
+                                onClick={() => handleAttack(weapon, weaponData?.type === 'ranged' ? 'dex' : 'str', attackBonus)}
                                 onMouseEnter={(e) => {
-                                  const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                  const lightColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                    ? '#F59E0B' 
+                                    : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                  e.currentTarget.style.backgroundColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                    ? '#F59E0B20' 
+                                    : 'transparent';
                                 }}
                               >
                                 {attackBonus > 0 ? `+${attackBonus}` : attackBonus === 0 ? '0' : attackBonus}
                               </div>
-                              <div 
-                                className="text-gray-300 border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
-                                style={{
-                                  borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
-                                  backgroundColor: 'transparent'
-                                }}
-                                onClick={() => {
-                                  const weaponData = Weapons.find(w => w.name === weapon.name);
-                                  const weaponType = weaponData?.type || 'melee';
-                                  const abilityModifier = weaponType === 'ranged' ? 
-                                    Math.floor(((stats?.dex || 10) - 10) / 2) : 
-                                    Math.floor(((stats?.str || 10) - 10) / 2);
-                                  onRoll?.(weapon.name, weaponType === 'ranged' ? 'dex' : 'str', abilityModifier, "Урон", damage);
-                                }}
-                                onMouseEnter={(e) => {
-                                  const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
-                                  e.currentTarget.style.backgroundColor = `${lightColor}20`;
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                }}
-                              >
-                                {damage}
+                              <div className="relative flex items-center justify-center mx-auto">
+                                {/* Молния слева от рамки (абсолютное позиционирование) */}
+                                {criticalHits[`${weapon.name}-${weapon.slot}`] && (
+                                  <span className="absolute -left-6 text-yellow-400 text-lg animate-pulse z-10">
+                                    ⚡
+                                  </span>
+                                )}
+                                
+                                {/* Рамка с уроном */}
+                                <div 
+                                  className={`border-2 w-[70px] rounded-md px-1 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                      ? 'text-yellow-300 font-bold animate-pulse' 
+                                      : 'text-gray-300'
+                                  }`}
+                                  style={{
+                                    borderColor: criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                      ? '#F59E0B' 
+                                      : `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                    backgroundColor: criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                      ? '#F59E0B20' 
+                                      : 'transparent'
+                                  }}
+                                  onClick={() => {
+                                    const weaponData = Weapons.find(w => w.name === weapon.name);
+                                    const weaponType = weaponData?.type || 'melee';
+                                    const abilityModifier = weaponType === 'ranged' ? 
+                                      Math.floor(((stats?.dex || 10) - 10) / 2) : 
+                                      Math.floor(((stats?.str || 10) - 10) / 2);
+                                    handleDamage(weapon, weaponType === 'ranged' ? 'dex' : 'str', abilityModifier, damage);
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    const lightColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                      ? '#F59E0B' 
+                                      : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                    e.currentTarget.style.backgroundColor = `${lightColor}20`;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                      ? '#F59E0B20' 
+                                      : 'transparent';
+                                  }}
+                                >
+                                  {damage}
+                                </div>
                               </div>
                             </div>
                             
@@ -377,10 +511,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         
                         return (
                           <div key={`spell-${action.index}`}>
-                            <div className="grid gap-2 text-xs py-1 items-center"
+                            <div className="grid gap-2 text-sm py-1 items-center"
                                  style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr' }}>
                               <div className="text-gray-200 truncate flex items-center justify-start">
-                                <span className="text-xs text-gray-500 mr-1 w-3 inline-block text-center">★</span>
+                                <span className="text-sm text-gray-500 mr-1 w-3 inline-block text-center">★</span>
                                 {spellName}
                               </div>
                               <div className="text-gray-300 flex items-center justify-center">{spellRange}</div>
@@ -390,33 +524,78 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
                                   backgroundColor: 'transparent'
                                 }}
-                                onClick={() => onRoll?.(spellName, spellAbility, spellAttackBonus, "Атака")}
+                                onClick={() => handleAttack(spellName, spellAbility, spellAttackBonus, true)}
                                 onMouseEnter={(e) => {
-                                  const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                  const lightColor = criticalHits[`spell-${spellName}`] 
+                                    ? '#F59E0B' 
+                                    : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                  e.currentTarget.style.backgroundColor = criticalHits[`spell-${spellName}`] 
+                                    ? '#F59E0B20' 
+                                    : 'transparent';
                                 }}
                               >
                                 {spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus}
                               </div>
-                              <div 
-                                className="text-gray-300 border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
-                                style={{
-                                  borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
-                                  backgroundColor: 'transparent'
-                                }}
-                                onClick={() => onRoll?.(spellName, spellAbility, 0, "Урон", spellDamage)}
-                                onMouseEnter={(e) => {
-                                  const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
-                                  e.currentTarget.style.backgroundColor = `${lightColor}20`;
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                }}
-                              >
-                                {spellDamage}
+                              <div className="relative flex items-center justify-center mx-auto">
+                                {/* Иконка типа урона слева от рамки для заклинаний */}
+                                {criticalHits[`spell-${spellName}`] && (
+                                  <span 
+                                    className="absolute -left-6 text-lg animate-pulse z-10"
+                                    style={{ 
+                                      color: getDamageColor(spellData?.damage?.type).text,
+                                      filter: spellData?.damage?.type === "Молния" ? "hue-rotate(200deg) saturate(1.5)" : 
+                                             spellData?.damage?.type === "Силовой" ? "hue-rotate(0deg) saturate(0.3) brightness(1.2)" :
+                                             spellData?.damage?.type === "Духовный" ? "hue-rotate(45deg) saturate(1.2) brightness(1.1)" : "none"
+                                    }}
+                                  >
+                                    {getDamageIcon(spellData?.damage?.type)}
+                                  </span>
+                                )}
+                                
+                                {/* Рамка с уроном заклинания */}
+                                <div 
+                                  className={`border-2 w-[70px] rounded-md px-1 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    criticalHits[`spell-${spellName}`] 
+                                      ? 'font-bold animate-pulse' 
+                                      : 'text-gray-300'
+                                  }`}
+                                  style={{
+                                    borderColor: criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).border
+                                      : `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                    backgroundColor: criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).bg
+                                      : 'transparent',
+                                    color: criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).text
+                                      : '#D1D5DB'
+                                  }}
+                                  onClick={() => {
+                                    const criticalDamage = criticalHits[`spell-${spellName}`] ? 
+                                      spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
+                                      spellDamage;
+                                    handleDamage(spellName, spellAbility, 0, criticalDamage, true);
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    const lightColor = criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).border
+                                      : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                    e.currentTarget.style.backgroundColor = `${lightColor}20`;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).bg
+                                      : 'transparent';
+                                  }}
+                                >
+                                  {criticalHits[`spell-${spellName}`] ? 
+                                    spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
+                                    spellDamage
+                                  }
+                                </div>
                               </div>
                             </div>
                             
@@ -442,9 +621,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 <div className="mt-6">
                   {/* Заголовок для бонусных действий */}
                   <div 
-                    className="text-xs font-semibold uppercase mb-2 flex items-cente mt-6"
+                    className="text-xs font-semibold uppercase mb-2 flex items-center mt-6 pb-2"
                     style={{
-                      borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20`
+                      borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}60`
                     }}
                   >
                     <span style={{ color: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54' }}>
@@ -453,12 +632,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   </div>
                   
                   {/* Заголовки таблицы */}
-                  <div className="grid gap-2 text-xs font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
+                  <div className="grid gap-2 text-sm font-semibold uppercase text-gray-400 mb-2 pb-1 items-center mt-4" 
                        style={{ 
                          gridTemplateColumns: '2fr 1fr 1fr 1fr',
                          borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20` 
                        }}>
-                    <div className="flex items-center justify-start">ДЕЙСТВИЕ</div>
+                    <div className="flex items-center justify-start">АТАКА</div>
                     <div className="flex items-center justify-center">ДАЛЬНОСТЬ</div>
                     <div className="flex items-center justify-center">ПОПАДАНИЕ</div>
                     <div className="flex items-center justify-center">УРОН</div>
@@ -516,10 +695,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         
                         return (
                           <div key={`bonus-spell-${action.index}`}>
-                            <div className="grid gap-2 text-xs py-1 items-center"
+                            <div className="grid gap-2 text-sm py-1 items-center"
                                  style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr' }}>
                               <div className="text-gray-200 truncate flex items-center justify-start">
-                                <span className="text-xs text-gray-500 mr-1 w-3 inline-block text-center">★</span>
+                                <span className="text-sm text-gray-500 mr-1 w-3 inline-block text-center">★</span>
                                 {spellName}
                               </div>
                               <div className="text-gray-300 flex items-center justify-center">{spellRange}</div>
@@ -529,33 +708,78 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
                                   backgroundColor: 'transparent'
                                 }}
-                                onClick={() => onRoll?.(spellName, spellAbility, spellAttackBonus, "Атака")}
+                                onClick={() => handleAttack(spellName, spellAbility, spellAttackBonus, true)}
                                 onMouseEnter={(e) => {
-                                  const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                  const lightColor = criticalHits[`spell-${spellName}`] 
+                                    ? '#F59E0B' 
+                                    : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                  e.currentTarget.style.backgroundColor = criticalHits[`spell-${spellName}`] 
+                                    ? '#F59E0B20' 
+                                    : 'transparent';
                                 }}
                               >
                                 {spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus}
                               </div>
-                              <div 
-                                className="text-gray-300 border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
-                                style={{
-                                  borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
-                                  backgroundColor: 'transparent'
-                                }}
-                                onClick={() => onRoll?.(spellName, spellAbility, 0, "Урон", spellDamage)}
-                                onMouseEnter={(e) => {
-                                  const lightColor = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
-                                  e.currentTarget.style.backgroundColor = `${lightColor}20`;
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                }}
-                              >
-                                {spellDamage}
+                              <div className="relative flex items-center justify-center mx-auto">
+                                {/* Иконка типа урона слева от рамки для заклинаний */}
+                                {criticalHits[`spell-${spellName}`] && (
+                                  <span 
+                                    className="absolute -left-6 text-lg animate-pulse z-10"
+                                    style={{ 
+                                      color: getDamageColor(spellData?.damage?.type).text,
+                                      filter: spellData?.damage?.type === "Молния" ? "hue-rotate(200deg) saturate(1.5)" : 
+                                             spellData?.damage?.type === "Силовой" ? "hue-rotate(0deg) saturate(0.3) brightness(1.2)" :
+                                             spellData?.damage?.type === "Духовный" ? "hue-rotate(45deg) saturate(1.2) brightness(1.1)" : "none"
+                                    }}
+                                  >
+                                    {getDamageIcon(spellData?.damage?.type)}
+                                  </span>
+                                )}
+                                
+                                {/* Рамка с уроном заклинания */}
+                                <div 
+                                  className={`border-2 w-[70px] rounded-md px-1 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    criticalHits[`spell-${spellName}`] 
+                                      ? 'font-bold animate-pulse' 
+                                      : 'text-gray-300'
+                                  }`}
+                                  style={{
+                                    borderColor: criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).border
+                                      : `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                    backgroundColor: criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).bg
+                                      : 'transparent',
+                                    color: criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).text
+                                      : '#D1D5DB'
+                                  }}
+                                  onClick={() => {
+                                    const criticalDamage = criticalHits[`spell-${spellName}`] ? 
+                                      spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
+                                      spellDamage;
+                                    handleDamage(spellName, spellAbility, 0, criticalDamage, true);
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    const lightColor = criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).border
+                                      : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                    e.currentTarget.style.backgroundColor = `${lightColor}20`;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = criticalHits[`spell-${spellName}`] 
+                                      ? getDamageColor(spellData?.damage?.type).bg
+                                      : 'transparent';
+                                  }}
+                                >
+                                  {criticalHits[`spell-${spellName}`] ? 
+                                    spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
+                                    spellDamage
+                                  }
+                                </div>
                               </div>
                             </div>
                             
@@ -614,7 +838,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     <div 
                       key={index} 
                       className="py-2 px-3 hover:bg-gray-700 rounded cursor-pointer transition-colors duration-200 border border-transparent hover:border-gray-600"
-                      onClick={() => onRoll?.(spell, 'int', 0, "Заклинание")}
+                      onClick={() => {
+                        const spellModifier = Math.floor(((stats?.cha || 10) - 10) / 2);
+                        const spellAttackBonus = spellModifier + (proficiencyBonus || 0);
+                        handleAttack(spell, 'cha', spellAttackBonus, true);
+                      }}
                     >
                       <div className="font-medium text-gray-200">{spell}</div>
                       <div className="text-xs text-gray-400">Заговор • Действие</div>

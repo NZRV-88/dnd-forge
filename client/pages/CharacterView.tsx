@@ -10,6 +10,7 @@ import PassiveSenses from "@/components/characterList/PassiveSenses";
 import Proficiencies from "@/components/characterList/Proficiencies";
 import InitiativeAC from "@/components/characterList/InitiativeAC";
 import RollLog from "@/components/characterList/RollLog";
+import DiceRollModal from "@/components/ui/DiceRollModal";
 import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
 import { RACE_CATALOG } from "@/data/races";
@@ -32,6 +33,10 @@ export default function CharacterView() {
     // roll log UI
     const [rollLog, setRollLog] = useState<string[]>([]);
     const [showLog, setShowLog] = useState(false);
+
+    // dice roll modal
+    const [diceModalOpen, setDiceModalOpen] = useState(false);
+    const [diceRollData, setDiceRollData] = useState<any>(null);
 
 
     // Load character by id from Supabase
@@ -224,11 +229,20 @@ export default function CharacterView() {
     const rollDamageDice = (diceString: string) => {
         const { dice, modifier } = parseDamageDice(diceString);
         const [numDice, diceSize] = dice.split('d').map(Number);
+        const individualRolls = [];
         let total = 0;
         for (let i = 0; i < numDice; i++) {
-            total += Math.floor(Math.random() * diceSize) + 1;
+            const roll = Math.floor(Math.random() * diceSize) + 1;
+            individualRolls.push(roll);
+            total += roll;
         }
-        return { diceRoll: total, finalResult: total + modifier };
+        return { 
+            diceRoll: total, 
+            finalResult: total + modifier, 
+            individualRolls: individualRolls,
+            dice: dice,
+            modifier: modifier
+        };
     };
 
     // universal addRoll function: any child can call it
@@ -237,6 +251,11 @@ export default function CharacterView() {
         const total = d20 + bonus;
         
         let entry = "";
+        let dice = "d20";
+        let diceRoll = d20;
+        let modifier = bonus;
+        let result = total;
+
         if (type === "Спасбросок") {
             entry = `${desc.toUpperCase()}: СПАС: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
         } else if (desc === "Инициатива") {
@@ -249,12 +268,18 @@ export default function CharacterView() {
         } else if (type === "Урон") {
             // Для урона: используем правильный кубик урона
             if (damageString) {
-                const { diceRoll, finalResult } = rollDamageDice(damageString);
-                const { dice, modifier } = parseDamageDice(damageString);
+                const { diceRoll: damageDiceRoll, finalResult, individualRolls, dice: damageDice, modifier: damageModifier } = rollDamageDice(damageString);
+                dice = damageDice;
+                diceRoll = damageDiceRoll;
+                modifier = damageModifier;
+                result = finalResult;
+                
                 if (modifier !== 0) {
-                    entry = `${desc.toUpperCase()}: УРОН: ${dice}${modifier >= 0 ? '+' : ''}${modifier} = ${diceRoll}${modifier >= 0 ? '+' : ''}${modifier} = ${finalResult}`;
+                    const individualRollsStr = individualRolls.join('+');
+                    entry = `${desc.toUpperCase()}: УРОН: ${dice}${modifier >= 0 ? '+' : ''}${modifier} = ${individualRollsStr}${modifier >= 0 ? '+' : ''}${modifier} = ${finalResult}`;
                 } else {
-                    entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${diceRoll} = ${finalResult}`;
+                    const individualRollsStr = individualRolls.join('+');
+                    entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${individualRollsStr} = ${finalResult}`;
                 }
             } else {
                 // Fallback на d20 если нет строки урона
@@ -267,6 +292,21 @@ export default function CharacterView() {
             // Для характеристик
             entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
         }
+
+        // Показываем модальное окно с результатом броска
+        setDiceRollData({
+            description: desc,
+            dice: dice,
+            modifier: modifier,
+            result: result,
+            diceRoll: diceRoll,
+            type: type,
+            individualRolls: type === "Урон" && damageString ? 
+                rollDamageDice(damageString).individualRolls : 
+                undefined
+        });
+        setDiceModalOpen(true);
+
         setRollLog((prev) => [entry, ...prev].slice(0, 200));
     };
 
@@ -396,11 +436,11 @@ export default function CharacterView() {
                     <div className="space-y-4">
                         <Skills
                             stats={finalStats}
-                            profs={characterData?.skills || []}
+                            profs={char?.skills || []}
                             proficiencyBonus={proficiencyBonus}
                             onRoll={addRoll}
                             onToggleProf={(skillKey) => {
-                                const currentSkills = characterData?.skills || [];
+                                const currentSkills = char?.skills || [];
                                 const updated = currentSkills.includes(skillKey)
                                     ? currentSkills.filter((s: string) => s !== skillKey)
                                     : [...currentSkills, skillKey];
@@ -429,6 +469,13 @@ export default function CharacterView() {
 
                 {/* ROLL LOG (floating bottom-right) */}
                 <RollLog rolls={rollLog} show={showLog} onToggle={() => setShowLog((s) => !s)} />
+
+                {/* DICE ROLL MODAL */}
+                <DiceRollModal 
+                    isOpen={diceModalOpen}
+                    onClose={() => setDiceModalOpen(false)}
+                    rollData={diceRollData}
+                />
 
             </div>
         </div>
