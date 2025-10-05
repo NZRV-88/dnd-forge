@@ -61,13 +61,10 @@ export const FrameColorProvider = ({ children }: FrameColorProviderProps) => {
     
     const baseColor = FRAME_COLORS[color as keyof typeof FRAME_COLORS] || FRAME_COLORS.gold;
     
-    // Создаем более светлые и темные варианты
-    const lightColor = adjustColorBrightness(baseColor, 20);
-    const darkColor = adjustColorBrightness(baseColor, -20);
-    
-    root.style.setProperty('--scrollbar-thumb', baseColor);
-    root.style.setProperty('--scrollbar-thumb-hover', lightColor);
-    root.style.setProperty('--scrollbar-thumb-active', darkColor);
+    // Полупрозрачный серый скроллбар
+    root.style.setProperty('--scrollbar-thumb', 'rgba(156, 163, 175, 0.6)'); // gray-400 с 60% прозрачности
+    root.style.setProperty('--scrollbar-thumb-hover', 'rgba(156, 163, 175, 0.8)'); // gray-400 с 80% прозрачности
+    root.style.setProperty('--scrollbar-thumb-active', 'rgba(156, 163, 175, 0.4)'); // gray-400 с 40% прозрачности
   };
   
   // Функция для изменения яркости цвета

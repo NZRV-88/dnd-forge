@@ -288,12 +288,13 @@ export default function CharacterList() {
             }
         }
         
-        // Добавляем бонус от щита
-        if (shield1) {
-            totalAC += 2; // Стандартный бонус щита
+        // Добавляем бонус от щита только из активного набора
+        const activeSlot = char.equipped.activeWeaponSlot || 1;
+        if (activeSlot === 1 && shield1) {
+            totalAC += 2; // Стандартный бонус щита из первого набора
         }
-        if (shield2) {
-            totalAC += 2; // Второй щит (если есть)
+        if (activeSlot === 2 && shield2) {
+            totalAC += 2; // Стандартный бонус щита из второго набора
         }
         
         return Math.floor(totalAC);
@@ -416,6 +417,22 @@ export default function CharacterList() {
         // Сохраняем изменения в БД сразу после обновления состояния
         setTimeout(() => {
             saveAll(newEquipped);
+        }, 50);
+    };
+
+    // Функция обновления только equipment (рюкзак)
+    const updateEquipment = (newEquipment: any[]) => {
+        setChar((prev: any) => ({
+            ...prev,
+            basics: {
+                ...prev.basics,
+                equipment: newEquipment
+            }
+        }));
+        
+        // Сохраняем изменения в БД
+        setTimeout(() => {
+            saveAll();
         }, 50);
     };
 
@@ -607,6 +624,7 @@ export default function CharacterList() {
                     onRoll={addRoll}
                     onSwitchWeaponSlot={switchWeaponSlot}
                     onUpdateEquipped={updateEquipped}
+                    onUpdateEquipment={updateEquipment}
                     onSaveAll={saveAll}
                     characterData={characterData}
                 />
