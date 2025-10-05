@@ -155,7 +155,7 @@ const getAbilityModifier = (score: number): number => {
 
 // Компонент карточки снаряжения
 const EquipmentCard = ({ itemName, onRemove, characterData }: { 
-    itemName: string; 
+    itemName: string | any; 
     onRemove: () => void;
     characterData?: any;
 }) => {
@@ -166,12 +166,33 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     const characterDataFull = characterData ? getAllCharacterData(characterData) : null;
     
     // Извлекаем количество и название предмета
-    const match = itemName.match(/^(\d+x\s+)?(.+)$/);
-    const quantity = match?.[1]?.trim() || '';
-    const name = match?.[2] || itemName;
+    let quantity = '';
+    let name = '';
+    
+    if (typeof itemName === 'object' && itemName !== null) {
+        // Если itemName - это объект, используем его свойства
+        quantity = itemName.quantity && itemName.quantity > 1 ? `${itemName.quantity}x ` : '';
+        name = itemName.name || '';
+    } else if (typeof itemName === 'string') {
+        // Если itemName - это строка, обрабатываем как раньше
+        const match = itemName.match(/^(\d+x\s+)?(.+)$/);
+        quantity = match?.[1]?.trim() || '';
+        name = match?.[2] || itemName;
+    } else {
+        name = String(itemName);
+    }
     
     // Определяем тип предмета и его состояние
-    const getItemType = (itemName: string): 'weapon' | 'armor' | 'shield' | 'capacity' | 'other' => {
+    const getItemType = (itemName: string | any): 'weapon' | 'armor' | 'shield' | 'capacity' | 'other' => {
+        // Если itemName - это объект, используем его свойство type
+        if (typeof itemName === 'object' && itemName !== null) {
+            return itemName.type || 'other';
+        }
+        
+        // Если itemName - это не строка, возвращаем 'other'
+        if (typeof itemName !== 'string') {
+            return 'other';
+        }
         const cleanName = itemName.replace(/^\d+x\s+/, '');
         
         // Проверяем оружие
@@ -397,7 +418,16 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     };
     
     // Ищем описание предмета
-    const getItemDescription = (itemName: string) => {
+    const getItemDescription = (itemName: string | any) => {
+        // Если itemName - это объект, используем его свойство description
+        if (typeof itemName === 'object' && itemName !== null) {
+            return itemName.description || '';
+        }
+        
+        // Если itemName - это не строка, возвращаем пустую строку
+        if (typeof itemName !== 'string') {
+            return '';
+        }
         // Убираем количество для поиска
         const cleanName = itemName.replace(/^\d+x\s+/, '');
         
@@ -779,7 +809,7 @@ export default function EquipmentPick() {
         silver: 0,    // Серебро
         copper: 0     // Медь
     });
-    const [addedInventory, setAddedInventory] = useState<string[]>([]);
+    const [addedInventory, setAddedInventory] = useState<(string | any)[]>([]);
     const [openSections, setOpenSections] = useState({
         starting: true,
         inventory: false,
@@ -840,7 +870,17 @@ export default function EquipmentPick() {
     };
 
     // Функция для получения веса предмета
-    const getItemWeight = (itemName: string) => {
+    const getItemWeight = (itemName: string | any) => {
+        // Если itemName - это объект, используем его свойство weight
+        if (typeof itemName === 'object' && itemName !== null) {
+            return itemName.weight || 0;
+        }
+        
+        // Если itemName - это строка, обрабатываем как раньше
+        if (typeof itemName !== 'string') {
+            return 0;
+        }
+        
         const cleanName = itemName.replace(/^\d+x\s+/, '');
         
         // Ищем в разных массивах
@@ -969,7 +1009,16 @@ export default function EquipmentPick() {
         };
         
         // Функция для извлечения базового названия предмета (убираем количество)
-        const getBaseItemName = (itemName: string) => {
+        const getBaseItemName = (itemName: string | any) => {
+            // Если itemName - это объект, используем его свойство name
+            if (typeof itemName === 'object' && itemName !== null) {
+                return itemName.name || '';
+            }
+            
+            // Если itemName - это не строка, возвращаем пустую строку
+            if (typeof itemName !== 'string') {
+                return '';
+            }
             // Убираем количество в разных форматах:
             // "Метательное копьё (8)" -> "Метательное копьё"
             // "8x Метательное копьё" -> "Метательное копьё"
@@ -981,7 +1030,16 @@ export default function EquipmentPick() {
         
         return sortedItems.sort((a, b) => {
             // Определяем тип предмета по его названию
-            const getItemType = (itemName: string) => {
+            const getItemType = (itemName: string | any) => {
+                // Если itemName - это объект, используем его свойство type
+                if (typeof itemName === 'object' && itemName !== null) {
+                    return itemName.type || 'other';
+                }
+                
+                // Если itemName - это не строка, возвращаем 'other'
+                if (typeof itemName !== 'string') {
+                    return 'other';
+                }
                 // Получаем базовое название предмета (без количества)
                 const baseItemName = getBaseItemName(itemName);
                 const normalizedItemName = normalizeString(baseItemName);
@@ -1040,7 +1098,9 @@ export default function EquipmentPick() {
             }
             
             // Если тип одинаковый, сортируем по алфавиту
-            return a.localeCompare(b);
+            const nameA = typeof a === 'string' ? a : (a.name || '');
+            const nameB = typeof b === 'string' ? b : (b.name || '');
+            return nameA.localeCompare(nameB);
         });
     };
 

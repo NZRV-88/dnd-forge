@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useFrameColor } from "@/contexts/FrameColorContext";
 import DynamicFrame from "@/components/ui/DynamicFrame";
 import { Weapons } from "@/data/items/weapons";
@@ -8,8 +9,10 @@ import { Gears, Ammunitions } from "@/data/items/gear";
 import { Armors } from "@/data/items/armors";
 import { Tools } from "@/data/items/tools";
 import { EQUIPMENT_PACKS } from "@/data/items/equipment-packs";
+import { getWeaponMasteryByKey } from "@/data/items/weapon-mastery";
+import { getWeaponPropertyByName } from "@/data/items/weapons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Props = {
@@ -33,6 +36,8 @@ type Props = {
   onUpdateEquipment?: (newEquipment: any[]) => void;
   onSaveAll?: () => void;
   characterData?: any;
+  char?: any;
+  setChar?: (char: any) => void;
 };
 
 type TabType = "actions" | "spells" | "inventory" | "features";
@@ -107,7 +112,7 @@ const getActionFrameSvg = (color: string) => {
 </svg>`;
 };
 
-export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onSaveAll, characterData }: Props) {
+export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onSaveAll, characterData, char, setChar }: Props) {
   const { frameColor } = useFrameColor();
   const [criticalHits, setCriticalHits] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabType>("actions");
@@ -131,8 +136,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     myInventory: false
   });
 
-  // Локальное состояние для equipment (рюкзак)
-  const [localEquipment, setLocalEquipment] = useState<any[]>([]);
 
   // Состояние для поиска и фильтров
   const [searchFilter, setSearchFilter] = useState('');
@@ -140,6 +143,15 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const [selectedItems, setSelectedItems] = useState<{[key: string]: number}>({});
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
+  const [isItemDetailsOpen, setIsItemDetailsOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  
+  // Состояние для подсказки мастерства
+  const [hoveredWeapon, setHoveredWeapon] = useState<string | null>(null);
+  const [starPosition, setStarPosition] = useState<{ x: number; y: number } | null>(null);
+  
+  // Состояние для подсказки удаления
+  const [showDeleteTooltip, setShowDeleteTooltip] = useState(false);
 
   // Функция для переключения секций
   const toggleSection = (section: keyof typeof openSections) => {
@@ -149,9 +161,198 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }));
   };
 
+  // Функция для удаления предмета
+  const handleDeleteItem = (itemName: string) => {
+    if (!char) return;
+    
+    // Удаляем предмет из инвентаря
+    const updatedInventory = char.inventory?.filter(item => item !== itemName) || [];
+    
+    // Обновляем персонажа
+    setChar({
+      ...char,
+      inventory: updatedInventory
+    });
+    
+    // Закрываем сайдбар
+    setIsItemDetailsOpen(false);
+    setSelectedItem(null);
+    
+    toast({
+      title: "Предмет удален",
+      description: `${getCleanItemName(itemName)} удален из инвентаря`,
+    });
+  };
+
+  // Функция для открытия сайдбара с описанием предмета
+  const openItemDetails = (item: any) => {
+    setSelectedItem(item);
+    setIsItemDetailsOpen(true);
+  };
+
+  // Функция для закрытия сайдбара с описанием предмета
+  const closeItemDetails = () => {
+    setIsItemDetailsOpen(false);
+    setSelectedItem(null);
+  };
+
+  // Функция для перевода типа урона
+  const translateDamageType = (type: string) => {
+    const translations: Record<string, string> = {
+      'bludgeoning': 'Дробящий',
+      'slashing': 'Рубящий',
+      'piercing': 'Колющий',
+      'fire': 'Огонь',
+      'cold': 'Холод',
+      'lightning': 'Электричество',
+      'thunder': 'Звук',
+      'acid': 'Кислота',
+      'poison': 'Яд',
+      'psychic': 'Психический',
+      'radiant': 'Излучение',
+      'necrotic': 'Некротический',
+      'force': 'Силовое поле'
+    };
+    return translations[type] || type;
+  };
+
+  // Функция для перевода свойств оружия
+  const translateWeaponProperties = (properties: string[] | undefined) => {
+    if (!properties || properties.length === 0) return [];
+    
+    const translations: Record<string, string> = {
+      'loading': 'Перезарядка',
+      'ammunition': 'Боеприпасы',
+      'two-handed': 'Двуручное',
+      'heavy': 'Тяжелое',
+      'reach': 'Досягаемость',
+      'versatile': 'Универсальное',
+      'thrown': 'Метательное',
+      'finesse': 'Фехтовальное',
+      'light': 'Лёгкое'
+    };
+    
+    return properties.map(prop => translations[prop] || prop);
+  };
+
+  // Функция для перевода валюты
+  const translateCurrency = (cost: string) => {
+    if (!cost || cost === 'Неизвестно') return 'Неизвестно';
+    
+    return cost
+      .replace(/\b(\d+)\s*pp\b/gi, '$1 ПМ') // platinum pieces
+      .replace(/\b(\d+)\s*gp\b/gi, '$1 ЗМ') // gold pieces
+      .replace(/\b(\d+)\s*ep\b/gi, '$1 ЭМ') // electrum pieces
+      .replace(/\b(\d+)\s*sp\b/gi, '$1 СМ') // silver pieces
+      .replace(/\b(\d+)\s*cp\b/gi, '$1 ММ') // copper pieces
+      .replace(/\bpp\b/gi, 'ПМ')
+      .replace(/\bgp\b/gi, 'ЗМ')
+      .replace(/\bep\b/gi, 'ЭМ')
+      .replace(/\bsp\b/gi, 'СМ')
+      .replace(/\bcp\b/gi, 'ММ');
+  };
+
+  // Функция для получения полной информации о предмете
+  const getItemDetails = (itemName: string) => {
+    const cleanName = getCleanItemName(itemName);
+    
+    // Ищем в оружии
+    const weapon = Weapons.find(w => w.name === cleanName);
+    if (weapon) {
+      // Определяем категорию оружия
+      let weaponCategory = '';
+      if (weapon.category === 'simple' && weapon.type === 'melee') {
+        weaponCategory = 'Простое оружие ближнего боя';
+      } else if (weapon.category === 'simple' && weapon.type === 'ranged') {
+        weaponCategory = 'Простое дальнобойное оружие';
+      } else if (weapon.category === 'martial' && weapon.type === 'melee') {
+        weaponCategory = 'Воинское оружие ближнего боя';
+      } else if (weapon.category === 'martial' && weapon.type === 'ranged') {
+        weaponCategory = 'Воинское дальнобойное оружие';
+      }
+
+      return {
+        ...weapon,
+        itemType: 'weapon',
+        category: weaponCategory,
+        cost: translateCurrency(weapon.cost),
+        properties: translateWeaponProperties(weapon.properties),
+        damageTypeTranslated: translateDamageType(weapon.damageType)
+      };
+    }
+    
+    // Ищем в доспехах
+    const armor = Armors.find(a => a.name === cleanName);
+    if (armor) {
+      // Определяем категорию доспеха
+      let armorCategory = '';
+      if (armor.category === 'light') {
+        armorCategory = 'Лёгкий доспех';
+      } else if (armor.category === 'medium') {
+        armorCategory = 'Средний доспех';
+      } else if (armor.category === 'heavy') {
+        armorCategory = 'Тяжёлый доспех';
+      } else if (armor.category === 'shield') {
+        armorCategory = 'Щит';
+      }
+
+      return {
+        ...armor,
+        itemType: 'armor',
+        category: armorCategory,
+        cost: translateCurrency(armor.cost)
+      };
+    }
+    
+    // Ищем в инструментах
+    const tool = Tools.find(t => t.name === cleanName);
+    if (tool) {
+      const TOOL_CATEGORY_LABELS: Record<string, string> = {
+        'artisan': 'Ремесленные инструменты',
+        'gaming': 'Игровой набор',
+        'musical': 'Музыкальный инструмент',
+        'other': 'Другие инструменты'
+      };
+      
+      return {
+        ...tool,
+        itemType: 'tool',
+        category: TOOL_CATEGORY_LABELS[tool.category] || tool.category,
+        cost: translateCurrency(tool.cost),
+        description: tool.desc
+      };
+    }
+    
+    // Ищем в снаряжении
+    const gear = Gears.find(g => g.name === cleanName);
+    if (gear) {
+      return {
+        ...gear,
+        itemType: 'gear',
+        category: 'Снаряжение',
+        cost: translateCurrency(gear.cost),
+        description: gear.desc
+      };
+    }
+    
+    // Ищем в боеприпасах
+    const ammo = Ammunitions.find(a => a.name === cleanName);
+    if (ammo) {
+      return {
+        ...ammo,
+        itemType: 'ammunition',
+        category: 'Боеприпасы',
+        cost: translateCurrency(ammo.cost),
+        description: ammo.desc
+      };
+    }
+    
+    return null;
+  };
+
   // Функция для получения предметов из рюкзака (не надетых)
   const getBackpackItems = () => {
-    if (!localEquipment || localEquipment.length === 0) return [];
+    if (!characterData?.equipment || characterData.equipment.length === 0) return [];
     
     // Получаем все надетые предметы
     const allEquippedItems = [
@@ -161,7 +362,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     ];
     
     // Фильтруем предметы, которые не надеты, и преобразуем в объекты
-    const result = localEquipment
+    const result = characterData.equipment
       .filter((item: any) => {
         // Если item - это объект, используем item.name
         const itemName = typeof item === 'string' ? item : (item.name || String(item));
@@ -202,8 +403,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       // Имитируем задержку (в реальном приложении здесь будет API вызов)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Добавляем предмет в localEquipment
-      const newEquipment = [...localEquipment];
+      // Добавляем предмет в characterData.equipment
+      const newEquipment = [...(characterData.equipment || [])];
       const existingItemIndex = newEquipment.findIndex(eq => {
         const eqName = typeof eq === 'string' ? eq : (eq.name || String(eq));
         return eqName === item.name;
@@ -252,9 +453,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           quantity: 1
         });
       }
-
-      // Обновляем локальное состояние
-      setLocalEquipment(newEquipment);
 
       // Обновляем только equipment (рюкзак), не затрагивая экипировку
       if (onUpdateEquipment) {
@@ -417,12 +615,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
   }, [equipped]);
 
-  // Инициализируем localEquipment из characterData.equipment только при первой загрузке
-  useEffect(() => {
-    if (characterData?.equipment && localEquipment.length === 0) {
-      setLocalEquipment(characterData.equipment);
-    }
-  }, [characterData?.equipment, localEquipment.length]);
 
   // Получаем все оружие с информацией о слоте
   const getAllWeapons = () => {
@@ -693,21 +885,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   };
 
   // Функция для перевода валютных единиц на русский
-  const translateCurrency = (cost: string) => {
-    if (!cost || cost === 'Неизвестно') return 'Неизвестно';
-    
-    return cost
-      .replace(/\b(\d+)\s*sp\b/gi, '$1 СМ') // silver pieces
-      .replace(/\b(\d+)\s*gp\b/gi, '$1 ЗМ') // gold pieces
-      .replace(/\b(\d+)\s*pp\b/gi, '$1 ПП') // platinum pieces
-      .replace(/\b(\d+)\s*ep\b/gi, '$1 ЭМ') // electrum pieces
-      .replace(/\b(\d+)\s*cp\b/gi, '$1 ММ') // copper pieces
-      .replace(/\b(\d+)\s*copper\b/gi, '$1 ММ')
-      .replace(/\b(\d+)\s*silver\b/gi, '$1 СМ')
-      .replace(/\b(\d+)\s*gold\b/gi, '$1 ЗМ')
-      .replace(/\b(\d+)\s*platinum\b/gi, '$1 ПП')
-      .replace(/\b(\d+)\s*electrum\b/gi, '$1 ЭМ');
-  };
 
   // Функция для получения стоимости предмета
   const getItemCost = (itemName: any) => {
@@ -1316,6 +1493,18 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         const weaponData = Weapons.find(w => w.name === weapon.name);
                         const range = weaponData?.range || (weaponData?.type === 'melee' ? '5 фт.' : '-');
                         
+                        // Отладочная информация для мастерства
+                        const allWeaponMasteryValues = char?.chosen?.weaponMastery ? Object.values(char.chosen.weaponMastery).flat() : [];
+                        console.log('Weapon mastery debug:', {
+                          weaponName: weapon.name,
+                          weaponKey: weaponData?.key,
+                          weaponMastery: weaponData?.mastery,
+                          charWeaponMastery: char?.chosen?.weaponMastery,
+                          allWeaponMasteryValues: allWeaponMasteryValues,
+                          includesCheck: allWeaponMasteryValues.includes(weaponData?.key),
+                          hasMastery: weaponData?.mastery && char?.chosen?.weaponMastery && allWeaponMasteryValues.includes(weaponData.key)
+                        });
+                        
                         return (
                           <div key={`weapon-${action.index}`}>
                             <div className={`grid gap-2 text-sm py-1 items-center ${!weapon.isActive ? 'opacity-60' : ''}`}
@@ -1323,6 +1512,26 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div className="text-gray-200 truncate flex items-center justify-start">
                                 <span className="text-sm text-gray-500 mr-1 w-3 inline-block text-center">{weapon.slot === 1 ? 'I' : 'II'}</span>
                                 {weapon.name}
+                                {weaponData?.mastery && char?.chosen?.weaponMastery && Object.values(char.chosen.weaponMastery).flat().includes(weaponData.key) && (
+                                  <span 
+                                    className="ml-1 text-lg cursor-help relative"
+                                    style={{ color: getFrameColor(frameColor) }}
+                                    onMouseEnter={(e) => {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      setHoveredWeapon(`${weapon.name}-${weapon.slot}`);
+                                      setStarPosition({
+                                        x: rect.left + rect.width / 2,
+                                        y: rect.top
+                                      });
+                                    }}
+                                    onMouseLeave={() => {
+                                      setHoveredWeapon(null);
+                                      setStarPosition(null);
+                                    }}
+                                  >
+                                    ★
+                                  </span>
+                                )}
                               </div>
                               <div className="text-gray-300 flex items-center justify-center">{range}</div>
                               <div 
@@ -2038,7 +2247,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               onClick={() => toggleItemEquipped(item.name)}
                             />
                           </div>
-                           <div className="text-gray-200 break-words">
+                           <div className="text-gray-200 break-words cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
                              <div>{getCleanItemName(item.name)}</div>
                              <div className="text-xs text-gray-500 mt-1">{getItemCategory(item.name)}</div>
                            </div>
@@ -2095,7 +2304,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             />
                           </div>
                           <div className="text-gray-200 break-words flex items-center gap-2">
-                            <div className="flex-1">
+                            <div className="flex-1 cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
                               <div>{getCleanItemName(item.name)}</div>
                               <div className="text-xs text-gray-500 mt-1">{getItemCategory(item.name)}</div>
                             </div>
@@ -2180,7 +2389,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             />
                           </div>
                           <div className="text-gray-200 break-words flex items-center gap-2">
-                            <div className="flex-1">
+                            <div className="flex-1 cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
                               <div>{getCleanItemName(item.name)}</div>
                               <div className="text-xs text-gray-500 mt-1">{getItemCategory(item.name)}</div>
                             </div>
@@ -2289,7 +2498,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div className="w-4 h-4" />
                             )}
                           </div>
-                          <div className="text-gray-200 break-words">
+                          <div className="text-gray-200 break-words cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
                             <div>
                               {cleanName}
                             </div>
@@ -2307,8 +2516,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             }}
                           />
                         )}
-                      </div>
-                    );
+    </div>
+  );
                   })
                   ) : (
                     <div className="text-center text-gray-500 text-sm py-4">
@@ -2632,7 +2841,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                           key={`${item.name}-${index}`}
                                           className="flex justify-between items-center p-2 bg-neutral-800 rounded border-b border-gray-600"
                                         >
-                                          <div className="flex flex-col gap-1 flex-1 min-w-0">
+                                          <div className="flex flex-col gap-1 flex-1 min-w-0 cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
                                             <span className="font-medium text-gray-200 break-words">
                                               {cleanName}
                                             </span>
@@ -2660,6 +2869,230 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             </div>
           </div>
         </div>
+      )}
+
+      {/* Сайдбар с описанием предмета */}
+      {isItemDetailsOpen && selectedItem && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
+          onClick={closeItemDetails}
+        >
+          <div 
+            className="w-full max-w-md bg-neutral-900 h-full overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-100">
+                {getCleanItemName(selectedItem.name)}
+              </h2>
+              <button
+                onClick={closeItemDetails}
+                className="text-gray-400 hover:text-gray-200 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {(() => {
+              const itemDetails = getItemDetails(selectedItem.name);
+              if (!itemDetails) {
+                return (
+                  <div className="text-gray-400">
+                    Информация о предмете не найдена
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3 text-xs">
+                  {/* Категория в самом верху */}
+                  <div className="text-gray-400 mb-2">
+                    {itemDetails.category}
+                  </div>
+
+                  {/* Источник вверху */}
+                  {(itemDetails as any).source && (
+                    <div className="text-gray-500 text-[10px] mb-2">
+                      Источник: {(itemDetails as any).source}
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    {/* Для оружия показываем специальные параметры */}
+                    {itemDetails.itemType === 'weapon' && (
+                      <>
+                        <div className="text-gray-400">
+                          <span className="font-medium text-gray-200">Дальность:</span> {(itemDetails as any).range || 'Ближний бой'}
+                        </div>
+                        <div className="text-gray-400">
+                          <span className="font-medium text-gray-200">Урон:</span> {(itemDetails as any).damage}
+                        </div>
+                        <div className="text-gray-400">
+                          <span className="font-medium text-gray-200">Тип урона:</span> {(itemDetails as any).damageTypeTranslated}
+                        </div>
+                        {(itemDetails as any).properties && (itemDetails as any).properties.length > 0 && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Свойства:</span> {(itemDetails as any).properties.join(', ')}
+                          </div>
+                        )}
+                        {(itemDetails as any).mastery && char?.chosen?.weaponMastery && Object.values(char.chosen.weaponMastery).flat().includes(itemDetails.key) && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Мастерство:</span> {getWeaponMasteryByKey((itemDetails as any).mastery)?.name || (itemDetails as any).mastery}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Для доспехов */}
+                    {itemDetails.itemType === 'armor' && (
+                      <>
+                        <div className="text-gray-400">
+                          <span className="font-medium text-gray-200">КД:</span> {(itemDetails as any).baseAC}
+                        </div>
+                        {(itemDetails as any).maxDexBonus !== undefined && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Макс. бонус ЛОВ:</span> {(itemDetails as any).maxDexBonus}
+                          </div>
+                        )}
+                        {(itemDetails as any).disadvantageStealth && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Помеха:</span> Помеха к Скрытности
+                          </div>
+                        )}
+                        {(itemDetails as any).requirements && (itemDetails as any).requirements.strength && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Требования:</span> Сила {(itemDetails as any).requirements.strength}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Для инструментов */}
+                    {itemDetails.itemType === 'tool' && (itemDetails as any).ability && (
+                      <>
+                        <div className="text-gray-400">
+                          <span className="font-medium text-gray-200">Характеристика:</span> {(itemDetails as any).ability}
+                        </div>
+                        {(itemDetails as any).utilize && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Использование:</span> {(itemDetails as any).utilize}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Стоимость и вес для всех предметов */}
+                    {itemDetails.cost && (
+                      <div className="text-gray-400">
+                        <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
+                      </div>
+                    )}
+                    {itemDetails.weight !== undefined && (
+                      <div className="text-gray-400">
+                        <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Описание */}
+                  {(itemDetails as any).description && (
+                    <div className="text-gray-400 mt-3 pt-3 border-t border-gray-700">
+                      <div className="font-medium text-gray-200 mb-1">Описание:</div>
+                      <div>{(itemDetails as any).description}</div>
+                    </div>
+                  )}
+
+                  {/* Описания свойств оружия */}
+                  {itemDetails.itemType === 'weapon' && (itemDetails as any).properties && (itemDetails as any).properties.length > 0 && (
+                    <div className="text-gray-400 mt-3 pt-3 border-t border-gray-700">
+                      <div className="font-medium text-gray-200 mb-2">Описания свойств:</div>
+                      <div className="space-y-2">
+                        {(itemDetails as any).properties.map((property: string) => {
+                          const propertyInfo = getWeaponPropertyByName(property);
+                          if (!propertyInfo) {
+                            return (
+                              <div key={property} className="text-xs text-red-400">
+                                Свойство не найдено: {property}
+                              </div>
+                            );
+                          }
+                          
+                          return (
+                            <div key={property} className="text-xs">
+                              <div className="font-medium text-gray-300 mb-1">
+                                {propertyInfo.name}
+                              </div>
+                              <div className="text-gray-400">
+                                {propertyInfo.desc}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Мастерство оружия */}
+                  {itemDetails.itemType === 'weapon' && (itemDetails as any).mastery && char?.chosen?.weaponMastery && Object.values(char.chosen.weaponMastery).flat().includes(itemDetails.key) && (
+                    <div className="text-gray-400 mt-3 pt-3 border-t border-gray-700">
+                      <div className="font-medium text-gray-200 mb-2 flex items-center">
+                        <span 
+                          className="mr-2 text-lg"
+                          style={{ color: getFrameColor(frameColor) }}
+                        >
+                          ★
+                        </span>
+                        Мастерство: {getWeaponMasteryByKey((itemDetails as any).mastery)?.name || (itemDetails as any).mastery}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {getWeaponMasteryByKey((itemDetails as any).mastery)?.desc || 'Описание мастерства не найдено'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Кнопка удаления */}
+                  <div className="mt-4 pt-3 border-t border-gray-700 flex justify-center">
+                    <button
+                      className="relative group flex items-center justify-center w-8 h-8 bg-red-600 hover:bg-red-700 rounded-full transition-colors duration-200"
+                      onClick={() => handleDeleteItem(selectedItem.name)}
+                      onMouseEnter={() => setShowDeleteTooltip(true)}
+                      onMouseLeave={() => setShowDeleteTooltip(false)}
+                    >
+                      <X size={16} className="text-white" />
+                      
+                      {/* Подсказка */}
+                      {showDeleteTooltip && (
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap pointer-events-none z-50">
+                          <div className="text-white font-semibold">Удалить предмет</div>
+                          {/* Стрелочка вниз */}
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Portal для подсказки мастерства */}
+      {hoveredWeapon && starPosition && createPortal(
+        <div 
+          className="fixed px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap pointer-events-none"
+          style={{ 
+            zIndex: 99999,
+            left: starPosition.x,
+            top: starPosition.y - 35, // Увеличиваем отступ сверху
+            transform: 'translateX(-50%)'
+          }}
+        >
+          <div className="text-white font-semibold">Мастерство</div>
+          {/* Стрелочка вниз */}
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+        </div>,
+        document.body
       )}
     </div>
   );

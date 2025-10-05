@@ -87,6 +87,7 @@ export type CharacterDraft = {
         spells: Record<string, string[]>;
         features: Record<string, string[]>;
         fightingStyle?: Record<string, string[]>;
+        weaponMastery?: Record<string, string[]>;       // источник -> выбранное оружейное мастерство
     };
     abilitiesMode?: "array" | "roll" | "point-buy";
     rolls?: RollResult[];
@@ -130,6 +131,9 @@ export type CharacterContextType = {
 
     setChosenSpells: (source: string, spells: string[]) => void;
     removeChosenSpell: (source: string, spell: string) => void;
+
+    setChosenWeaponMastery: (source: string, weapons: string[]) => void;
+    removeChosenWeaponMastery: (source: string, weapon: string) => void;
 
     setChosenFeats: (featKey: string[]) => void;
     removeChosenFeat: (featKey: string) => void;
@@ -248,7 +252,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         const migrated = { ...chosen };
         
         // Мигрируем ключи для всех типов выборов
-        ['abilities', 'skills', 'tools', 'languages', 'spells', 'features', 'fightingStyle'].forEach(type => {
+        ['abilities', 'skills', 'tools', 'languages', 'spells', 'features', 'fightingStyle', 'weaponMastery'].forEach(type => {
             if (migrated[type]) {
                 const newTypeData: any = {};
                 
@@ -318,6 +322,21 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         localStorage.setItem("characterDraft", JSON.stringify(draft));
     }, [draft]);
+
+    // Мониторинг изменений всех типов выборов для отладки
+    useEffect(() => {
+        console.log('chosen data changed:', {
+            abilities: draft.chosen.abilities,
+            skills: draft.chosen.skills,
+            tools: draft.chosen.tools,
+            languages: draft.chosen.languages,
+            spells: draft.chosen.spells,
+            features: draft.chosen.features,
+            fightingStyle: draft.chosen.fightingStyle,
+            weaponMastery: draft.chosen.weaponMastery,
+            timestamp: new Date().toISOString()
+        });
+    }, [draft.chosen.abilities, draft.chosen.skills, draft.chosen.tools, draft.chosen.languages, draft.chosen.spells, draft.chosen.features, draft.chosen.fightingStyle, draft.chosen.weaponMastery]);
 
     const resetCharacter = () => {
         setDraft(makeDefaultDraft());
@@ -478,11 +497,30 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
        Сеттеры для chosen.*
     ----------------------------- */
 
-    const setChosenAbilities = (source: string, abilities: (keyof Abilities)[]) =>
-        setDraft(d => ({
-            ...d,
-            chosen: { ...d.chosen, abilities: { ...d.chosen.abilities, [source]: abilities } },
-        }));
+    const setChosenAbilities = (source: string, abilities: (keyof Abilities)[]) => {
+        console.log('setChosenAbilities called:', {
+            source,
+            abilities,
+            currentAbilities: draft.chosen.abilities,
+            timestamp: new Date().toISOString()
+        });
+        
+        setDraft(d => {
+            const newDraft = {
+                ...d,
+                chosen: { ...d.chosen, abilities: { ...d.chosen.abilities, [source]: abilities } },
+            };
+            
+            console.log('setChosenAbilities result:', {
+                source,
+                abilities,
+                newAbilities: newDraft.chosen.abilities,
+                timestamp: new Date().toISOString()
+            });
+            
+            return newDraft;
+        });
+    };
 
 
     const removeChosenAbility = (source: string, ability: (keyof Abilities)) =>
@@ -497,11 +535,30 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             },
         }));
 
-    const setChosenSkills = (source: string, skills: string[]) =>
-        setDraft(d => ({
-            ...d,
-            chosen: { ...d.chosen, skills: { ...d.chosen.skills, [source]: skills } },
-        }));
+    const setChosenSkills = (source: string, skills: string[]) => {
+        console.log('setChosenSkills called:', {
+            source,
+            skills,
+            currentSkills: draft.chosen.skills,
+            timestamp: new Date().toISOString()
+        });
+        
+        setDraft(d => {
+            const newDraft = {
+                ...d,
+                chosen: { ...d.chosen, skills: { ...d.chosen.skills, [source]: skills } },
+            };
+            
+            console.log('setChosenSkills result:', {
+                source,
+                skills,
+                newSkills: newDraft.chosen.skills,
+                timestamp: new Date().toISOString()
+            });
+            
+            return newDraft;
+        });
+    };
 
     const removeChosenSkill = (source: string, skill: string) =>
         setDraft(d => ({
@@ -583,6 +640,49 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 spells: {
                     ...d.chosen.spells,
                     [source]: (d.chosen.spells[source] || []).filter(s => s !== spell),
+                },
+            },
+        }));
+
+    const setChosenWeaponMastery = (source: string, weapons: string[]) => {
+        console.log('setChosenWeaponMastery called:', {
+            source,
+            weapons,
+            currentWeaponMastery: draft.chosen.weaponMastery,
+            timestamp: new Date().toISOString()
+        });
+        
+        setDraft(d => {
+            const newDraft = {
+                ...d,
+                chosen: { 
+                    ...d.chosen, 
+                    weaponMastery: { 
+                        ...d.chosen.weaponMastery, 
+                        [source]: weapons 
+                    } 
+                },
+            };
+            
+            console.log('setChosenWeaponMastery result:', {
+                source,
+                weapons,
+                newWeaponMastery: newDraft.chosen.weaponMastery,
+                timestamp: new Date().toISOString()
+            });
+            
+            return newDraft;
+        });
+    };
+
+    const removeChosenWeaponMastery = (source: string, weapon: string) =>
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                weaponMastery: {
+                    ...d.chosen.weaponMastery,
+                    [source]: (d.chosen.weaponMastery?.[source] || []).filter(w => w !== weapon),
                 },
             },
         }));
@@ -1073,6 +1173,13 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 const migratedBasics = migrateRaceKeys(savedDraft.basics || {});
                 const migrationEndTime = performance.now();
                 console.log(`loadFromSupabase: Migration took ${migrationEndTime - migrationStartTime}ms`);
+                
+                // Отладочная информация для weaponMastery
+                console.log('loadFromSupabase: weaponMastery debug:', {
+                    originalChosen: savedDraft.chosen?.weaponMastery,
+                    migratedChosen: migratedChosen.weaponMastery,
+                    allChosen: migratedChosen
+                });
 
                 const mergeStartTime = performance.now();
                 // мержим с дефолтами, чтобы не поломались старые персонажи
@@ -1113,6 +1220,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenLanguage,
         setChosenSpells,
         removeChosenSpell,
+        setChosenWeaponMastery,
+        removeChosenWeaponMastery,
         setChosenFeats,
         removeChosenFeat,
 

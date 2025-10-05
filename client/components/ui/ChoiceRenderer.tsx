@@ -24,6 +24,8 @@ import type { Spell } from "@/data/spells/types";
 import { LANGUAGES } from "@/data/languages/languages";
 import { ALL_FEATS } from "@/data/feats/feats";
 import { Tools, TOOL_CATEGORY_LABELS, getToolKeysByCategory, getToolByKey } from "@/data/items/tools";
+import { getWeaponsWithMastery } from "@/data/items/weapons";
+import { getWeaponMasteryByKey } from "@/data/items/weapon-mastery";
 import { CLASS_CATALOG } from "@/data/classes/";
 import { FEATURES } from "@/data/classes/features/features";
 import { FIGHTING_STYLES } from "@/data/classes/features/fightingStyles";
@@ -81,6 +83,10 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         // Функции для работы с заклинаниями
         setChosenSpells,
         removeChosenSpell,
+        
+        // Функции для работы с оружейным мастерством
+        setChosenWeaponMastery,
+        removeChosenWeaponMastery,
         
         // Функции для работы с талантами
         setChosenFeats,
@@ -236,6 +242,9 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         Object.keys(draft.chosen.spells).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenSpells(key, []);
         });
+        Object.keys(draft.chosen.weaponMastery || {}).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenWeaponMastery(key, []);
+        });
     };
 
     /**
@@ -263,6 +272,9 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         });
         Object.keys(draft.chosen.spells).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenSpells(key, []);
+        });
+        Object.keys(draft.chosen.weaponMastery || {}).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenWeaponMastery(key, []);
         });
         Object.keys(draft.chosen.features).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenFeatures(key, []);
@@ -361,12 +373,18 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                                     i === idx ? value : (sourceArray[i] || "")
                                                 ) as (keyof Abilities)[];
                                                 
+                                                // Защита от дублирования: очищаем пустые значения
+                                                const cleanedUpdated = updated.filter(val => val !== "");
+                                                
                                                 console.log('ChoiceRenderer: setChosenAbilities called:', {
                                                     source,
                                                     updated,
-                                                    choice
+                                                    cleanedUpdated,
+                                                    choice,
+                                                    currentSourceArray: sourceArray,
+                                                    allChosenAbilities: draft.chosen.abilities
                                                 });
-                                                setChosenAbilities(source, updated);
+                                                setChosenAbilities(source, cleanedUpdated);
                                             }}
                                         >
                                             <option value="">— Выберите характеристику —</option>
@@ -386,6 +404,26 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                             const choiceKey = `${source}:ability:${ci}:${idx}`;
                             const sourceArray = draft.chosen.abilities?.[source] || [];
                             const selected = sourceArray[idx] ?? "";
+                            
+                            console.log('ChoiceRenderer: ability initialization:', {
+                                source,
+                                sourceArray,
+                                selected,
+                                idx,
+                                allChosenAbilities: draft.chosen.abilities,
+                                isSelectedEmpty: selected === "",
+                                isSourceArrayEmpty: sourceArray.length === 0
+                            });
+                            
+                            // Защита от сброса: если данные есть в драфте, но селект пустой
+                            if (sourceArray.length > 0 && selected === "") {
+                                console.warn('ChoiceRenderer: Potential select reset detected!', {
+                                    source,
+                                    sourceArray,
+                                    selected,
+                                    idx
+                                });
+                            }
 
                             return (
                                 <select
@@ -489,6 +527,95 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                             <SpellMeta spell={selectedSpell} />
                                         </div>
                                     )}
+                                </div>
+                            );
+                        });
+                    }
+
+                    // ========================================================================
+                    // ВЫБОР ОРУЖЕЙНОГО МАСТЕРСТВА
+                    // ========================================================================
+                    case "weapon-mastery": {
+                        return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
+                            const choiceKey = `${source}:weapon-mastery:${ci}:${idx}`;
+                            const sourceArray = draft.chosen.weaponMastery?.[source] || [];
+                            const selected = sourceArray[idx] ?? "";
+                            const takenExceptCurrent = sourceArray.filter((_, i) => i !== idx);
+
+                        console.log('ChoiceRenderer: weapon-mastery case:', {
+                            source,
+                            sourceArray,
+                            selected,
+                            idx,
+                            allChosenWeaponMastery: draft.chosen.weaponMastery,
+                            isSelectedEmpty: selected === "",
+                            isSourceArrayEmpty: sourceArray.length === 0
+                        });
+                        
+                        // Защита от сброса: если данные есть в драфте, но селект пустой
+                        if (sourceArray.length > 0 && selected === "") {
+                            console.warn('ChoiceRenderer: Potential weapon-mastery select reset detected!', {
+                                source,
+                                sourceArray,
+                                selected,
+                                idx
+                            });
+                        }
+
+                            // Получаем список оружия с мастерством
+                            const weaponsWithMastery = getWeaponsWithMastery();
+                            const availableWeapons = weaponsWithMastery.filter(weapon => 
+                                !takenExceptCurrent.includes(weapon.key)
+                            );
+
+                            return (
+                                <div key={choiceKey} className="space-y-2">
+                                    <select
+                                        className={getSelectStyles(!!selected)}
+                                        value={selected}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            
+                                        // Создаем массив фиксированной длины для сохранения позиций
+                                        const updated = Array.from({ length: choice.count ?? 1 }, (_, i) => 
+                                            i === idx ? value : (sourceArray[i] || "")
+                                        );
+                                        
+                                        // Защита от дублирования: очищаем пустые значения
+                                        const cleanedUpdated = updated.filter(val => val !== "");
+
+                                        setChosenWeaponMastery(source, cleanedUpdated);
+                                        }}
+                                    >
+                                        <option value="">— Выберите оружие —</option>
+                                        {availableWeapons.map((weapon) => {
+                                            const mastery = getWeaponMasteryByKey(weapon.mastery!);
+                                            return (
+                                                <option key={weapon.key} value={weapon.key}>
+                                                    {weapon.name} ({mastery?.name || weapon.mastery})
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+
+                                    {/* Карточка выбранного оружия */}
+                                    {selected && (() => {
+                                        const weapon = weaponsWithMastery.find(w => w.key === selected);
+                                        const mastery = weapon ? getWeaponMasteryByKey(weapon.mastery!) : null;
+                                        
+                                        return weapon ? (
+                                            <div className="rounded border p-2 bg-muted/10">
+                                                <div className="text-sm text-muted-foreground mb-1">
+                                                    Мастерство: {mastery?.name || weapon.mastery}
+                                                </div>
+                                                {mastery?.desc && (
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {mastery.desc}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null;
+                                    })()}
                                 </div>
                             );
                         });
@@ -702,6 +829,13 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                         const selectedFeature = selected[0] 
                             ? availableFeatures.find(f => f.key === selected[0]) 
                             : null;
+                        
+                        console.log('ChoiceRenderer: feature case:', {
+                            source,
+                            selected,
+                            selectedFeature,
+                            availableFeatures: availableFeatures.length
+                        });
 
                         // Проверяем завершенность всех подвыборов корректно по соответствующим сторам
                         const isChoiceComplete = selectedFeature?.choices?.every((subChoice) => {
@@ -720,6 +854,8 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     return (draft.chosen.languages?.[subSource]?.length || 0) >= cnt;
                                 case "spell":
                                     return (draft.chosen.spells?.[subSource]?.length || 0) >= cnt;
+                                case "weapon-mastery":
+                                    return (draft.chosen.weaponMastery?.[subSource]?.length || 0) >= cnt;
                                 case "feature":
                                     return (draft.chosen.features?.[subSource]?.length || 0) >= cnt;
                                 case "fighting-style":
@@ -732,7 +868,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                         return (
                             <div key={`${source}:feature:${ci}`} className="space-y-2">
                                 <select
-                                    className={getSelectStyles(!!selected[0])}
+                                    className={getSelectStyles(!!selected[0], !isChoiceComplete)}
                                     value={selected[0] || ""}
                                     onChange={(e) => {
                                         const value = e.target.value;
@@ -994,6 +1130,26 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                             const sourceArray = draft.chosen.skills?.[source] || [];
                             const selected = sourceArray[idx] ?? "";
 
+                            console.log('ChoiceRenderer: skill case:', {
+                                source,
+                                sourceArray,
+                                selected,
+                                idx,
+                                allChosenSkills: draft.chosen.skills,
+                                isSelectedEmpty: selected === "",
+                                isSourceArrayEmpty: sourceArray.length === 0
+                            });
+                            
+                            // Защита от сброса: если данные есть в драфте, но селект пустой
+                            if (sourceArray.length > 0 && selected === "") {
+                                console.warn('ChoiceRenderer: Potential skill select reset detected!', {
+                                    source,
+                                    sourceArray,
+                                    selected,
+                                    idx
+                                });
+                            }
+
                             // Получаем фиксированные навыки (ВСЕГДА блокируются)
                             const fixedSkills = [
                                 ...fixedData.background.skills,
@@ -1022,11 +1178,14 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                         const value = e.target.value;
 
                                         // Создаем массив фиксированной длины для сохранения позиций
-                                        const updated = Array.from({ length: choice.count ?? 1 }, (_, i) =>
+                                        const updated = Array.from({ length: choice.count ?? 1 }, (_, i) => 
                                             i === idx ? value : (sourceArray[i] || "")
                                         );
+                                        
+                                        // Защита от дублирования: очищаем пустые значения
+                                        const cleanedUpdated = updated.filter(val => val !== "");
 
-                                        setChosenSkills(source, updated);
+                                        setChosenSkills(source, cleanedUpdated);
                                     }}
                                 >
                                     <option value="">— Выберите навык —</option>

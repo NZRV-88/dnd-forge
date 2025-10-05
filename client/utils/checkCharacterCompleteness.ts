@@ -33,8 +33,19 @@ function isChoiceComplete(choice: ChoiceOption, source: string, draft: Character
             });
             return result;
         }
-        case "skill":
-            return (draft.chosen.skills?.[source]?.filter(s => s).length || 0) >= count;
+        case "skill": {
+            const skills = draft.chosen.skills?.[source]?.filter(s => s) || [];
+            const result = skills.length >= count;
+            console.log('isChoiceComplete: skill:', {
+                choice,
+                source,
+                count,
+                skills,
+                result,
+                allChosenSkills: draft.chosen.skills
+            });
+            return result;
+        }
         case "tool":
             return (draft.chosen.tools?.[source]?.filter(t => t).length || 0) >= count;
         case "tool-proficiency": {
@@ -70,6 +81,21 @@ function isChoiceComplete(choice: ChoiceOption, source: string, draft: Character
             return (draft.chosen.features?.[source]?.length || 0) >= count;
         case "fighting-style":
             return (draft.chosen.fightingStyle?.[source]?.length || 0) >= count;
+        case "weapon-mastery": {
+            const weaponMasteryArray = draft.chosen.weaponMastery?.[source] || [];
+            const weaponMastery = weaponMasteryArray.filter(w => w).length;
+            const result = weaponMastery >= count;
+            console.log('isChoiceComplete: weapon-mastery:', {
+                choice,
+                source,
+                count,
+                weaponMasteryArray,
+                weaponMastery,
+                result,
+                allChosenWeaponMastery: draft.chosen.weaponMastery
+            });
+            return result;
+        }
         case "subclass":
             return !!draft.basics.subclass;
         default:
@@ -100,8 +126,21 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                     features.forEach((feature, featureIdx) => {
                         if (feature.choices) {
                             const source = `${draft.basics.class}-${level}-${featureIdx}-`;
+                            console.log('checkCharacterCompleteness: Проверяем особенность класса:', {
+                                feature: feature.name,
+                                featureKey: feature.key,
+                                source,
+                                choices: feature.choices
+                            });
                             for (const choice of feature.choices) {
-                                if (!isChoiceComplete(choice, source, draft)) {
+                                const isComplete = isChoiceComplete(choice, source, draft);
+                                console.log('checkCharacterCompleteness: Результат проверки особенности:', {
+                                    feature: feature.name,
+                                    choice: choice.type,
+                                    source,
+                                    isComplete
+                                });
+                                if (!isComplete) {
                                     incomplete.push({ 
                                         page: 'class', 
                                         label: `Класс: не завершены выборы в "${feature.name}"`, 
@@ -124,10 +163,10 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                     const levelNum = Number(level);
                     if (levelNum <= draft.basics.level) {
                         features.forEach((feature, featureIdx) => {
-                            if (feature.choices) {
-                                const source = `${draft.basics.class}-subclass-${subclass.key}-${level}-${featureIdx}-`;
-                                for (const choice of feature.choices) {
-                                    if (!isChoiceComplete(choice, source, draft)) {
+                        if (feature.choices) {
+                            const source = `${draft.basics.class}-subclass-${subclass.key}-${level}-${featureIdx}-`;
+                            for (const choice of feature.choices) {
+                                if (!isChoiceComplete(choice, source, draft)) {
                                         incomplete.push({ 
                                             page: 'class', 
                                             label: `Подкласс: не завершены выборы в "${feature.name}"`, 

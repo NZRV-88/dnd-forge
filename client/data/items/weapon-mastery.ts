@@ -56,6 +56,8 @@ export const WEAPON_MASTERY: WeaponMastery[] = [
     }
 ];
 
+
+
 // Функция для получения мастерства по ключу
 export const getWeaponMasteryByKey = (key: string): WeaponMastery | undefined => {
     return WEAPON_MASTERY.find(mastery => mastery.key === key);

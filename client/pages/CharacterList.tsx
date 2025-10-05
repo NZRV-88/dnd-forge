@@ -101,78 +101,49 @@ export default function CharacterList() {
         })();
     }, [id]);
 
-    // final stats calculation (ASIs + race + feats as before)
+    // final stats calculation using getAllCharacterData
     const finalStats = useMemo(() => {
         if (!char) return {};
-        const basics = char.basics || {};
-        const stats = char.stats || {};
-        const raceBonuses = basics.raceBonuses || {};
-        const backgroundBonuses = basics.backgroundBonuses || {};
-        const asi = char.asi || {};
-
-
-        const asiBonuses: Record<string, number> = {};
-        const featBonuses: Record<string, number> = {};
-        let extraInitiative = 0;
-        let extraSpeed = 0;
-        let extraHp = 0;
-
-        Object.values(asi).forEach((s: any) => {
-            if (!s) return;
-            if (s.mode === "asi") {
-                if (s.s1) asiBonuses[s.s1] = (asiBonuses[s.s1] || 0) + 1;
-                if (s.s2) asiBonuses[s.s2] = (asiBonuses[s.s2] || 0) + 1;
-            } else if (s.mode === "feat" && s.feat) {
-                const feat = ALL_FEATS.find((f) => f.key === s.feat);
-                if (!feat?.effect) return;
-                for (const bonus of feat.effect) {
-                    // статичное увеличение характеристик
-                    if (bonus.abilities) {
-                        for (const [k, v] of Object.entries(bonus.abilities)) {
-                            featBonuses[k] = (featBonuses[k] || 0) + (v as number);
-                        }
-                    }
-
-                    // выбор характеристики
-                    if (bonus.abilityChoice && s.choice) {
-                        const chosen = s.choice as string;
-                        if (bonus.abilityChoice.includes(chosen as any)) {
-                            featBonuses[chosen] = (featBonuses[chosen] || 0) + 1;
-                        }
-                    }
-
-                    // другие бонусы
-                    if (bonus.initiative) extraInitiative += bonus.initiative;
-                    if (bonus.speed) extraSpeed += bonus.speed;
-                    if (bonus.hp) extraHp += bonus.hp;
-                }
-            }
+        
+        console.log('CharacterList: calculating finalStats for char:', {
+            char,
+            timestamp: new Date().toISOString()
         });
-
+        
+        // Используем getAllCharacterData для получения всех бонусов
+        const characterData = getAllCharacterData(char);
+        
+        console.log('CharacterList: characterData from getAllCharacterData:', {
+            characterData,
+            abilityBonuses: characterData.abilityBonuses,
+            timestamp: new Date().toISOString()
+        });
+        
         const keys = ["str", "dex", "con", "int", "wis", "cha"] as const;
         const out: Record<string, number> = {};
+        
         keys.forEach((k) => {
-            const base = stats[k] || 0;
-            const total =
-                base +
-                (raceBonuses[k] || 0) +
-                (backgroundBonuses[k] || 0) +
-                (asiBonuses[k] || 0) +
-                (featBonuses[k] || 0);
-            const capFromData = (char?.abilityMax && typeof char.abilityMax[k] === "number")
-                ? char.abilityMax[k]
-                : undefined;
-            const maxVal = typeof capFromData === "number" ? capFromData : 20;
+            const base = char.stats?.[k] || 0;
+            const bonuses = characterData.abilityBonuses?.[k] || 0;
+            const total = base + bonuses;
+            
+            // Применяем ограничения максимума
+            const maxVal = characterData.abilityMax?.[k] || 20;
             out[k] = Math.min(maxVal, total);
             
+            console.log(`CharacterList: ${k}: base=${base} + bonuses=${bonuses} = ${total}, capped at ${out[k]}`);
         });
 
+        console.log('CharacterList: final finalStats:', {
+            finalStats: out,
+            timestamp: new Date().toISOString()
+        });
 
         return {
             ...out,
-            _extraInitiative: extraInitiative,
-            _extraSpeed: extraSpeed,
-            _extraHp: extraHp,
+            _extraInitiative: characterData.initiativeBonus || 0,
+            _extraSpeed: characterData.speed || 0,
+            _extraHp: 0, // TODO: добавить расчет HP если нужно
         };
     }, [char]);
 
@@ -422,18 +393,43 @@ export default function CharacterList() {
 
     // Функция обновления только equipment (рюкзак)
     const updateEquipment = (newEquipment: any[]) => {
-        setChar((prev: any) => ({
-            ...prev,
+        const updatedChar = {
+            ...char,
             basics: {
-                ...prev.basics,
+                ...char.basics,
                 equipment: newEquipment
             }
-        }));
+        };
         
-        // Сохраняем изменения в БД
+        setChar(updatedChar);
+        
+        // Сохраняем изменения в БД с обновленными данными
         setTimeout(() => {
-            saveAll();
+            saveAllWithData(updatedChar);
         }, 50);
+    };
+
+    // Save changes back to Supabase with specific data
+    const saveAllWithData = async (charData: any) => {
+        try {
+            if (!charData) return;
+            
+            const updated = { ...charData };
+            updated.basics = { ...updated.basics, hpCurrent: curHp, hpTemp: tempHp };
+            updated.skills = skillProfs;
+            
+            const { error } = await supabase
+                .from("characters")
+                .update({ data: updated, updated_at: new Date() })
+                .eq("id", id);
+            if (!error) {
+                setChar(updated);
+            } else {
+                console.error("Error updating character:", error);
+            }
+        } catch (error) {
+            console.error("Error updating character:", error);
+        }
     };
 
     // Save changes back to Supabase
@@ -449,6 +445,7 @@ export default function CharacterList() {
             if (customEquipped) {
                 updated.equipped = customEquipped;
             }
+            
             const { error } = await supabase
                 .from("characters")
                 .update({ data: updated, updated_at: new Date() })
@@ -625,6 +622,8 @@ export default function CharacterList() {
                     onSwitchWeaponSlot={switchWeaponSlot}
                     onUpdateEquipped={updateEquipped}
                     onUpdateEquipment={updateEquipment}
+                    char={char}
+                    setChar={setChar}
                     onSaveAll={saveAll}
                     characterData={characterData}
                 />

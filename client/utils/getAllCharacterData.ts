@@ -20,6 +20,24 @@ import { applyProficiencies, Proficiency } from "@/data/proficiencies";
  * фиксированные + выбранные игроком.
  */
 export function getAllCharacterData(draft: CharacterDraft) {
+    console.log('getAllCharacterData: starting with draft:', {
+        chosenAbilities: draft.chosen.abilities,
+        chosenAbilitiesSources: Object.keys(draft.chosen.abilities),
+        chosenAbilitiesDetails: Object.entries(draft.chosen.abilities).map(([source, abilities]) => ({
+            source,
+            abilities,
+            count: abilities.length
+        })),
+        chosenSkills: draft.chosen.skills,
+        chosenTools: draft.chosen.tools,
+        chosenLanguages: draft.chosen.languages,
+        chosenSpells: draft.chosen.spells,
+        chosenFeatures: draft.chosen.features,
+        chosenFightingStyle: draft.chosen.fightingStyle,
+        chosenWeaponMastery: draft.chosen.weaponMastery,
+        timestamp: new Date().toISOString()
+    });
+
     const skills = new Set<string>();
     const tools = new Set<string>();
     const toolProficiencies = new Set<string>();
@@ -358,9 +376,49 @@ export function getAllCharacterData(draft: CharacterDraft) {
     Object.values(draft.chosen.spells).flat().forEach(sp => spells.add(sp));
     draft.chosen.feats.forEach(f => feats.add(f));
 
-    for (const arr of Object.values(draft.chosen.abilities)) {
-        for (const ab of arr) {
-            abilityBonuses[ab] = (abilityBonuses[ab] || 0) + 1;
+    // Обрабатываем ВСЕ выбранные характеристики из всех источников
+    // Сначала собираем все уникальные источники (убираем дублирование)
+    const uniqueSources = new Set<string>();
+    const sourceMap = new Map<string, (keyof Abilities)[]>();
+    
+    for (const [source, abilities] of Object.entries(draft.chosen.abilities)) {
+        // Нормализуем источник, убирая -base- для дедупликации
+        const normalizedSource = source.replace(/-base-/, '-');
+        
+        if (!uniqueSources.has(normalizedSource)) {
+            uniqueSources.add(normalizedSource);
+            sourceMap.set(normalizedSource, abilities);
+            console.log('getAllCharacterData: adding unique source:', {
+                originalSource: source,
+                normalizedSource,
+                abilities,
+                abilitiesLength: abilities.length,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            console.log('getAllCharacterData: skipping duplicate source:', {
+                originalSource: source,
+                normalizedSource,
+                abilities,
+                abilitiesLength: abilities.length,
+                timestamp: new Date().toISOString()
+            });
+        }
+    }
+    
+    // Теперь обрабатываем только уникальные источники
+    for (const [source, abilities] of sourceMap) {
+        console.log('getAllCharacterData: processing abilities from unique source:', {
+            source,
+            abilities,
+            abilitiesLength: abilities.length,
+            timestamp: new Date().toISOString()
+        });
+        
+        for (const ab of abilities) {
+            const oldBonus = abilityBonuses[ab] || 0;
+            abilityBonuses[ab] = oldBonus + 1;
+            console.log(`getAllCharacterData: ability ${ab}: ${oldBonus} + 1 = ${abilityBonuses[ab]}`);
         }
     }
 
@@ -400,6 +458,11 @@ export function getAllCharacterData(draft: CharacterDraft) {
         }
     }
 
+    // Отладочная информация о итоговых характеристиках
+    console.log('getAllCharacterData: final abilityBonuses:', {
+        abilityBonuses,
+        timestamp: new Date().toISOString()
+    });
     
     return {
         skills: Array.from(skills),
