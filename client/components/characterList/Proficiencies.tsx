@@ -3,6 +3,69 @@ import { useFrameColor } from "@/contexts/FrameColorContext";
 import { Settings, X } from "lucide-react";
 import { getToolName } from "@/data/items/tools";
 
+// Импортируем FRAME_COLORS из DynamicFrame
+const FRAME_COLORS = {
+  gold: '#B59E54',
+  silver: '#C0C0C0',
+  bronze: '#CD7F32',
+  copper: '#B87333',
+  steel: '#71797E',
+  red: '#DC2626',
+  blue: '#2563EB',
+  green: '#16A34A',
+  purple: '#9333EA',
+  orange: '#EA580C',
+  pink: '#EC4899',
+  cyan: '#0891B2',
+  lime: '#65A30D',
+  indigo: '#4F46E5',
+  teal: '#0D9488',
+  emerald: '#059669',
+  rose: '#E11D48',
+  amber: '#D97706',
+  violet: '#7C3AED',
+  fuchsia: '#C026D3',
+  sky: '#0284C7',
+  stone: '#78716C',
+  neutral: '#6B7280',
+  zinc: '#71717A',
+  slate: '#64748B',
+  gray: '#6B7280',
+  cool: '#6B7280',
+  warm: '#78716C',
+  true: '#FFFFFF',
+};
+
+const getFrameColor = (color: string) => {
+  return FRAME_COLORS[color as keyof typeof FRAME_COLORS] || FRAME_COLORS.gold;
+};
+
+// Функция для генерации динамического SVG proficiencyFrame
+const getProficiencyFrameSvg = (color: string) => {
+  const hexColor = FRAME_COLORS[color as keyof typeof FRAME_COLORS] || FRAME_COLORS.gold;
+  
+  return `<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Слой_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 594.96 724.85" style="enable-background:new 0 0 594.96 724.85;" xml:space="preserve">
+<style type="text/css">
+	.st0{clip-path:url(#SVGID_00000153686997206779015270000001183223655721033604_);fill:${hexColor};}
+</style>
+<g>
+	<defs>
+		<rect id="SVGID_1_" x="2.31" y="2.65" width="592.65" height="720.56"/>
+	</defs>
+	<clipPath id="SVGID_00000106861218441049207750000012369970898801251741_">
+		<use xlink:href="#SVGID_1_"  style="overflow:visible;"/>
+	</clipPath>
+	<path style="clip-path:url(#SVGID_00000106861218441049207750000012369970898801251741_);fill:${hexColor};" d="M586.56,696.32h-4.52
+		V29.53h4.52V696.32z M15.68,695.3h-4.54V28.48h4.54V695.3z M594.96,16.27v-4.09h-13.09V2.65h-5.71c0,0-2.26,3.28-8.34,3.28H29.45
+		c-6.08,0-8.34-3.28-8.34-3.28H15.4v9.53H2.31v4.09C7.7,16.27,8,25.09,8,25.09V695.3c0,0-0.3,8.72-5.69,8.72v4.26H15.4v14.92h5.71
+		V9.7h555.04v706.45H21.11v7.06c0,0,2.26-3.28,8.34-3.28h538.37c6.05,0,8.31,3.24,8.34,3.28h5.71v-14.92h13.09v-4.26
+		c-5.39,0-5.69-8.8-5.69-8.8V25.09C589.27,25.09,589.57,16.27,594.96,16.27z"/>
+</g>
+</svg>`;
+};
+
 type ProficienciesData = {
     armor: string[];
     weapons: string[];
@@ -213,7 +276,7 @@ export default function Proficiencies({ data }: ProficienciesProps) {
                     <div 
                         className="h-px"
                         style={{
-                            backgroundColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                            backgroundColor: `${getFrameColor(frameColor)}40`
                         }}
                     />
                 )}
@@ -225,7 +288,7 @@ export default function Proficiencies({ data }: ProficienciesProps) {
         <div
             className="relative text-gray-300 w-[300px] h-[400px]"
             style={{
-                backgroundImage: "url('/frames/proficiencyFrame.svg')",
+                backgroundImage: `url('data:image/svg+xml;charset=utf-8,${encodeURIComponent(getProficiencyFrameSvg(frameColor))}')`,
                 backgroundSize: "100% auto",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center",

@@ -2,7 +2,7 @@ import React from 'react';
 import { useFrameColor } from '@/contexts/FrameColorContext';
 
 interface DynamicFrameProps {
-  frameType: 'ability' | 'health' | 'ac' | 'initiative' | 'prof' | 'st' | 'st-mode' | 'ps-mode' | 'senses' | 'skills';
+  frameType: 'ability' | 'health' | 'ac' | 'initiative' | 'prof' | 'st' | 'st-mode' | 'ps-mode' | 'senses' | 'skills' | 'action';
   color?: string;
   size?: 'small' | 'medium' | 'large' | 'custom';
   className?: string;
@@ -479,6 +479,32 @@ const SKILLS_FRAME_SVG = (color: string) => `<?xml version="1.0" encoding="utf-8
 </g>
 </svg>`;
 
+// SVG для action frame с возможностью изменения цвета
+const ACTION_FRAME_SVG = (color: string) => `<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Слой_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 289.93 307.31" preserveAspectRatio="none" style="enable-background:new 0 0 289.93 307.31;" xml:space="preserve">
+<style type="text/css">
+	.st0{clip-path:url(#SVGID_00000074437919751204614870000007753514779035950496_);fill:${color};}
+</style>
+<g>
+	<defs>
+		<rect id="SVGID_1_" width="289.93" height="307.31"/>
+	</defs>
+	<clipPath id="SVGID_00000034811484770670226070000009542851693816943004_">
+		<use xlink:href="#SVGID_1_"  style="overflow:visible;"/>
+	</clipPath>
+	<path style="clip-path:url(#SVGID_00000034811484770670226070000009542851693816943004_);fill:${color};" d="M288.49,10.1
+		c-0.45-1.41-1.05-2.74-1.81-4V6.01h-0.05c-1.25-2.06-2.97-3.58-5.17-4.56h2.75l4.28,4.47V10.1z M288.49,294.79
+		c-0.36,1.83-0.96,3.56-1.81,5.22V7.31c0.2,0.31,0.37,0.64,0.51,0.98c0.58,1.36,1.03,2.75,1.35,4.19L288.49,294.79z M288.49,301.35
+		l-4.28,4.47h-2.75c2.2-0.98,3.92-2.5,5.17-4.56h0.05v-0.09c0.78-1.26,1.38-2.59,1.81-4V301.35z M10.38,305.82
+		c-1.32-0.32-2.53-0.87-3.63-1.66c-1.1-0.79-2.02-1.76-2.75-2.9V6.05c0.75-1.14,1.68-2.1,2.79-2.9c1.11-0.79,2.32-1.36,3.64-1.71
+		H279.5c1.32,0.32,2.53,0.87,3.63,1.66c1.1,0.79,2.02,1.76,2.75,2.9v295.21c-0.75,1.14-1.68,2.1-2.79,2.9
+		c-1.11,0.79-2.32,1.36-3.64,1.71H10.38z M10.38,305.82c-1.32-0.32-2.53-0.87-3.63-1.66c-1.1-0.79-2.02-1.76-2.75-2.9V6.05
+		c0.75-1.14,1.68-2.1,2.79-2.9c1.11-0.79,2.32-1.36,3.64-1.71H279.5c1.32,0.32,2.53,0.87,3.63,1.66c1.1,0.79,2.02,1.76,2.75,2.9
+		v295.21c-0.75,1.14-1.68,2.1-2.79,2.9c-1.11,0.79-2.32,1.36-3.64,1.71H10.38z"/>
+</g>
+</svg>`;
+
 export default function DynamicFrame({
   frameType, 
   color, 
@@ -514,6 +540,8 @@ export default function DynamicFrame({
         return SENSES_FRAME_SVG(frameColor);
       case 'skills':
         return SKILLS_FRAME_SVG(frameColor);
+      case 'action':
+        return ACTION_FRAME_SVG(frameColor);
       default:
         return ABILITY_FRAME_SVG(frameColor);
     }

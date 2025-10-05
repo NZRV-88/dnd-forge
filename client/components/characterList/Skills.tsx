@@ -2,6 +2,44 @@ import React from "react";
 import DynamicFrame from "@/components/ui/DynamicFrame";
 import { useFrameColor } from "@/contexts/FrameColorContext";
 
+// Импортируем FRAME_COLORS из DynamicFrame
+const FRAME_COLORS = {
+  gold: '#B59E54',
+  silver: '#C0C0C0',
+  bronze: '#CD7F32',
+  copper: '#B87333',
+  steel: '#71797E',
+  red: '#DC2626',
+  blue: '#2563EB',
+  green: '#16A34A',
+  purple: '#9333EA',
+  orange: '#EA580C',
+  pink: '#EC4899',
+  cyan: '#0891B2',
+  lime: '#65A30D',
+  indigo: '#4F46E5',
+  teal: '#0D9488',
+  emerald: '#059669',
+  rose: '#E11D48',
+  amber: '#D97706',
+  violet: '#7C3AED',
+  fuchsia: '#C026D3',
+  sky: '#0284C7',
+  stone: '#78716C',
+  neutral: '#6B7280',
+  zinc: '#71717A',
+  slate: '#64748B',
+  gray: '#6B7280',
+  cool: '#6B7280',
+  warm: '#78716C',
+  true: '#FFFFFF',
+};
+
+// Вспомогательная функция для получения цвета рамки
+const getFrameColor = (color: string) => {
+  return FRAME_COLORS[color as keyof typeof FRAME_COLORS] || FRAME_COLORS.gold;
+};
+
 type Props = {
   stats: Record<string, number>;
   onRoll: (label: string, key: string, value: number) => void;
@@ -79,7 +117,7 @@ export default function Skills({
                 <div 
                   className="h-px my-1"
                   style={{
-                    backgroundColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                    backgroundColor: `${getFrameColor(frameColor)}40`
                   }}
                 />
               )}
@@ -93,17 +131,47 @@ export default function Skills({
                   className="w-4 h-4 rounded-full flex items-center justify-center focus:outline-none -ml-6"
                 >
                   {profSet.has(key) ? (
-                    <span className="w-3 h-3 rounded-full bg-[#B59E54] block hover:bg-yellow-400/70"></span>
+                    <span 
+                      className="w-3 h-3 rounded-full block hover:opacity-70"
+                      style={{ backgroundColor: getFrameColor(frameColor) }}
+                    ></span>
                   ) : (
-                    <span className="w-3 h-3 rounded-full border border-neutral-500 block hover:bg-yellow-400/30"></span>
+                    <span 
+                      className="w-3 h-3 rounded-full border block transition-colors duration-200"
+                      style={{ 
+                        borderColor: getFrameColor(frameColor),
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}30`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    ></span>
                   )}
                 </button>
               ) : (
                 <div className="w-4 h-4 rounded-full flex items-center justify-center">
                   {profSet.has(key) ? (
-                    <span className="w-3 h-3 rounded-full bg-[#B59E54] block"></span>
+                    <span 
+                      className="w-3 h-3 rounded-full block"
+                      style={{ backgroundColor: getFrameColor(frameColor) }}
+                    ></span>
                   ) : (
-                    <span className="w-3 h-3 rounded-full border border-neutral-500 block"></span>
+                    <span 
+                      className="w-3 h-3 rounded-full border block transition-colors duration-200"
+                      style={{ 
+                        borderColor: getFrameColor(frameColor),
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}30`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    ></span>
                   )}
                 </div>
               )}
@@ -127,7 +195,7 @@ export default function Skills({
                 <span 
                   className="flex items-center justify-center w-10 h-8 border-2 rounded-md font-bold text-sm cursor-pointer transition-colors min-w-10 min-h-8 ml-2"
                   style={{
-                    borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                    borderColor: `${getFrameColor(frameColor)}40`,
                     backgroundColor: 'transparent',
                     width: '40px',
                     height: '32px'

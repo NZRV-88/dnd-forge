@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useFrameColor } from "@/contexts/FrameColorContext";
+import DynamicFrame from "@/components/ui/DynamicFrame";
 import { Weapons } from "@/data/items/weapons";
 import { getClassByKey } from "@/data/classes";
 import { Cantrips } from "@/data/spells/cantrips";
@@ -26,13 +27,83 @@ type Props = {
   onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number) => void;
   onSwitchWeaponSlot?: (slot: number) => void;
   onUpdateEquipped?: (newEquipped: any) => void;
+  onSaveAll?: () => void;
   characterData?: any;
 };
 
 type TabType = "actions" | "spells" | "inventory" | "features";
 type ActionType = "attack" | "action" | "bonus" | "reaction";
 
-export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, characterData }: Props) {
+// Импортируем FRAME_COLORS из DynamicFrame
+const FRAME_COLORS = {
+  gold: '#B59E54',
+  silver: '#C0C0C0',
+  bronze: '#CD7F32',
+  copper: '#B87333',
+  steel: '#71797E',
+  red: '#DC2626',
+  blue: '#2563EB',
+  green: '#16A34A',
+  purple: '#9333EA',
+  orange: '#EA580C',
+  pink: '#EC4899',
+  cyan: '#0891B2',
+  lime: '#65A30D',
+  indigo: '#4F46E5',
+  teal: '#0D9488',
+  emerald: '#059669',
+  rose: '#E11D48',
+  amber: '#D97706',
+  violet: '#7C3AED',
+  fuchsia: '#C026D3',
+  sky: '#0284C7',
+  stone: '#78716C',
+  neutral: '#6B7280',
+  zinc: '#71717A',
+  slate: '#64748B',
+  gray: '#6B7280',
+  cool: '#6B7280',
+  warm: '#78716C',
+  true: '#FFFFFF',
+};
+
+// Вспомогательная функция для получения цвета рамки
+const getFrameColor = (color: string) => {
+  return FRAME_COLORS[color as keyof typeof FRAME_COLORS] || FRAME_COLORS.gold;
+};
+
+// Функция для генерации динамического SVG actionFrame
+const getActionFrameSvg = (color: string) => {
+  const hexColor = getFrameColor(color);
+  
+  return `<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Слой_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 289.93 307.31" preserveAspectRatio="none" style="enable-background:new 0 0 289.93 307.31;" xml:space="preserve">
+<style type="text/css">
+	.st0{clip-path:url(#SVGID_00000074437919751204614870000007753514779035950496_);fill:${hexColor};}
+</style>
+<g>
+	<defs>
+		<rect id="SVGID_1_" width="289.93" height="307.31"/>
+	</defs>
+	<clipPath id="SVGID_00000034811484770670226070000009542851693816943004_">
+		<use xlink:href="#SVGID_1_"  style="overflow:visible;"/>
+	</clipPath>
+	<path style="clip-path:url(#SVGID_00000034811484770670226070000009542851693816943004_);fill:${hexColor};" d="M288.49,10.1
+		c-0.45-1.41-1.05-2.74-1.81-4V6.01h-0.05c-1.25-2.06-2.97-3.58-5.17-4.56h2.75l4.28,4.47V10.1z M288.49,294.79
+		c-0.36,1.83-0.96,3.56-1.81,5.22V7.31c0.2,0.31,0.37,0.64,0.51,0.98c0.58,1.36,1.03,2.75,1.35,4.19L288.49,294.79z M288.49,301.35
+		l-4.28,4.47h-2.75c2.2-0.98,3.92-2.5,5.17-4.56h0.05v-0.09c0.78-1.26,1.38-2.59,1.81-4V301.35z M10.38,305.82
+		c-1.32-0.32-2.53-0.87-3.63-1.66c-1.1-0.79-2.02-1.76-2.75-2.9V6.05c0.75-1.14,1.68-2.1,2.79-2.9c1.11-0.79,2.32-1.36,3.64-1.71
+		H279.5c1.32,0.32,2.53,0.87,3.63,1.66c1.1,0.79,2.02,1.76,2.75,2.9v295.21c-0.75,1.14-1.68,2.1-2.79,2.9
+		c-1.11,0.79-2.32,1.36-3.64,1.71H10.38z M5.68,305.82l-4.28-4.47v-4.14c0.45,1.41,1.06,2.74,1.81,4v0.09h0.05
+		c1.25,2.06,2.97,3.58,5.17,4.56H5.68V305.82z M1.4,12.53c0.36-1.82,0.97-3.56,1.81-5.22V300c-0.2-0.31-0.37-0.64-0.51-0.98
+		c-0.58-1.36-1.03-2.75-1.35-4.19L1.4,12.53z M1.4,5.96l4.28-4.47h2.75c-2.17,0.99-3.89,2.5-5.17,4.52H3.21V6.1
+		c-0.78,1.26-1.38,2.59-1.81,4V5.96z M284.76,0H5.12L0,5.35v296.6l5.12,5.35h279.69l5.12-5.35V5.35L284.76,0z"/>
+</g>
+</svg>`;
+};
+
+export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onSaveAll, characterData }: Props) {
   const { frameColor } = useFrameColor();
   const [criticalHits, setCriticalHits] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabType>("actions");
@@ -450,8 +521,41 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return true;
   };
 
+  // Функция для проверки, можно ли переключить универсальный режим
+  const canToggleVersatileMode = (itemName: string) => {
+    const cleanName = itemName.replace(/^\d+x\s+/, '');
+    
+    // Ищем оружие в обоих наборах
+    const mainItem = localEquipped.mainSet.find(item => item.name === cleanName);
+    const additionalItem = localEquipped.additionalSet.find(item => item.name === cleanName);
+    const item = mainItem || additionalItem;
+    
+    if (!item || !item.isVersatile) {
+      return false;
+    }
+    
+    // Если переключаемся с двуручного на одноручный - всегда можно
+    if (item.versatileMode) {
+      return true;
+    }
+    
+    // Если переключаемся с одноручного на двуручный - проверяем доступность слотов
+    const currentSet = mainItem ? localEquipped.mainSet : localEquipped.additionalSet;
+    const otherSet = mainItem ? localEquipped.additionalSet : localEquipped.mainSet;
+    
+    const currentUsedSlots = getUsedSlots(currentSet) - item.slots + 2; // 2 слота для двуручного режима
+    const otherUsedSlots = getUsedSlots(otherSet);
+    
+    // Проверяем, есть ли место хотя бы в одном наборе
+    return (currentUsedSlots <= 2) || (otherUsedSlots + 2 <= 2);
+  };
+
   // Функция для переключения универсального режима оружия
   const toggleVersatileMode = (itemName: string) => {
+    if (!canToggleVersatileMode(itemName)) {
+      return; // Блокируем переключение, если нет места
+    }
+    
     const cleanName = itemName.replace(/^\d+x\s+/, '');
     
     setLocalEquipped(prev => {
@@ -635,17 +739,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   // Подсчет общего веса инвентаря
   const calculateTotalWeight = () => {
     if (!characterData?.equipment) {
-      console.log('No equipment data found');
       return 0;
     }
     
     let totalWeight = 0;
     characterData.equipment.forEach((item: string) => {
       const weight = getItemWeight(item);
-      console.log(`Item: ${item}, Weight: ${weight}`);
       totalWeight += weight;
     });
-    console.log(`Total weight: ${totalWeight}`);
     return totalWeight;
   };
 
@@ -668,13 +769,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Получение валюты
   const getCurrency = () => {
-    console.log('Currency data:', characterData?.currency);
     if (!characterData?.currency) return null;
     
     const { platinum, gold, electrum, silver, copper } = characterData.currency;
     const totalValue = platinum * 1000 + gold * 100 + electrum * 50 + silver * 10 + copper;
-    
-    console.log('Currency values:', { platinum, gold, electrum, silver, copper, totalValue });
     
     if (totalValue === 0) return null;
     
@@ -686,7 +784,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     if (copper > 0) parts.push(`${copper} ММ`);
     
     const result = parts.join(', ');
-    console.log('Currency result:', result);
     return result;
   };
 
@@ -715,7 +812,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             >
               {actionTypes.map((actionType) => {
                 const isActive = activeActionType === actionType.key;
-                const frameColorHex = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                const frameColorHex = getFrameColor(frameColor);
                 
                 return (
                   <button
@@ -749,11 +846,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 <div 
                   className="text-xs font-semibold uppercase mb-4 flex items-center justify-between pb-2"
                   style={{
-                    borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}60`
+                    borderBottom: `1px solid ${getFrameColor(frameColor)}60`
                   }}
                 >
                   <div className="flex items-center">
-                    <span style={{ color: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54' }}>
+                    <span style={{ color: getFrameColor(frameColor) }}>
                       ДЕЙСТВИЯ
                     </span>
                     <span className="text-gray-400 ml-2">• Атак за действие: {getAttacksPerAction()}</span>
@@ -770,9 +867,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         }`}
                         style={{
                           backgroundColor: (equipped?.activeWeaponSlot || 1) === 1 
-                            ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54')
+                            ? getFrameColor(frameColor)
                             : 'transparent',
-                          border: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                          border: `1px solid ${getFrameColor(frameColor)}40`
                         }}
                       >
                         I
@@ -786,9 +883,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         }`}
                         style={{
                           backgroundColor: (equipped?.activeWeaponSlot || 1) === 2 
-                            ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54')
+                            ? getFrameColor(frameColor)
                             : 'transparent',
-                          border: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                          border: `1px solid ${getFrameColor(frameColor)}40`
                         }}
                       >
                         II
@@ -807,7 +904,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   <div className="grid gap-2 text-sm font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
                        style={{ 
                          gridTemplateColumns: '2fr 1fr 1fr 1fr',
-                         borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20` 
+                         borderBottom: `1px solid ${getFrameColor(frameColor)}20` 
                        }}>
                     <div className="flex items-center justify-start">АТАКА</div>
                     <div className="flex items-center justify-center">ДАЛЬНОСТЬ</div>
@@ -859,14 +956,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div 
                                 className="text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
                                 style={{
-                                  borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                  borderColor: `${getFrameColor(frameColor)}40`,
                                   backgroundColor: 'transparent'
                                 }}
                                 onClick={() => handleAttack(weapon, weaponData?.type === 'ranged' ? 'dex' : 'str', attackBonus)}
                                 onMouseEnter={(e) => {
                                   const lightColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
                                     ? '#F59E0B' 
-                                    : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                    : getFrameColor(frameColor);
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                 }}
                                 onMouseLeave={(e) => {
@@ -895,7 +992,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   style={{
                                     borderColor: criticalHits[`${weapon.name}-${weapon.slot}`] 
                                       ? '#F59E0B' 
-                                      : `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                      : `${getFrameColor(frameColor)}40`,
                                     backgroundColor: criticalHits[`${weapon.name}-${weapon.slot}`] 
                                       ? '#F59E0B20' 
                                       : 'transparent'
@@ -911,7 +1008,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   onMouseEnter={(e) => {
                                     const lightColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
                                       ? '#F59E0B' 
-                                      : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                      : getFrameColor(frameColor);
                                     e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                   }}
                                   onMouseLeave={(e) => {
@@ -930,7 +1027,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div 
                                 className="my-1 h-px"
                                 style={{
-                                  borderTop: `1px dotted ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                                  borderTop: `1px dotted ${getFrameColor(frameColor)}40`
                                 }}
                               />
                             )}
@@ -973,14 +1070,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div 
                                 className="text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
                                 style={{
-                                  borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                  borderColor: `${getFrameColor(frameColor)}40`,
                                   backgroundColor: 'transparent'
                                 }}
                                 onClick={() => handleAttack(spellName, spellAbility, spellAttackBonus, true)}
                                 onMouseEnter={(e) => {
                                   const lightColor = criticalHits[`spell-${spellName}`] 
                                     ? '#F59E0B' 
-                                    : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                    : getFrameColor(frameColor);
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                 }}
                                 onMouseLeave={(e) => {
@@ -1017,7 +1114,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   style={{
                                     borderColor: criticalHits[`spell-${spellName}`] 
                                       ? getDamageColor(spellData?.damage?.type).border
-                                      : `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                      : `${getFrameColor(frameColor)}40`,
                                     backgroundColor: criticalHits[`spell-${spellName}`] 
                                       ? getDamageColor(spellData?.damage?.type).bg
                                       : 'transparent',
@@ -1034,7 +1131,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   onMouseEnter={(e) => {
                                     const lightColor = criticalHits[`spell-${spellName}`] 
                                       ? getDamageColor(spellData?.damage?.type).border
-                                      : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                      : getFrameColor(frameColor);
                                     e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                   }}
                                   onMouseLeave={(e) => {
@@ -1056,7 +1153,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div 
                                 className="my-1 h-px"
                                 style={{
-                                  borderTop: `1px dotted ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                                  borderTop: `1px dotted ${getFrameColor(frameColor)}40`
                                 }}
                               />
                             )}
@@ -1075,10 +1172,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   <div 
                     className="text-xs font-semibold uppercase mb-2 flex items-center mt-6 pb-2"
                     style={{
-                      borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}60`
+                      borderBottom: `1px solid ${getFrameColor(frameColor)}60`
                     }}
                   >
-                    <span style={{ color: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54' }}>
+                    <span style={{ color: getFrameColor(frameColor) }}>
                       БОНУСНЫЕ ДЕЙСТВИЯ
                     </span>
                   </div>
@@ -1087,7 +1184,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   <div className="grid gap-2 text-sm font-semibold uppercase text-gray-400 mb-2 pb-1 items-center mt-4" 
                        style={{ 
                          gridTemplateColumns: '2fr 1fr 1fr 1fr',
-                         borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20` 
+                         borderBottom: `1px solid ${getFrameColor(frameColor)}20` 
                        }}>
                     <div className="flex items-center justify-start">АТАКА</div>
                     <div className="flex items-center justify-center">ДАЛЬНОСТЬ</div>
@@ -1157,14 +1254,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div 
                                 className="text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
                                 style={{
-                                  borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                  borderColor: `${getFrameColor(frameColor)}40`,
                                   backgroundColor: 'transparent'
                                 }}
                                 onClick={() => handleAttack(spellName, spellAbility, spellAttackBonus, true)}
                                 onMouseEnter={(e) => {
                                   const lightColor = criticalHits[`spell-${spellName}`] 
                                     ? '#F59E0B' 
-                                    : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                    : getFrameColor(frameColor);
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                 }}
                                 onMouseLeave={(e) => {
@@ -1201,7 +1298,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   style={{
                                     borderColor: criticalHits[`spell-${spellName}`] 
                                       ? getDamageColor(spellData?.damage?.type).border
-                                      : `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
+                                      : `${getFrameColor(frameColor)}40`,
                                     backgroundColor: criticalHits[`spell-${spellName}`] 
                                       ? getDamageColor(spellData?.damage?.type).bg
                                       : 'transparent',
@@ -1218,7 +1315,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   onMouseEnter={(e) => {
                                     const lightColor = criticalHits[`spell-${spellName}`] 
                                       ? getDamageColor(spellData?.damage?.type).border
-                                      : frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+                                      : getFrameColor(frameColor);
                                     e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                   }}
                                   onMouseLeave={(e) => {
@@ -1240,7 +1337,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div 
                                 className="my-1 h-px"
                                 style={{
-                                  borderTop: `1px dotted ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
+                                  borderTop: `1px dotted ${getFrameColor(frameColor)}40`
                                 }}
                               />
                             )}
@@ -1279,7 +1376,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               <div 
                 className="text-xs font-semibold uppercase mb-2 text-gray-400"
                 style={{
-                  borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20`
+                  borderBottom: `1px solid ${getFrameColor(frameColor)}20`
                 }}
               >
                 ЗАГОВОРЫ (0 уровень)
@@ -1313,7 +1410,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               <div 
                 className="text-xs font-semibold uppercase mb-2 text-gray-400"
                 style={{
-                  borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20`
+                  borderBottom: `1px solid ${getFrameColor(frameColor)}20`
                 }}
               >
                 ПОДГОТОВЛЕННЫЕ ЗАКЛИНАНИЯ
@@ -1503,8 +1600,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 <button
                   className="px-3 py-1 text-xs font-semibold rounded border"
                   style={{
-                    borderColor: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54',
-                    backgroundColor: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54',
+                    borderColor: getFrameColor(frameColor),
+                    backgroundColor: getFrameColor(frameColor),
                     color: '#000'
                   }}
                   onClick={saveEquipmentChanges}
@@ -1524,7 +1621,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 <div className="grid gap-2 text-sm font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
                      style={{ 
                        gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr',
-                       borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20` 
+                       borderBottom: `1px solid ${getFrameColor(frameColor)}20` 
                      }}>
                   <div className="text-center">✓</div>
                   <div className="flex items-center justify-start">НАЗВАНИЕ</div>
@@ -1543,7 +1640,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         className="w-2 h-2 rounded-full"
                         style={{
                           backgroundColor: localEquipped.armor
-                            ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54')
+                            ? getFrameColor(frameColor)
                             : '#4B5563'
                         }}
                       />
@@ -1558,8 +1655,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             <div 
                               className="w-4 h-4 rounded-none border-2 cursor-pointer hover:opacity-80"
                               style={{
-                                borderColor: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54',
-                                backgroundColor: item.equipped ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54') : '#171717'
+                                borderColor: getFrameColor(frameColor),
+                                backgroundColor: item.equipped ? getFrameColor(frameColor) : '#171717'
                               }}
                               onClick={() => toggleItemEquipped(item.name)}
                             />
@@ -1587,7 +1684,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               className="w-2 h-2 rounded-full"
                               style={{
                                 backgroundColor: i < getUsedSlotsCount(localEquipped.mainSet)
-                                  ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54')
+                                  ? getFrameColor(frameColor)
                                   : '#4B5563'
                               }}
                             />
@@ -1603,8 +1700,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             <div 
                               className="w-4 h-4 rounded-none border-2 cursor-pointer hover:opacity-80"
                               style={{
-                                borderColor: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54',
-                                backgroundColor: item.equipped ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54') : '#171717'
+                                borderColor: getFrameColor(frameColor),
+                                backgroundColor: item.equipped ? getFrameColor(frameColor) : '#171717'
                               }}
                               onClick={() => toggleItemEquipped(item.name)}
                             />
@@ -1612,18 +1709,23 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div className="text-gray-200 truncate flex items-center gap-2">
                             {item.name}
                             {item.isVersatile && (
-                              <button
-                                className="text-xs px-2 py-1 rounded border"
-                                style={{
-                                  borderColor: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54',
-                                  backgroundColor: item.versatileMode ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54') : 'transparent',
-                                  color: item.versatileMode ? '#000' : (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54')
-                                }}
-                                onClick={() => toggleVersatileMode(item.name)}
-                                title={item.versatileMode ? 'Двуручный режим (2 слота)' : 'Одноручный режим (1 слот)'}
-                              >
-                                {item.versatileMode ? '2H' : '1H'}
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <div
+                                  className={`w-4 h-4 rounded-full ${canToggleVersatileMode(item.name) ? 'cursor-pointer hover:opacity-80' : 'cursor-not-allowed opacity-50'}`}
+                                  style={{
+                                    backgroundColor: item.versatileMode ? getFrameColor(frameColor) : 'transparent',
+                                    border: `2px solid ${getFrameColor(frameColor)}`
+                                  }}
+                                  onClick={() => canToggleVersatileMode(item.name) && toggleVersatileMode(item.name)}
+                                  title={canToggleVersatileMode(item.name) 
+                                    ? (item.versatileMode ? 'Двуручный режим (2 слота) - клик для переключения' : 'Одноручный режим (1 слот) - клик для переключения')
+                                    : 'Недостаточно свободных слотов для переключения в двуручный режим'
+                                  }
+                                />
+                                <span className="text-xs text-gray-400">
+                                  {item.versatileMode ? '2H' : '1H'}
+                                </span>
+                              </div>
                             )}
                           </div>
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
@@ -1656,7 +1758,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               className="w-2 h-2 rounded-full"
                               style={{
                                 backgroundColor: i < getUsedSlotsCount(localEquipped.additionalSet)
-                                  ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54')
+                                  ? getFrameColor(frameColor)
                                   : '#4B5563'
                               }}
                             />
@@ -1672,8 +1774,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             <div 
                               className="w-4 h-4 rounded-none border-2 cursor-pointer hover:opacity-80"
                               style={{
-                                borderColor: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54',
-                                backgroundColor: item.equipped ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54') : '#171717'
+                                borderColor: getFrameColor(frameColor),
+                                backgroundColor: item.equipped ? getFrameColor(frameColor) : '#171717'
                               }}
                               onClick={() => toggleItemEquipped(item.name)}
                             />
@@ -1681,18 +1783,23 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div className="text-gray-200 truncate flex items-center gap-2">
                             {item.name}
                             {item.isVersatile && (
-                              <button
-                                className="text-xs px-2 py-1 rounded border"
-                                style={{
-                                  borderColor: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54',
-                                  backgroundColor: item.versatileMode ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54') : 'transparent',
-                                  color: item.versatileMode ? '#000' : (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54')
-                                }}
-                                onClick={() => toggleVersatileMode(item.name)}
-                                title={item.versatileMode ? 'Двуручный режим (2 слота)' : 'Одноручный режим (1 слот)'}
-                              >
-                                {item.versatileMode ? '2H' : '1H'}
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <div
+                                  className={`w-4 h-4 rounded-full ${canToggleVersatileMode(item.name) ? 'cursor-pointer hover:opacity-80' : 'cursor-not-allowed opacity-50'}`}
+                                  style={{
+                                    backgroundColor: item.versatileMode ? getFrameColor(frameColor) : 'transparent',
+                                    border: `2px solid ${getFrameColor(frameColor)}`
+                                  }}
+                                  onClick={() => canToggleVersatileMode(item.name) && toggleVersatileMode(item.name)}
+                                  title={canToggleVersatileMode(item.name) 
+                                    ? (item.versatileMode ? 'Двуручный режим (2 слота) - клик для переключения' : 'Одноручный режим (1 слот) - клик для переключения')
+                                    : 'Недостаточно свободных слотов для переключения в двуручный режим'
+                                  }
+                                />
+                                <span className="text-xs text-gray-400">
+                                  {item.versatileMode ? '2H' : '1H'}
+                                </span>
+                              </div>
                             )}
                           </div>
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
@@ -1715,15 +1822,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     </div>
                   )}
                   
-                  {/* Отладочная информация */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="text-xs text-gray-600 mt-2 p-2 bg-gray-800 rounded">
-                      Debug: equippedItems.length = {equippedItems.length}<br/>
-                      Armor: {equippedItems.filter(item => item.set === 'armor').length}<br/>
-                      Main: {equippedItems.filter(item => item.set === 'main').length}<br/>
-                      Additional: {equippedItems.filter(item => item.set === 'additional').length}
-                    </div>
-                  )}
                 </div>
               </div>
               
@@ -1735,7 +1833,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 <div className="grid gap-2 text-sm font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
                      style={{ 
                        gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr',
-                       borderBottom: `1px solid ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}20` 
+                       borderBottom: `1px solid ${getFrameColor(frameColor)}20` 
                      }}>
                   <div className="text-center">✓</div>
                   <div className="flex items-center justify-start">НАЗВАНИЕ</div>
@@ -1760,8 +1858,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                     : 'cursor-not-allowed opacity-50'
                                 }`}
                                 style={{
-                                  borderColor: frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54',
-                                  backgroundColor: item.equipped ? (frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54') : '#171717'
+                                  borderColor: getFrameColor(frameColor),
+                                  backgroundColor: item.equipped ? getFrameColor(frameColor) : '#171717'
                                 }}
                                 onClick={() => canEquipItem(item.name) && toggleItemEquipped(item.name)}
                                 title={!canEquipItem(item.name) ? 'Недостаточно слотов для экипировки' : undefined}
@@ -1815,7 +1913,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     <div
       className="relative text-gray-300 w-[561px] h-[669px] flex-shrink-0"
       style={{
-        backgroundImage: "url('/frames/actionFrame.svg')",
+        backgroundImage: `url('data:image/svg+xml;charset=utf-8,${encodeURIComponent(getActionFrameSvg(frameColor))}')`,
         backgroundSize: "100% auto",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center top",
@@ -1827,7 +1925,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         <div className="flex gap-0 mb-4 flex-shrink-0">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.key;
-            const frameColorHex = frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54';
+            const frameColorHex = getFrameColor(frameColor);
             
             return (
               <button
@@ -1846,7 +1944,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         </div>
         
         {/* Контент вкладки с скроллом */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+        <div className="flex-1 overflow-y-auto scrollbar-thin" style={{
+          scrollbarColor: `${getFrameColor(frameColor)} #1a1a1a`
+        }}>
           {renderContent()}
         </div>
       </div>

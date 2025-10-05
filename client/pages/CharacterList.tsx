@@ -79,6 +79,19 @@ export default function CharacterList() {
                 } else {
                     draft.skills = [];
                 }
+                
+                // Инициализируем equipped если его нет
+                if (!draft.equipped) {
+                    draft.equipped = {
+                        weaponSlot1: [],
+                        weaponSlot2: [],
+                        activeWeaponSlot: 1,
+                        armor: null,
+                        shield1: null,
+                        shield2: null
+                    };
+                }
+                
                 setChar(draft);
                 setCurHp(draft.basics?.hpCurrent ?? 0);
                 setTempHp(draft.basics?.hpTemp ?? 0);
@@ -96,6 +109,7 @@ export default function CharacterList() {
         const raceBonuses = basics.raceBonuses || {};
         const backgroundBonuses = basics.backgroundBonuses || {};
         const asi = char.asi || {};
+
 
         const asiBonuses: Record<string, number> = {};
         const featBonuses: Record<string, number> = {};
@@ -150,7 +164,9 @@ export default function CharacterList() {
                 : undefined;
             const maxVal = typeof capFromData === "number" ? capFromData : 20;
             out[k] = Math.min(maxVal, total);
+            
         });
+
 
         return {
             ...out,
@@ -231,30 +247,20 @@ export default function CharacterList() {
     // Расчет класса брони с учетом доспехов и щитов
     const calculateAC = () => {
         const baseAC = 10; // Базовый AC без доспехов
-        const dexMod = Math.floor(((finalStats as any).dex || 10) - 10) / 2;
+        const dexValue = (finalStats as any).dex || 10;
+        const dexMod = Math.floor((dexValue - 10) / 2);
         
-        if (!char?.equipped) return baseAC + dexMod;
+        if (!char?.equipped) return Math.floor(baseAC + dexMod);
         
         const { armor, shield1, shield2 } = char.equipped;
         let totalAC = baseAC;
-        
-        console.log('Debug AC calculation:');
-        console.log('- baseAC:', baseAC);
-        console.log('- dexMod:', dexMod);
-        console.log('- armor:', armor);
-        console.log('- shield1:', shield1);
-        console.log('- shield2:', shield2);
         
         // Добавляем AC от доспехов - ищем полные данные по имени
         if (armor) {
             const armorData = Armors.find(a => a.name === armor.name);
             if (armorData) {
                 totalAC = armorData.baseAC || baseAC;
-                console.log('- armor baseAC:', armorData.baseAC);
-                console.log('- armor category:', armorData.category);
-                console.log('- totalAC after armor:', totalAC);
             } else {
-                console.log('- armor data not found for:', armor.name);
                 totalAC = baseAC;
             }
         }
@@ -262,43 +268,35 @@ export default function CharacterList() {
         // Добавляем модификатор ловкости (если доспех это позволяет)
         if (!armor) {
             totalAC += dexMod;
-            console.log('- added full dexMod:', dexMod);
         } else {
             const armorData = Armors.find(a => a.name === armor.name);
             if (armorData) {
                 if (armorData.category === 'light') {
                     totalAC += dexMod;
-                    console.log('- added full dexMod:', dexMod);
                 } else if (armorData.category === 'medium') {
                     const maxDex = armorData.maxDexBonus !== undefined ? armorData.maxDexBonus : 2;
                     const dexBonus = Math.min(dexMod, maxDex);
                     totalAC += dexBonus;
-                    console.log('- added limited dexMod:', dexBonus, '(max:', maxDex, ')');
                 } else if (armorData.category === 'heavy') {
                     const maxDex = armorData.maxDexBonus !== undefined ? armorData.maxDexBonus : 0;
                     const dexBonus = Math.min(dexMod, maxDex);
                     totalAC += dexBonus;
-                    console.log('- added limited dexMod:', dexBonus, '(max:', maxDex, ')');
                 }
             } else {
                 // Если данные доспеха не найдены, добавляем полный модификатор ловкости
                 totalAC += dexMod;
-                console.log('- armor data not found, added full dexMod:', dexMod);
             }
         }
         
         // Добавляем бонус от щита
         if (shield1) {
             totalAC += 2; // Стандартный бонус щита
-            console.log('- added shield1 bonus: +2');
         }
         if (shield2) {
             totalAC += 2; // Второй щит (если есть)
-            console.log('- added shield2 bonus: +2');
         }
         
-        console.log('- final totalAC:', totalAC);
-        return totalAC;
+        return Math.floor(totalAC);
     };
 
     // universal addRoll function: any child can call it
@@ -414,22 +412,37 @@ export default function CharacterList() {
             ...prev,
             equipped: newEquipped
         }));
+        
+        // Сохраняем изменения в БД сразу после обновления состояния
+        setTimeout(() => {
+            saveAll(newEquipped);
+        }, 50);
     };
 
     // Save changes back to Supabase
-    const saveAll = async () => {
+    const saveAll = async (customEquipped?: any) => {
         try {
             if (!char) return;
+            
             const updated = { ...char };
             updated.basics = { ...updated.basics, hpCurrent: curHp, hpTemp: tempHp };
             updated.skills = skillProfs;
+            
+            // Используем customEquipped если передан, иначе char.equipped
+            if (customEquipped) {
+                updated.equipped = customEquipped;
+            }
             const { error } = await supabase
                 .from("characters")
                 .update({ data: updated, updated_at: new Date() })
                 .eq("id", id);
-            if (!error) setChar(updated);
-        } catch {
-            // noop
+            if (!error) {
+                setChar(updated);
+            } else {
+                console.error("Error updating character:", error);
+            }
+        } catch (error) {
+            console.error("Error updating character:", error);
         }
     };
 
@@ -584,18 +597,19 @@ export default function CharacterList() {
 
                         {/* Attacks (под инициативой/AC) */}
                         <div>
-                            <Attacks 
-                                attacks={[]} 
-                                equipped={char?.equipped}
-                                stats={finalStats}
-                                proficiencyBonus={proficiencyBonus}
-                                classKey={char?.basics?.class}
-                                level={char?.basics?.level}
-                                onRoll={addRoll}
-                                onSwitchWeaponSlot={switchWeaponSlot}
-                                onUpdateEquipped={updateEquipped}
-                                characterData={characterData}
-                            />
+                <Attacks 
+                    attacks={[]} 
+                    equipped={char?.equipped}
+                    stats={finalStats}
+                    proficiencyBonus={proficiencyBonus}
+                    classKey={char?.basics?.class}
+                    level={char?.basics?.level}
+                    onRoll={addRoll}
+                    onSwitchWeaponSlot={switchWeaponSlot}
+                    onUpdateEquipped={updateEquipped}
+                    onSaveAll={saveAll}
+                    characterData={characterData}
+                />
                         </div>
                     </div>
                 </div>
