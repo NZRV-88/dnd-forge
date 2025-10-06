@@ -179,7 +179,7 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
         quantity = match?.[1]?.trim() || '';
         name = match?.[2] || itemName;
     } else {
-        name = String(itemName);
+        name = itemName?.name || String(itemName) || '';
     }
     
     // Определяем тип предмета и его состояние
@@ -602,29 +602,7 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                             )}
                         </div>
                         <div className="flex items-center gap-2">
-                            {/* Слоты для оружия и щита */}
-                            {(itemType === 'weapon' || itemType === 'shield') && (
-                                <EquipmentSlots 
-                                    weaponSlot1={Array.isArray(equipped?.weaponSlot1) ? equipped.weaponSlot1 : []}
-                                    weaponSlot2={Array.isArray(equipped?.weaponSlot2) ? equipped.weaponSlot2 : []}
-                                    shield1={equipped?.shield1 || null}
-                                    shield2={equipped?.shield2 || null}
-                                    isVersatile={itemType === 'weapon' ? equippedItem()?.isVersatile : false}
-                                    versatileMode={itemType === 'weapon' ? equippedItem()?.versatileMode : false}
-                                    onVersatileToggle={itemType === 'weapon' ? handleVersatileToggle : undefined}
-                                    activeWeaponSlot={equipped?.activeWeaponSlot || 1}
-                                    onSlotClick={(slot) => setActiveWeaponSlot(slot)}
-                                />
-                            )}
-                            
-                            {/* Слот для доспеха */}
-                            {itemType === 'armor' && (
-                                <div className={`w-3 h-3 border border-gray-400 rounded-sm transition-colors ${
-                                    equipped?.armor ? 'bg-[#cf995f] ring-1 ring-[#cf995f]/50' : 'bg-transparent'
-                                }`}
-                                title={equipped?.armor ? `Доспех: ${equipped.armor.name}` : 'Свободно'}
-                                />
-                            )}
+                            {/* Слоты убраны из карточек - теперь отображаются в контенте блока */}
                             
                             
                             {/* Кнопка надевания */}
@@ -799,7 +777,7 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
 export default function EquipmentPick() {
     const { id } = useParams<{ id: string }>(); 
     const nav = useNavigate();
-    const { draft, setBasics, calculateMaxCarryWeight, isOverloaded } = useCharacter();
+    const { draft, setBasics, calculateMaxCarryWeight, isOverloaded, setActiveWeaponSlot } = useCharacter();
     const [selectedClassChoice, setSelectedClassChoice] = useState<number>(0);
     const [selectedBackgroundChoice, setSelectedBackgroundChoice] = useState<number>(0);
     const [currency, setCurrency] = useState({
@@ -809,7 +787,15 @@ export default function EquipmentPick() {
         silver: 0,    // Серебро
         copper: 0     // Медь
     });
-    const [addedInventory, setAddedInventory] = useState<(string | any)[]>([]);
+    const [addedInventory, setAddedInventory] = useState<Array<{
+        name: string;
+        type: string;
+        category: string;
+        weight: number;
+        cost: string;
+        quantity: number;
+    }>>([]);
+    const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
     const [openSections, setOpenSections] = useState({
         starting: true,
         inventory: false,
@@ -824,16 +810,55 @@ export default function EquipmentPick() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [notification, setNotification] = useState<{ message: string; type: 'buy' | 'add' | 'error' } | null>(null);
 
-    // Загружаем инвентарь из драфта при инициализации
+    // Загружаем инвентарь из драфта только при инициализации компонента
     useEffect(() => {
-        if (draft.basics.equipment && draft.basics.equipment.length > 0) {
-            setAddedInventory(draft.basics.equipment);
+        console.log('=== ЗАГРУЗКА ИНВЕНТАРЯ ИЗ ДРАФТА (ИНИЦИАЛИЗАЦИЯ) ===');
+        console.log('draft.basics.equipment:', draft.basics.equipment);
+        console.log('Array.isArray(draft.basics.equipment):', Array.isArray(draft.basics.equipment));
+        console.log('draft.basics.equipment.length:', draft.basics.equipment?.length);
+        
+        if (draft.basics.equipment && Array.isArray(draft.basics.equipment) && draft.basics.equipment.length > 0) {
+            const convertedInventory = convertStringsToInventory(draft.basics.equipment);
+            console.log('convertedInventory:', convertedInventory);
+            setAddedInventory(convertedInventory);
         }
-        // gold теперь управляется через currency
+    }, []); // Пустой массив зависимостей - выполняется только при монтировании
+
+    // Загружаем валюту из драфта
+    useEffect(() => {
         if (draft.basics.currency) {
             setCurrency(draft.basics.currency);
         }
-    }, [draft.basics.equipment, draft.basics.gold, draft.basics.currency]);
+    }, [draft.basics.currency]);
+
+    // Функция для подсчета слотов и наборов
+    const getSlotsInfo = () => {
+        const equipped = draft.equipped;
+        if (!equipped) return { armor: 0, set1: 0, set2: 0 };
+
+        // Доспех - 1 слот
+        const armorSlots = equipped.armor ? 1 : 0;
+
+        // Набор I - оружие + щит
+        const weaponSlot1 = Array.isArray(equipped.weaponSlot1) ? equipped.weaponSlot1 : [];
+        const shield1 = equipped.shield1;
+        const weaponSlots1 = weaponSlot1.reduce((sum, w) => sum + (w.slots || 0), 0);
+        const shieldSlots1 = shield1 ? 1 : 0;
+        const set1Slots = weaponSlots1 + shieldSlots1;
+
+        // Набор II - оружие + щит
+        const weaponSlot2 = Array.isArray(equipped.weaponSlot2) ? equipped.weaponSlot2 : [];
+        const shield2 = equipped.shield2;
+        const weaponSlots2 = weaponSlot2.reduce((sum, w) => sum + (w.slots || 0), 0);
+        const shieldSlots2 = shield2 ? 1 : 0;
+        const set2Slots = weaponSlots2 + shieldSlots2;
+
+        return {
+            armor: armorSlots,
+            set1: set1Slots,
+            set2: set2Slots
+        };
+    };
 
     // Функция для показа уведомления
     const showNotification = (message: string, type: 'buy' | 'add' | 'error') => {
@@ -870,29 +895,28 @@ export default function EquipmentPick() {
     };
 
     // Функция для получения веса предмета
-    const getItemWeight = (itemName: string | any) => {
-        // Если itemName - это объект, используем его свойство weight
-        if (typeof itemName === 'object' && itemName !== null) {
-            return itemName.weight || 0;
+    const getItemWeight = (item: string | any) => {
+        // Если item - это объект, используем его свойство weight
+        if (typeof item === 'object' && item !== null) {
+            return item.weight || 0;
         }
         
-        // Если itemName - это строка, обрабатываем как раньше
-        if (typeof itemName !== 'string') {
+        // Если item - это строка, обрабатываем как раньше (для обратной совместимости)
+        if (typeof item !== 'string') {
             return 0;
         }
         
-        const cleanName = itemName.replace(/^\d+x\s+/, '');
+        const cleanName = item.replace(/^\d+x\s+/, '');
         
         // Ищем в разных массивах
-        let item = Gears.find(g => g.name === cleanName);
-        if (item) {
-            // Если у предмета нет веса, возвращаем 0
-            return typeof item.weight === 'number' ? item.weight : 0;
+        let foundItem = Gears.find(g => g.name === cleanName);
+        if (foundItem) {
+            return typeof foundItem.weight === 'number' ? foundItem.weight : 0;
         }
         
-        item = Ammunitions.find(a => a.name === cleanName);
-        if (item) {
-            return typeof item.weight === 'number' ? item.weight : 0;
+        foundItem = Ammunitions.find(a => a.name === cleanName);
+        if (foundItem) {
+            return typeof foundItem.weight === 'number' ? foundItem.weight : 0;
         }
         
         const weapon = Weapons.find(w => w.name === cleanName);
@@ -916,16 +940,31 @@ export default function EquipmentPick() {
         }
         
         // Отладочная информация
-        console.log(`Предмет не найден: "${cleanName}" (оригинал: "${itemName}")`);
+        console.log(`Предмет не найден: "${cleanName}" (оригинал: "${item}")`);
         return 0;
     };
 
     // Подсчет общего веса инвентаря
     const calculateTotalWeight = () => {
         let totalWeight = 0;
-        addedInventory.forEach(item => {
-            totalWeight += getItemWeight(item);
+        
+        addedInventory.forEach((item, index) => {
+            let itemWeight = 0;
+            let itemQuantity = 1;
+            
+            if (typeof item === 'object' && item !== null) {
+                // Для объектов используем их свойства
+                itemWeight = typeof item.weight === 'number' ? item.weight : 0;
+                itemQuantity = typeof item.quantity === 'number' ? item.quantity : 1;
+            } else {
+                // Для строк используем старую логику
+                itemWeight = getItemWeight(item);
+                itemQuantity = 1;
+            }
+            
+            totalWeight += itemWeight * itemQuantity;
         });
+        
         return totalWeight;
     };
 
@@ -996,7 +1035,10 @@ export default function EquipmentPick() {
 
     // Сортировка предметов в инвентаре по категориям
     const getSortedInventory = () => {
-        const sortedItems = [...addedInventory];
+        const sortedItems = [...addedInventory].filter(item => {
+            // Фильтруем только валидные предметы (строки или объекты с name)
+            return typeof item === 'string' || (typeof item === 'object' && item !== null && item.name);
+        });
         
         // Отладочная информация - показываем все предметы в инвентаре
         // console.log('=== ВСЕ ПРЕДМЕТЫ В ИНВЕНТАРЕ ===');
@@ -1009,20 +1051,20 @@ export default function EquipmentPick() {
         };
         
         // Функция для извлечения базового названия предмета (убираем количество)
-        const getBaseItemName = (itemName: string | any) => {
-            // Если itemName - это объект, используем его свойство name
-            if (typeof itemName === 'object' && itemName !== null) {
-                return itemName.name || '';
+        const getBaseItemName = (item: string | any) => {
+            // Если item - это объект, используем его свойство name
+            if (typeof item === 'object' && item !== null) {
+                return item.name || '';
             }
             
-            // Если itemName - это не строка, возвращаем пустую строку
-            if (typeof itemName !== 'string') {
+            // Если item - это не строка, возвращаем пустую строку
+            if (typeof item !== 'string') {
                 return '';
             }
             // Убираем количество в разных форматах:
             // "Метательное копьё (8)" -> "Метательное копьё"
             // "8x Метательное копьё" -> "Метательное копьё"
-            return itemName
+            return item
                 .replace(/\s*\(\d+\)\s*$/, '') // убираем (8)
                 .replace(/^\d+x\s*/, '') // убираем 8x в начале
                 .trim();
@@ -1273,22 +1315,16 @@ export default function EquipmentPick() {
             const item = prev[index];
             if (!item) return prev;
             
-            // Проверяем, есть ли количество в названии предмета
-            const quantityMatch = item.match(/^(\d+)x\s+(.+)$/);
-            
-            if (quantityMatch) {
-                const quantity = parseInt(quantityMatch[1]);
-                const itemName = quantityMatch[2];
-                
-                if (quantity > 1) {
+            // Если item - это объект, работаем с количеством
+            if (typeof item === 'object' && item !== null) {
+                if (item.quantity > 1) {
                     // Уменьшаем количество на 1
-                    const newQuantity = quantity - 1;
-                    const newItem = `${newQuantity}x ${itemName}`;
+                    const newItem = { ...item, quantity: item.quantity - 1 };
                     const newInventory = [...prev];
                     newInventory[index] = newItem;
                     
                     // Обновляем инвентарь в драфте
-                    setBasics({ equipment: newInventory });
+                    setBasics({ equipment: convertInventoryToStrings(newInventory) });
                     return newInventory;
                 } else {
                     // Если количество 1, удаляем предмет полностью
@@ -1302,34 +1338,192 @@ export default function EquipmentPick() {
                         });
                     } else {
                         // Обновляем инвентарь в драфте
-                        setBasics({ equipment: newInventory });
+                        setBasics({ equipment: convertInventoryToStrings(newInventory) });
                     }
                     
                     return newInventory;
                 }
             } else {
-                // Если нет количества, удаляем предмет полностью
-                const newInventory = prev.filter((_, i) => i !== index);
+                // Если item - это строка (для обратной совместимости)
+                const itemString = String(item);
+                const quantityMatch = itemString.match(/^(\d+)x\s+(.+)$/);
                 
-                // Если инвентарь пуст, сбрасываем флаг
-                if (newInventory.length === 0) {
-                    setBasics({ 
-                        equipment: [], 
-                        isStartEquipmentAdded: false 
-                    });
+                if (quantityMatch) {
+                    const quantity = parseInt(quantityMatch[1]);
+                    const itemName = quantityMatch[2];
+                    
+                    if (quantity > 1) {
+                        // Уменьшаем количество на 1
+                        const newQuantity = quantity - 1;
+                        const newItem = createItemObject(itemName, 'other', newQuantity);
+                        const newInventory = [...prev];
+                        newInventory[index] = newItem;
+                        
+                        // Обновляем инвентарь в драфте
+                        setBasics({ equipment: convertInventoryToStrings(newInventory) });
+                        return newInventory;
+                    } else {
+                        // Если количество 1, удаляем предмет полностью
+                        const newInventory = prev.filter((_, i) => i !== index);
+                        
+                        // Если инвентарь пуст, сбрасываем флаг
+                        if (newInventory.length === 0) {
+                            setBasics({ 
+                                equipment: [], 
+                                isStartEquipmentAdded: false 
+                            });
+                        } else {
+                            // Обновляем инвентарь в драфте
+                            setBasics({ equipment: convertInventoryToStrings(newInventory) });
+                        }
+                        
+                        return newInventory;
+                    }
                 } else {
-                    // Обновляем инвентарь в драфте
-                    setBasics({ equipment: newInventory });
+                    // Если нет количества, удаляем предмет полностью
+                    const newInventory = prev.filter((_, i) => i !== index);
+                    
+                    // Если инвентарь пуст, сбрасываем флаг
+                    if (newInventory.length === 0) {
+                        setBasics({ 
+                            equipment: [], 
+                            isStartEquipmentAdded: false 
+                        });
+                    } else {
+                        // Обновляем инвентарь в драфте
+                        setBasics({ equipment: convertInventoryToStrings(newInventory) });
+                    }
+                    
+                    return newInventory;
                 }
-                
+            }
+        });
+    };
+
+    // Вспомогательная функция для создания объекта предмета
+    const createItemObject = (itemName: string, itemType: string, quantity: number = 1) => {
+        const allItems = getAllItems();
+        const itemData = allItems.find(i => i.name === itemName);
+        
+        if (itemData) {
+            return {
+                name: itemName,
+                type: itemData.type,
+                category: itemData.category,
+                weight: itemData.weight,
+                cost: itemData.cost,
+                quantity: quantity
+            };
+        }
+        
+        // Если предмет не найден в getAllItems, создаем базовый объект
+        return {
+            name: itemName,
+            type: itemType,
+            category: 'Прочее',
+            weight: 0,
+            cost: 'Неизвестно',
+            quantity: quantity
+        };
+    };
+
+    // Функция для конвертации объектов в строки для совместимости с setBasics
+    const convertInventoryToStrings = (inventory: Array<{
+        name: string;
+        type: string;
+        category: string;
+        weight: number;
+        cost: string;
+        quantity: number;
+    }>): string[] => {
+        console.log('=== КОНВЕРТАЦИЯ ИНВЕНТАРЯ В СТРОКИ ===');
+        console.log('Входной inventory:', inventory);
+        
+        const result = inventory.map(item => {
+            if (item.quantity > 1) {
+                return `${item.quantity}x ${item.name}`;
+            } else {
+                return item.name;
+            }
+        });
+        
+        console.log('Результат конвертации:', result);
+        return result;
+    };
+
+    // Функция для конвертации строк в объекты для загрузки из драфта
+    const convertStringsToInventory = (equipment: string[]): Array<{
+        name: string;
+        type: string;
+        category: string;
+        weight: number;
+        cost: string;
+        quantity: number;
+    }> => {
+        return equipment.map(itemString => {
+            // Убеждаемся, что itemString - это строка
+            const stringItem = String(itemString);
+            
+            // Парсим количество и название
+            const match = stringItem.match(/^(\d+)x\s+(.+)$/);
+            if (match) {
+                const quantity = parseInt(match[1]);
+                const name = match[2];
+                return createItemObject(name, 'other', quantity);
+            } else {
+                return createItemObject(stringItem, 'other', 1);
+            }
+        });
+    };
+
+    // Функция для добавления предмета в инвентарь с проверкой на существование
+    const addItemToInventory = (itemObject: {
+        name: string;
+        type: string;
+        category: string;
+        weight: number;
+        cost: string;
+        quantity: number;
+    }) => {
+        console.log('=== ДОБАВЛЕНИЕ ПРЕДМЕТА В ИНВЕНТАРЬ ===');
+        console.log('Добавляемый предмет:', itemObject);
+        console.log('Текущий addedInventory:', addedInventory);
+        
+        setAddedInventory(prev => {
+            console.log('prev в addItemToInventory:', prev);
+            
+            // Ищем существующий предмет по названию
+            const existingItemIndex = prev.findIndex(item => item.name === itemObject.name);
+            console.log('existingItemIndex:', existingItemIndex);
+            
+            if (existingItemIndex >= 0) {
+                // Если предмет уже есть, увеличиваем количество
+                const newInventory = [...prev];
+                newInventory[existingItemIndex] = {
+                    ...newInventory[existingItemIndex],
+                    quantity: newInventory[existingItemIndex].quantity + itemObject.quantity
+                };
+                console.log('Обновленный инвентарь (увеличение количества):', newInventory);
                 return newInventory;
+            } else {
+                // Если предмета нет, добавляем новый
+                const newItems = [...prev, itemObject];
+                console.log('Новый инвентарь (добавление предмета):', newItems);
+                return newItems;
             }
         });
     };
 
     // Функция для добавления стартового инвентаря
     const addStartingInventory = () => {
-        const newItems: string[] = [];
+        const newItems: Array<{
+            name: string;
+            type: string;
+            category: string;
+            weight: number;
+            cost: string;
+            quantity: number;
+        }> = [];
         let totalGold = 0;
         
         // Добавляем снаряжение класса
@@ -1345,14 +1539,16 @@ export default function EquipmentPick() {
                         if (pack) {
                             pack.items.forEach(packItem => {
                                 const packItemName = getItemName("gear", packItem.key);
-                                const fullName = `${packItem.quantity && packItem.quantity > 1 ? packItem.quantity + 'x ' : ''}${packItemName}`;
-                                newItems.push(fullName);
+                                const quantity = packItem.quantity || 1;
+                                const itemObject = createItemObject(packItemName, "gear", quantity);
+                                newItems.push(itemObject);
                             });
                         }
                     } else {
                         // Обычный предмет
-                        const fullName = `${item.quantity && item.quantity > 1 ? item.quantity + 'x ' : ''}${itemName}`;
-                        newItems.push(fullName);
+                        const quantity = item.quantity || 1;
+                        const itemObject = createItemObject(itemName, item.type, quantity);
+                        newItems.push(itemObject);
                     }
                 });
                 
@@ -1376,8 +1572,9 @@ export default function EquipmentPick() {
                                 const selectedTools = draft.chosen.tools?.["background-equipment"] || [];
                                 const selectedTool = selectedTools[0] || "dice-set";
                                 const itemName = getItemName("tool", selectedTool);
-                                const fullName = `${item.quantity && item.quantity > 1 ? item.quantity + 'x ' : ''}${itemName}`;
-                                newItems.push(fullName);
+                                const quantity = item.quantity || 1;
+                                const itemObject = createItemObject(itemName, "tool", quantity);
+                                newItems.push(itemObject);
                             }
                             // Можно добавить другие типы выборов здесь
                         });
@@ -1391,14 +1588,16 @@ export default function EquipmentPick() {
                             if (pack) {
                                 pack.items.forEach(packItem => {
                                     const packItemName = getItemName("gear", packItem.key);
-                                    const fullName = `${packItem.quantity && packItem.quantity > 1 ? packItem.quantity + 'x ' : ''}${packItemName}`;
-                                    newItems.push(fullName);
+                                    const quantity = packItem.quantity || 1;
+                                    const itemObject = createItemObject(packItemName, "gear", quantity);
+                                    newItems.push(itemObject);
                                 });
                             }
                         } else {
                             // Обычный предмет
-                            const fullName = `${item.quantity && item.quantity > 1 ? item.quantity + 'x ' : ''}${itemName}`;
-                            newItems.push(fullName);
+                            const quantity = item.quantity || 1;
+                            const itemObject = createItemObject(itemName, item.type, quantity);
+                            newItems.push(itemObject);
                         }
                     }
                 });
@@ -1411,7 +1610,7 @@ export default function EquipmentPick() {
         }
         
         // Обновляем инвентарь
-        setAddedInventory(prev => [...prev, ...newItems]);
+        newItems.forEach(item => addItemToInventory(item));
         
         // Добавляем золото к общей валюте
         if (totalGold > 0) {
@@ -1429,7 +1628,7 @@ export default function EquipmentPick() {
             : currency;
         
         setBasics({ 
-            equipment: [...addedInventory, ...newItems], 
+            equipment: convertInventoryToStrings(addedInventory), 
             gold: currency.gold + totalGold,
             currency: finalCurrency,
             isStartEquipmentAdded: true
@@ -1440,7 +1639,7 @@ export default function EquipmentPick() {
     const handleNext = () => {
         // Сохраняем инвентарь в драфт персонажа
         setBasics({ 
-            equipment: addedInventory, 
+            equipment: convertInventoryToStrings(addedInventory), 
             gold: currency.gold 
         });
         
@@ -1660,15 +1859,138 @@ export default function EquipmentPick() {
                             </CollapsibleTrigger>
                             <CollapsibleContent>
                                 <div className="p-4">
+                                    {addedInventory.length > 0 && (
+                                        <div className="mb-4 p-3 bg-muted/30 rounded-lg border">
+                                            <div className="space-y-3">
+                                                {/* Доспехи */}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-muted-foreground">Доспехи:</span>
+                                                    <div className={`w-3 h-3 border border-gray-400 rounded-sm transition-colors ${
+                                                        draft.equipped?.armor ? 'bg-[#cf995f] ring-1 ring-[#cf995f]/50' : 'bg-transparent'
+                                                    }`}
+                                                    title={draft.equipped?.armor ? `Доспех: ${draft.equipped.armor.name}` : 'Свободно'}
+                                                    />
+                                                </div>
+                                                
+                                                {/* Основной набор */}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-muted-foreground">Основной набор:</span>
+                                                    <div className="flex gap-1">
+                                                        {Array.from({ length: 2 }, (_, index) => {
+                                                            const currentWeapons = Array.isArray(draft.equipped?.weaponSlot1) ? draft.equipped.weaponSlot1 : [];
+                                                            const weaponSlots = currentWeapons.reduce((sum, w) => sum + (w.slots || 0), 0);
+                                                            const shieldSlots = draft.equipped?.shield1 ? 1 : 0;
+                                                            const totalSlots = weaponSlots + shieldSlots;
+                                                            const isOccupied = index < totalSlots;
+                                                            const isShieldSlot = isOccupied && draft.equipped?.shield1 && index === weaponSlots;
+                                                            
+                                                            // Находим оружие для этого слота
+                                                            let weaponName = '';
+                                                            let isTwoHanded = false;
+                                                            if (isOccupied && !isShieldSlot) {
+                                                                let currentSlot = 0;
+                                                                for (const weapon of currentWeapons) {
+                                                                    const weaponSlotCount = weapon.slots || 0;
+                                                                    if (index >= currentSlot && index < currentSlot + weaponSlotCount) {
+                                                                        weaponName = weapon.name;
+                                                                        isTwoHanded = weaponSlotCount === 2;
+                                                                        break;
+                                                                    }
+                                                                    currentSlot += weaponSlotCount;
+                                                                }
+                                                            }
+                                                            
+                                                            return (
+                                                                <div
+                                                                    key={index}
+                                                                    className={`w-3 h-3 border border-gray-400 rounded-sm transition-colors ${
+                                                                        isOccupied ? (
+                                                                            isShieldSlot 
+                                                                                ? 'bg-blue-500' 
+                                                                                : isTwoHanded 
+                                                                                    ? 'bg-red-700' 
+                                                                                    : 'bg-green-500'
+                                                                        ) : 'bg-transparent'
+                                                                    }`}
+                                                                    title={
+                                                                        isShieldSlot 
+                                                                            ? `Щит: ${draft.equipped?.shield1?.name}` 
+                                                                            : isOccupied 
+                                                                                ? `Оружие: ${weaponName}`
+                                                                                : 'Свободно'
+                                                                    }
+                                                                />
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Дополнительный набор */}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-muted-foreground">Дополнительный набор:</span>
+                                                    <div className="flex gap-1">
+                                                        {Array.from({ length: 2 }, (_, index) => {
+                                                            const currentWeapons = Array.isArray(draft.equipped?.weaponSlot2) ? draft.equipped.weaponSlot2 : [];
+                                                            const weaponSlots = currentWeapons.reduce((sum, w) => sum + (w.slots || 0), 0);
+                                                            const shieldSlots = draft.equipped?.shield2 ? 1 : 0;
+                                                            const totalSlots = weaponSlots + shieldSlots;
+                                                            const isOccupied = index < totalSlots;
+                                                            const isShieldSlot = isOccupied && draft.equipped?.shield2 && index === weaponSlots;
+                                                            
+                                                            // Находим оружие для этого слота
+                                                            let weaponName = '';
+                                                            let isTwoHanded = false;
+                                                            if (isOccupied && !isShieldSlot) {
+                                                                let currentSlot = 0;
+                                                                for (const weapon of currentWeapons) {
+                                                                    const weaponSlotCount = weapon.slots || 0;
+                                                                    if (index >= currentSlot && index < currentSlot + weaponSlotCount) {
+                                                                        weaponName = weapon.name;
+                                                                        isTwoHanded = weaponSlotCount === 2;
+                                                                        break;
+                                                                    }
+                                                                    currentSlot += weaponSlotCount;
+                                                                }
+                                                            }
+                                                            
+                                                            return (
+                                                                <div
+                                                                    key={index}
+                                                                    className={`w-3 h-3 border border-gray-400 rounded-sm transition-colors ${
+                                                                        isOccupied ? (
+                                                                            isShieldSlot 
+                                                                                ? 'bg-blue-500' 
+                                                                                : isTwoHanded 
+                                                                                    ? 'bg-red-700' 
+                                                                                    : 'bg-green-500'
+                                                                        ) : 'bg-transparent'
+                                                                    }`}
+                                                                    title={
+                                                                        isShieldSlot 
+                                                                            ? `Щит: ${draft.equipped?.shield2?.name}` 
+                                                                            : isOccupied 
+                                                                                ? `Оружие: ${weaponName}`
+                                                                                : 'Свободно'
+                                                                    }
+                                                                />
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     {addedInventory.length > 0 ? (
                                         <div className="space-y-2">
                                             {getSortedInventory().map((item, index) => {
                                                 // Находим оригинальный индекс в массиве addedInventory
                                                 const originalIndex = addedInventory.indexOf(item);
+                                                // Убеждаемся, что itemName - это строка или объект с правильной структурой
+                                                const itemName = typeof item === 'object' && item !== null ? item : String(item);
                                                 return (
                                                     <EquipmentCard 
-                                                        key={`${item}-${originalIndex}`} 
-                                                        itemName={item} 
+                                                        key={`${typeof item === 'object' ? item.name : item}-${originalIndex}`} 
+                                                        itemName={itemName} 
                                                         onRemove={() => removeFromInventory(originalIndex)}
                                                         characterData={draft}
                                                     />
@@ -1823,7 +2145,7 @@ export default function EquipmentPick() {
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
                                                                     <button
-                                                                        onClick={(e) => {
+                                                                        onClick={async (e) => {
                                                                             e.stopPropagation();
                                                                             const allItems = getAllItems();
                                                                             const itemData = allItems.find(i => i.key === item.key);
@@ -1833,71 +2155,105 @@ export default function EquipmentPick() {
                                                                                  const currentGoldInCopper = currentTotalGold * 100; // Конвертируем ЗМ в ММ
                                                                                  
                                                                                  if (costInCopper <= currentGoldInCopper) {
-                                                                                     // Добавляем предмет в инвентарь
-                                                                                     setAddedInventory(prev => [...prev, itemData.name]);
+                                                                                     // Устанавливаем состояние загрузки
+                                                                                     setLoadingItems(prev => new Set(prev).add(item.key));
                                                                                      
-                                                                                     // Вычитаем стоимость из валюты
-                                                                                     const newGoldInCopper = currentGoldInCopper - costInCopper;
-                                                                                     const newTotalGold = newGoldInCopper / 100;
+                                                                                     try {
+                                                                                         // Добавляем предмет в инвентарь
+                                                                                         const itemObject = createItemObject(itemData.name, itemData.type, 1);
+                                                                                         await new Promise(resolve => setTimeout(resolve, 500));
+                                                                                         addItemToInventory(itemObject);
                                                                                      
-                                                                                     // Распределяем по типам монет
-                                                                                     const newPlatinum = Math.floor(newTotalGold / 10);
-                                                                                     const remainingAfterPlatinum = newTotalGold % 10;
-                                                                                     const newGold = Math.floor(remainingAfterPlatinum);
-                                                                                     const remainingAfterGold = (remainingAfterPlatinum % 1) * 10;
-                                                                                     const newSilver = Math.floor(remainingAfterGold);
-                                                                                     const newCopper = Math.round((remainingAfterGold % 1) * 10);
-                                                                                     
-                                                                                     const newCurrency = {
-                                                                                         platinum: newPlatinum,
-                                                                                         gold: newGold,
-                                                                                         electrum: 0, // Пока не используем электрум
-                                                                                         silver: newSilver,
-                                                                                         copper: newCopper
-                                                                                     };
-                                                                                     setCurrency(newCurrency);
-                                                                                     
-                                                                                     // Сохраняем в драфт
-                                                                                     setBasics({
-                                                                                         equipment: [...addedInventory, itemData.name],
-                                                                                         gold: newTotalGold,
-                                                                                         currency: newCurrency
-                                                                                     });
-                                                                                     
-                                                                                     // Показываем уведомление
-                                                                                     showNotification(`Предмет "${itemData.name}" успешно куплен`, 'buy');
+                                                                                         // Вычитаем стоимость из валюты
+                                                                                         const newGoldInCopper = currentGoldInCopper - costInCopper;
+                                                                                         const newTotalGold = newGoldInCopper / 100;
+                                                                                         
+                                                                                         // Распределяем по типам монет
+                                                                                         const newPlatinum = Math.floor(newTotalGold / 10);
+                                                                                         const remainingAfterPlatinum = newTotalGold % 10;
+                                                                                         const newGold = Math.floor(remainingAfterPlatinum);
+                                                                                         const remainingAfterGold = (remainingAfterPlatinum % 1) * 10;
+                                                                                         const newSilver = Math.floor(remainingAfterGold);
+                                                                                         const newCopper = Math.round((remainingAfterGold % 1) * 10);
+                                                                                         
+                                                                                         const newCurrency = {
+                                                                                             platinum: newPlatinum,
+                                                                                             gold: newGold,
+                                                                                             electrum: 0, // Пока не используем электрум
+                                                                                             silver: newSilver,
+                                                                                             copper: newCopper
+                                                                                         };
+                                                                                         setCurrency(newCurrency);
+                                                                                         
+                                                                                         // Сохраняем в драфт (addedInventory уже обновлен через addItemToInventory)
+                                                                                         setBasics({
+                                                                                             equipment: convertInventoryToStrings(addedInventory),
+                                                                                             gold: newTotalGold,
+                                                                                             currency: newCurrency
+                                                                                         });
+                                                                                         
+                                                                                         // Показываем уведомление
+                                                                                         showNotification(`Предмет "${itemData.name}" успешно куплен`, 'buy');
+                                                                                     } catch (error) {
+                                                                                         showNotification('Ошибка при покупке предмета', 'error');
+                                                                                     } finally {
+                                                                                         // Сбрасываем состояние загрузки
+                                                                                         setLoadingItems(prev => {
+                                                                                             const newSet = new Set(prev);
+                                                                                             newSet.delete(item.key);
+                                                                                             return newSet;
+                                                                                         });
+                                                                                     }
                                                                                  } else {
                                                                                      showNotification('Недостаточно средств для покупки', 'error');
                                                                                  }
-                                                                            }
+                                                                             }
                                                                         }}
-                                                                        className="px-1.5 py-0.5 bg-[#96bf6b] text-primary-foreground text-[10px] rounded transition-colors shadow-inner"
+                                                                        className="px-1.5 py-0.5 bg-[#96bf6b] text-primary-foreground text-[10px] rounded transition-colors shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                        disabled={loadingItems.has(item.key)}
                                                                     >
-                                                                        КУПИТЬ
+                                                                        {loadingItems.has(item.key) ? '...' : 'КУПИТЬ'}
                                                                     </button>
                                                                     <button
-                                                                        onClick={(e) => {
+                                                                        onClick={async (e) => {
                                                                             e.stopPropagation();
                                                                             const allItems = getAllItems();
                                                                             const itemData = allItems.find(i => i.key === item.key);
                                                                              if (itemData) {
-                                                                                 // Добавляем предмет в инвентарь без трат
-                                                                                 setAddedInventory(prev => [...prev, itemData.name]);
+                                                                                 // Устанавливаем состояние загрузки
+                                                                                 setLoadingItems(prev => new Set(prev).add(item.key));
                                                                                  
-                                                                                 // Сохраняем в драфт
+                                                                                 try {
+                                                                                     // Добавляем предмет в инвентарь без трат
+                                                                                     const itemObject = createItemObject(itemData.name, itemData.type, 1);
+                                                                                     await new Promise(resolve => setTimeout(resolve, 500));
+                                                                                     addItemToInventory(itemObject);
+                                                                                 
+                                                                                 // Сохраняем в драфт (addedInventory уже обновлен через addItemToInventory)
                                                                                  setBasics({
-                                                                                     equipment: [...addedInventory, itemData.name],
+                                                                                     equipment: convertInventoryToStrings(addedInventory),
                                                                                      gold: currency.gold,
                                                                                      currency: currency
                                                                                  });
                                                                                  
                                                                                  // Показываем уведомление
                                                                                  showNotification(`Предмет "${itemData.name}" успешно добавлен`, 'add');
+                                                                                 } catch (error) {
+                                                                                     showNotification('Ошибка при добавлении предмета', 'error');
+                                                                                 } finally {
+                                                                                     // Сбрасываем состояние загрузки
+                                                                                     setLoadingItems(prev => {
+                                                                                         const newSet = new Set(prev);
+                                                                                         newSet.delete(item.key);
+                                                                                         return newSet;
+                                                                                     });
+                                                                                 }
                                                                              }
                                                                         }}
-                                                                        className="px-1.5 py-0.5 bg-gray-600 text-white text-[10px] rounded transition-colors shadow-inner"
+                                                                        className="px-1.5 py-0.5 bg-gray-600 text-white text-[10px] rounded transition-colors shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                        disabled={loadingItems.has(item.key)}
                                                                     >
-                                                                        ДОБАВИТЬ
+                                                                        {loadingItems.has(item.key) ? '...' : 'ДОБАВИТЬ'}
                                                                     </button>
                                                                     <ChevronDown className="w-6 h-6 text-primary" />
                                                                 </div>

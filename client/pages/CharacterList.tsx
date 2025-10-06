@@ -409,6 +409,27 @@ export default function CharacterList() {
         }, 50);
     };
 
+    const updateCurrency = (newCurrency: any) => {
+        console.log('updateCurrency called with:', newCurrency);
+        
+        const updatedChar = {
+            ...char,
+            basics: {
+                ...char.basics,
+                currency: newCurrency
+            }
+        };
+        
+        console.log('Updated char with currency:', updatedChar.basics.currency);
+        
+        setChar(updatedChar);
+        
+        // Сохраняем изменения в БД с обновленными данными
+        setTimeout(() => {
+            saveAllWithData(updatedChar);
+        }, 50);
+    };
+
     // Save changes back to Supabase with specific data
     const saveAllWithData = async (charData: any) => {
         try {
@@ -622,6 +643,7 @@ export default function CharacterList() {
                     onSwitchWeaponSlot={switchWeaponSlot}
                     onUpdateEquipped={updateEquipped}
                     onUpdateEquipment={updateEquipment}
+                    onUpdateCurrency={updateCurrency}
                     char={char}
                     setChar={setChar}
                     onSaveAll={saveAll}
