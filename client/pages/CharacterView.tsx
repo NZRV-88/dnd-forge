@@ -461,9 +461,8 @@ export default function CharacterView() {
                     </div>
                 </div>
 
-                {/* SAVE button */}
+                {/* Navigation buttons */}
                 <div className="flex flex-col sm:flex-row justify-end gap-2">
-                    <Button onClick={saveAll} className="bg-amber-500 text-black">Сохранить</Button>
                     <Button onClick={() => nav(-1)}>Назад</Button>
                 </div>
 

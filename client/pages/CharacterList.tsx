@@ -32,6 +32,22 @@ export default function CharacterList() {
 
     // character + local controlled HP state
     const [char, setChar] = useState<any | null>(null);
+    
+    // Обернем setChar для отладки
+    let setCharCallCounter = 0;
+    const setCharWithLog = (newChar: any | null) => {
+        setCharCallCounter++;
+        console.log(`setCharWithLog #${setCharCallCounter} called with currency:`, newChar?.basics?.currency);
+        console.log(`setCharWithLog #${setCharCallCounter} timestamp:`, new Date().toISOString());
+        console.log(`setCharWithLog #${setCharCallCounter} newChar object:`, newChar);
+        console.log(`setCharWithLog #${setCharCallCounter} newChar.basics:`, newChar?.basics);
+        console.log(`setCharWithLog #${setCharCallCounter} newChar.basics.currency:`, newChar?.basics?.currency);
+        console.log(`setCharWithLog #${setCharCallCounter} newChar.basics.currency type:`, typeof newChar?.basics?.currency);
+        console.log(`setCharWithLog #${setCharCallCounter} newChar.basics.currency keys:`, Object.keys(newChar?.basics?.currency || {}));
+        console.log(`setCharWithLog #${setCharCallCounter} newChar.basics.currency values:`, Object.values(newChar?.basics?.currency || {}));
+        console.trace(`setCharWithLog #${setCharCallCounter} call stack`);
+        setChar(newChar);
+    };
     const [curHp, setCurHp] = useState<number>(0);
     const [tempHp, setTempHp] = useState<number>(0);
 
@@ -57,7 +73,7 @@ export default function CharacterList() {
                     .eq("id", id)
                     .single();
                 if (error || !data) {
-                    setChar(null);
+                    setCharWithLog(null);
                     return;
                 }
                 const draft = data.data || {};
@@ -92,11 +108,11 @@ export default function CharacterList() {
                     };
                 }
                 
-                setChar(draft);
+                setCharWithLog(draft);
                 setCurHp(draft.basics?.hpCurrent ?? 0);
                 setTempHp(draft.basics?.hpTemp ?? 0);
             } catch {
-                setChar(null);
+                setCharWithLog(null);
             }
         })();
     }, [id]);
@@ -145,13 +161,17 @@ export default function CharacterList() {
             _extraSpeed: characterData.speed || 0,
             _extraHp: 0, // TODO: добавить расчет HP если нужно
         };
-    }, [char]);
+    }, [char, char?.basics?.currency]);
 
     // Get all character data including proficiencies
     const characterData = useMemo(() => {
         if (!char) return null;
-        return getAllCharacterData(char);
-    }, [char]);
+        console.log('CharacterList: calculating characterData for char:', char);
+        console.log('CharacterList: char.basics.currency:', char?.basics?.currency);
+        const result = getAllCharacterData(char);
+        console.log('CharacterList: characterData result:', result);
+        return result;
+    }, [char?.basics?.currency, char?.basics?.equipment]);
 
     // skill profs set (normalized)
     const skillProfs: string[] = Array.isArray(char?.skills) ? char.skills : [];
@@ -294,9 +314,10 @@ export default function CharacterList() {
             individualRolls.push(roll);
             total += roll;
         }
+        const finalResult = total + modifier;
         return { 
             diceRoll: total, 
-            finalResult: total + modifier, 
+            finalResult: finalResult, 
             individualRolls: individualRolls,
             dice: dice,
             modifier: modifier
@@ -312,6 +333,7 @@ export default function CharacterList() {
         let diceRoll = d20;
         let modifier = bonus;
         let result = total;
+        let individualRolls: number[] = [];
 
         if (type === "Спасбросок") {
             entry = `${desc.toUpperCase()}: СПАС: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
@@ -325,15 +347,17 @@ export default function CharacterList() {
         } else if (type === "Урон") {
             // Для урона: используем правильный кубик урона
             if (damageString) {
-                const { diceRoll: damageDiceRoll, finalResult, individualRolls, dice: damageDice, modifier: damageModifier } = rollDamageDice(damageString);
+                const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier } = rollDamageDice(damageString);
                 dice = damageDice;
                 diceRoll = damageDiceRoll;
                 modifier = damageModifier;
                 result = finalResult;
+                individualRolls = damageIndividualRolls;
                 
                 if (modifier !== 0) {
                     const individualRollsStr = individualRolls.join('+');
-                    entry = `${desc.toUpperCase()}: УРОН: ${dice}${modifier >= 0 ? '+' : ''}${modifier} = ${individualRollsStr}${modifier >= 0 ? '+' : ''}${modifier} = ${finalResult}`;
+                    const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+                    entry = `${desc.toUpperCase()}: УРОН: ${dice}${modStr} = ${individualRollsStr}${modStr} = ${finalResult}`;
                 } else {
                     const individualRollsStr = individualRolls.join('+');
                     entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${individualRollsStr} = ${finalResult}`;
@@ -351,17 +375,18 @@ export default function CharacterList() {
         }
 
         // Показываем модальное окно с результатом броска
-        setDiceRollData({
+        const rollData = {
             description: desc,
             dice: dice,
             modifier: modifier,
             result: result,
             diceRoll: diceRoll,
             type: type,
-            individualRolls: type === "Урон" && damageString ? 
-                rollDamageDice(damageString).individualRolls : 
+            individualRolls: individualRolls.length > 0 ? 
+                individualRolls : 
                 undefined
-        });
+        };
+        setDiceRollData(rollData);
         setDiceModalOpen(true);
 
         setRollLog((prev) => [entry, ...prev].slice(0, 200));
@@ -369,7 +394,7 @@ export default function CharacterList() {
 
     // Функция переключения активного слота оружия
     const switchWeaponSlot = (slot: number) => {
-        setChar((prev: any) => ({
+        setCharWithLog((prev: any) => ({
             ...prev,
             equipped: {
                 ...prev.equipped,
@@ -380,7 +405,7 @@ export default function CharacterList() {
 
     // Функция обновления экипировки
     const updateEquipped = (newEquipped: any) => {
-        setChar((prev: any) => ({
+        setCharWithLog((prev: any) => ({
             ...prev,
             equipped: newEquipped
         }));
@@ -401,8 +426,6 @@ export default function CharacterList() {
             }
         };
         
-        setChar(updatedChar);
-        
         // Сохраняем изменения в БД с обновленными данными
         setTimeout(() => {
             saveAllWithData(updatedChar);
@@ -411,6 +434,7 @@ export default function CharacterList() {
 
     const updateCurrency = (newCurrency: any) => {
         console.log('updateCurrency called with:', newCurrency);
+        console.trace('updateCurrency call stack');
         
         const updatedChar = {
             ...char,
@@ -422,7 +446,8 @@ export default function CharacterList() {
         
         console.log('Updated char with currency:', updatedChar.basics.currency);
         
-        setChar(updatedChar);
+        console.log('setChar called with currency:', updatedChar.basics.currency);
+        setCharWithLog(updatedChar);
         
         // Сохраняем изменения в БД с обновленными данными
         setTimeout(() => {
@@ -444,7 +469,7 @@ export default function CharacterList() {
                 .update({ data: updated, updated_at: new Date() })
                 .eq("id", id);
             if (!error) {
-                setChar(updated);
+                console.log("Character saved to database successfully");
             } else {
                 console.error("Error updating character:", error);
             }
@@ -472,7 +497,7 @@ export default function CharacterList() {
                 .update({ data: updated, updated_at: new Date() })
                 .eq("id", id);
             if (!error) {
-                setChar(updated);
+                setCharWithLog(updated);
             } else {
                 console.error("Error updating character:", error);
             }
@@ -485,7 +510,7 @@ export default function CharacterList() {
     const handleAvatarChange = async (avatarUrl: string | null) => {
         if (!char) return;
         const updated = { ...char, avatar: avatarUrl };
-        setChar(updated);
+        setCharWithLog(updated);
         
         // Save to Supabase
         try {
@@ -612,7 +637,7 @@ export default function CharacterList() {
                                         ? currentSkills.filter((s: string) => s !== skillKey)
                                         : [...currentSkills, skillKey];
 
-                                    setChar((prev: any) => ({ ...prev, skills: updated }));
+                                    setCharWithLog((prev: any) => ({ ...prev, skills: updated }));
                                 }}
                             />
                         </div>
@@ -644,6 +669,15 @@ export default function CharacterList() {
                     onUpdateEquipped={updateEquipped}
                     onUpdateEquipment={updateEquipment}
                     onUpdateCurrency={updateCurrency}
+                    setDraft={(updater) => {
+                        console.log('setDraft called with char:', char);
+                        const updated = updater(char);
+                        console.log('setDraft updated char:', updated);
+                        // Автоматически сохраняем изменения в БД
+                        setTimeout(() => {
+                            saveAllWithData(updated);
+                        }, 50);
+                    }}
                     char={char}
                     setChar={setChar}
                     onSaveAll={saveAll}
@@ -653,9 +687,8 @@ export default function CharacterList() {
                     </div>
                 </div>
 
-                {/* SAVE button */}
+                {/* Navigation buttons */}
                 <div className="flex flex-col sm:flex-row justify-end gap-2">
-                    <Button onClick={saveAll} className="bg-amber-500 text-black">Сохранить</Button>
                     <Button onClick={() => nav(-1)}>Назад</Button>
                 </div>
 

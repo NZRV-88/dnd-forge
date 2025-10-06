@@ -80,7 +80,7 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
           {/* Расчет */}
           <div className="flex items-center gap-2">
             <span className="text-white text-lg font-bold">
-              {individualRolls && individualRolls.length > 1 
+              {individualRolls && individualRolls.length > 0 
                 ? `${individualRolls.join('+')}${modifier !== 0 ? (modifier > 0 ? `+${modifier}` : `${modifier}`) : ''}`
                 : `${diceRoll}${modifier !== 0 ? (modifier > 0 ? `+${modifier}` : `${modifier}`) : ''}`
               }

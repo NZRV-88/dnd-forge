@@ -21,6 +21,7 @@ export const TOOL_CATEGORY_LABELS: Record<string, string> = {
     artisan: "Ремесленный инструмент",
     gaming: "Игральный набор",
     musical: "Музыкальный инструмент",
+    kit: "Набор инструментов",
     other: "Прочее",
 };
 

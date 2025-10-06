@@ -35,6 +35,7 @@ type Props = {
   onUpdateEquipped?: (newEquipped: any) => void;
   onUpdateEquipment?: (newEquipment: any[]) => void;
   onUpdateCurrency?: (newCurrency: any) => void;
+  setDraft?: (updater: (prev: any) => any) => void;
   onSaveAll?: () => void;
   characterData?: any;
   char?: any;
@@ -113,11 +114,13 @@ const getActionFrameSvg = (color: string) => {
 </svg>`;
 };
 
-export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onUpdateCurrency, onSaveAll, characterData, char, setChar }: Props) {
+export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onUpdateCurrency, setDraft, onSaveAll, characterData, char, setChar }: Props) {
   const { frameColor } = useFrameColor();
   const [criticalHits, setCriticalHits] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabType>("actions");
   const [activeActionType, setActiveActionType] = useState<ActionType>("attack");
+  const [loadingAttacks, setLoadingAttacks] = useState<Record<string, boolean>>({});
+  const [loadingDamage, setLoadingDamage] = useState<Record<string, boolean>>({});
   
   // Состояние для экипировки (локальное, не синхронизируется с equipped)
   const [localEquipped, setLocalEquipped] = useState<{
@@ -159,6 +162,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   // Состояние для подсказки валюты
   const [hoveredCurrency, setHoveredCurrency] = useState<string | null>(null);
   const [currencyPosition, setCurrencyPosition] = useState<{ x: number; y: number } | null>(null);
+  const [currencyTimeout, setCurrencyTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Функция для расчета итоговой стоимости покупки
   const calculatePurchaseCost = (item: any, quantity: number) => {
@@ -212,7 +216,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   };
 
 
-  // Функция для удаления предмета
+  // Функция для удаления предмета (удаляет только 1 штуку)
   const handleDeleteItem = async (itemName: string) => {
     const itemKey = `delete-${itemName}`;
     
@@ -223,13 +227,31 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       // Имитируем задержку (в реальном приложении здесь будет API вызов)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Удаляем предмет из characterData.equipment
-      const newEquipment = (characterData.equipment || []).filter(item => {
+      // Удаляем только 1 предмет из characterData.equipment
+      const newEquipment = [...(characterData.equipment || [])];
+      const cleanItemName = getCleanItemName(itemName);
+      
+      // Находим первый предмет с таким именем
+      const itemIndex = newEquipment.findIndex(item => {
         const itemNameToCheck = typeof item === 'string' ? item : (item.name || String(item));
         const cleanItemNameToCheck = getCleanItemName(itemNameToCheck);
-        const cleanItemName = getCleanItemName(itemName);
-        return cleanItemNameToCheck !== cleanItemName;
+        return cleanItemNameToCheck === cleanItemName;
       });
+
+      if (itemIndex !== -1) {
+        const item = newEquipment[itemIndex];
+        
+        if (typeof item === 'object' && item.quantity && item.quantity > 1) {
+          // Если это объект с количеством больше 1, уменьшаем количество
+          newEquipment[itemIndex] = {
+            ...item,
+            quantity: item.quantity - 1
+          };
+        } else {
+          // Если это строка или объект с количеством 1, удаляем полностью
+          newEquipment.splice(itemIndex, 1);
+        }
+      }
 
       // Обновляем только equipment (рюкзак), не затрагивая экипировку
       if (onUpdateEquipment) {
@@ -239,7 +261,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       // Показываем toast с успехом
       toast({
         title: "Предмет удален!",
-        description: `${getCleanItemName(itemName)} успешно удален из рюкзака`,
+        description: `1x ${getCleanItemName(itemName)} удален из рюкзака`,
         duration: 3000,
       });
       
@@ -320,6 +342,19 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return translations[type] || type;
   };
 
+  // Функция для перевода характеристик
+  const translateAbility = (abilityKey: string) => {
+    const abilities: Record<string, string> = {
+      'str': 'Сила',
+      'dex': 'Ловкость',
+      'con': 'Телосложение',
+      'int': 'Интеллект',
+      'wis': 'Мудрость',
+      'cha': 'Харизма'
+    };
+    return abilities[abilityKey] || abilityKey;
+  };
+
   // Функция для перевода свойств оружия
   const translateWeaponProperties = (properties: string[] | undefined) => {
     if (!properties || properties.length === 0) return [];
@@ -349,11 +384,23 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       .replace(/\b(\d+)\s*ep\b/gi, '$1 ЭМ') // electrum pieces
       .replace(/\b(\d+)\s*sp\b/gi, '$1 СМ') // silver pieces
       .replace(/\b(\d+)\s*cp\b/gi, '$1 ММ') // copper pieces
+      .replace(/\b(\d+)\s*PP\b/g, '$1 ПМ') // platinum pieces (uppercase)
+      .replace(/\b(\d+)\s*GP\b/g, '$1 ЗМ') // gold pieces (uppercase)
+      .replace(/\b(\d+)\s*EP\b/g, '$1 ЭМ') // electrum pieces (uppercase)
+      .replace(/\b(\d+)\s*SP\b/g, '$1 СМ') // silver pieces (uppercase)
+      .replace(/\b(\d+)\s*CP\b/g, '$1 ММ') // copper pieces (uppercase)
+      .replace(/\b(\d+)\s*СP\b/g, '$1 ММ') // copper pieces (mixed case)
       .replace(/\bpp\b/gi, 'ПМ')
       .replace(/\bgp\b/gi, 'ЗМ')
       .replace(/\bep\b/gi, 'ЭМ')
       .replace(/\bsp\b/gi, 'СМ')
-      .replace(/\bcp\b/gi, 'ММ');
+      .replace(/\bcp\b/gi, 'ММ')
+      .replace(/\bPP\b/g, 'ПМ')
+      .replace(/\bGP\b/g, 'ЗМ')
+      .replace(/\bEP\b/g, 'ЭМ')
+      .replace(/\bSP\b/g, 'СМ')
+      .replace(/\bCP\b/g, 'ММ')
+      .replace(/\bСP\b/g, 'ММ');
   };
 
   // Функция для получения полной информации о предмете
@@ -415,6 +462,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         'artisan': 'Ремесленные инструменты',
         'gaming': 'Игровой набор',
         'musical': 'Музыкальный инструмент',
+        'kit': 'Набор инструментов',
         'other': 'Другие инструменты'
       };
       
@@ -631,6 +679,52 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return totalCopper / 100; // 1 ЗМ = 100 ММ
   };
 
+  // Функция для конвертации валюты при недостатке средств
+  const convertCurrency = (currentCurrency: any, requiredCopper: number) => {
+    let totalCopper = currentCurrency.platinum * 1000 + 
+                     currentCurrency.gold * 100 + 
+                     currentCurrency.electrum * 50 + 
+                     currentCurrency.silver * 10 + 
+                     currentCurrency.copper;
+    
+    console.log('convertCurrency input:', { currentCurrency, requiredCopper, totalCopper });
+    
+    // Если недостаточно средств, конвертируем начиная с самых крупных монет
+    if (totalCopper < requiredCopper) {
+      const newCurrency = { ...currentCurrency };
+      
+      // Конвертируем платину в золото (1 ПМ = 10 ЗМ = 1000 ММ)
+      while (newCurrency.platinum > 0 && totalCopper < requiredCopper) {
+        newCurrency.platinum--;
+        newCurrency.gold += 10;
+        totalCopper += 1000;
+        console.log('Converted 1 platinum to 10 gold, totalCopper now:', totalCopper);
+      }
+      
+      // Конвертируем золото в серебро (1 ЗМ = 10 СМ = 100 ММ)
+      while (newCurrency.gold > 0 && totalCopper < requiredCopper) {
+        newCurrency.gold--;
+        newCurrency.silver += 10;
+        totalCopper += 100;
+        console.log('Converted 1 gold to 10 silver, totalCopper now:', totalCopper);
+      }
+      
+      // Конвертируем серебро в медь (1 СМ = 10 ММ)
+      while (newCurrency.silver > 0 && totalCopper < requiredCopper) {
+        newCurrency.silver--;
+        newCurrency.copper += 10;
+        totalCopper += 10;
+        console.log('Converted 1 silver to 10 copper, totalCopper now:', totalCopper);
+      }
+      
+      console.log('convertCurrency output:', { newCurrency, totalCopper });
+      return newCurrency;
+    }
+    
+    console.log('No conversion needed, returning original currency');
+    return currentCurrency;
+  };
+
   // Функция для покупки предмета с указанным количеством
   const handlePurchaseItem = async (item: any, quantity: number) => {
     const itemType = item.itemType || item.type;
@@ -649,12 +743,28 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       
       // Конвертируем стоимость в медные монеты
       const costInCopper = convertToCopper(itemCost) * quantity;
-      const currentTotalGold = calculateTotalGold();
-      const currentGoldInCopper = currentTotalGold * 100; // Конвертируем ЗМ в ММ
       
-      // Проверяем, достаточно ли денег
-      if (costInCopper > currentGoldInCopper) {
-        throw new Error('Недостаточно средств для покупки');
+      // Сначала обновляем валюту, затем инвентарь
+      let currentCurrency = characterData.currency || { platinum: 0, gold: 0, electrum: 0, silver: 0, copper: 0 };
+      
+      console.log('Before conversion:', currentCurrency);
+      console.log('Required copper:', costInCopper);
+      
+      // Конвертируем валюту при необходимости
+      const convertedCurrency = convertCurrency(currentCurrency, costInCopper);
+      console.log('After conversion:', convertedCurrency);
+      
+      // Проверяем, достаточно ли денег после конвертации
+      const totalCopperAfterConversion = convertedCurrency.platinum * 1000 + 
+                                       convertedCurrency.gold * 100 + 
+                                       convertedCurrency.electrum * 50 + 
+                                       convertedCurrency.silver * 10 + 
+                                       convertedCurrency.copper;
+      
+      if (costInCopper > totalCopperAfterConversion) {
+        const currentTotal = Math.floor(totalCopperAfterConversion / 100);
+        const requiredTotal = Math.floor(costInCopper / 100);
+        throw new Error(`Требуется: ${requiredTotal} ЗМ, В наличии: ${currentTotal} ЗМ`);
       }
       
       // Имитируем задержку покупки
@@ -713,31 +823,18 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         });
       }
 
-      // Обновляем только equipment (рюкзак), не затрагивая экипировку
-      if (onUpdateEquipment) {
-        onUpdateEquipment(newEquipment);
-      }
-      
-      // Вычитаем стоимость из валюты с правильной конвертацией монет
-      const currentCurrency = characterData.currency || { platinum: 0, gold: 0, electrum: 0, silver: 0, copper: 0 };
-      
-      console.log('Currency conversion debug:', {
-        currentCurrency,
-        costInCopper,
-        itemCost,
-        quantity,
-        totalCopperBefore: currentCurrency.platinum * 1000 + currentCurrency.gold * 100 + currentCurrency.electrum * 50 + currentCurrency.silver * 10 + currentCurrency.copper
-      });
-      
       // Конвертируем все монеты в медные для точного расчета
-      let totalCopper = currentCurrency.platinum * 1000 + 
-                       currentCurrency.gold * 100 + 
-                       currentCurrency.electrum * 50 + 
-                       currentCurrency.silver * 10 + 
-                       currentCurrency.copper;
+      let totalCopper = convertedCurrency.platinum * 1000 + 
+                       convertedCurrency.gold * 100 + 
+                       convertedCurrency.electrum * 50 + 
+                       convertedCurrency.silver * 10 + 
+                       convertedCurrency.copper;
+      
+      console.log('Total copper after conversion:', totalCopper);
       
       // Вычитаем стоимость покупки
       totalCopper -= costInCopper;
+      console.log('Total copper after purchase:', totalCopper);
       
       // Распределяем обратно по типам монет, начиная с самых крупных
       const newPlatinum = Math.floor(totalCopper / 1000);
@@ -762,21 +859,26 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         copper: newCopper
       };
       
-      console.log('Currency conversion result:', {
-        newCurrency,
-        costInCopper,
-        totalCopperAfter: newCurrency.platinum * 1000 + newCurrency.gold * 100 + newCurrency.electrum * 50 + newCurrency.silver * 10 + newCurrency.copper,
-        difference: (currentCurrency.platinum * 1000 + currentCurrency.gold * 100 + currentCurrency.electrum * 50 + currentCurrency.silver * 10 + currentCurrency.copper) - (newCurrency.platinum * 1000 + newCurrency.gold * 100 + newCurrency.electrum * 50 + newCurrency.silver * 10 + newCurrency.copper)
-      });
+      console.log('Final currency:', newCurrency);
       
       // Обновляем валюту
-      console.log('Calling onUpdateCurrency with:', newCurrency);
       if (onUpdateCurrency) {
+        console.log('Calling onUpdateCurrency with:', newCurrency);
         onUpdateCurrency(newCurrency);
-        console.log('onUpdateCurrency called successfully');
       } else {
         console.log('onUpdateCurrency is not defined!');
       }
+      
+      // Небольшая задержка перед обновлением инвентаря
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Обновляем только equipment (рюкзак), не затрагивая экипировку
+      if (onUpdateEquipment) {
+        onUpdateEquipment(newEquipment);
+      }
+      
+      // Дополнительная задержка для стабилизации состояния
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Показываем toast с успехом
       toast({
@@ -787,11 +889,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       
     } catch (error) {
       // Показываем toast с ошибкой
+      const errorMessage = error instanceof Error ? error.message : "Не удалось купить предмет";
+      const isInsufficientFunds = errorMessage.includes("Недостаточно средств");
+      
       toast({
-        title: "Ошибка покупки",
-        description: error instanceof Error ? error.message : "Не удалось купить предмет",
+        title: isInsufficientFunds ? "Недостаточно средств" : "Ошибка покупки",
+        description: errorMessage,
         variant: "destructive",
-        duration: 3000,
+        duration: 5000, // Увеличиваем время показа для ошибок
       });
     } finally {
       // Убираем предмет из состояния загрузки покупки
@@ -991,6 +1096,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   // Debug: выводим characterData для понимания структуры
   console.log('CharacterData debug:', {
     characterData,
+    currency: characterData?.currency,
     weapons: characterData?.weapons,
     weaponsLength: characterData?.weapons?.length,
     weaponsContent: characterData?.weapons?.map(w => ({ key: w, type: typeof w })),
@@ -998,6 +1104,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     char,
     charWeapons: char?.weapons
   });
+  
+  // Детальный лог валюты
+  if (characterData?.currency) {
+    console.log('Currency in characterData:', characterData.currency);
+  }
   
   // Дополнительный debug для weapons
   if (characterData?.weapons) {
@@ -1145,10 +1256,29 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const allWeapons = getAllWeapons();
 
   // Функция для обработки атаки с проверкой критического попадания
-  const handleAttack = (weapon: any, ability: string, bonus: number, isSpell: boolean = false) => {
+  const handleAttack = async (weapon: any, ability: string, bonus: number, isSpell: boolean = false) => {
+    const key = isSpell ? `spell-${weapon}` : `${weapon.name}-${weapon.slot}`;
+    
+    // Устанавливаем состояние загрузки
+    setLoadingAttacks(prev => ({ ...prev, [key]: true }));
+    
     // Бросаем d20 для атаки
     const attackRoll = Math.floor(Math.random() * 20) + 1;
     const isCritical = attackRoll === 20;
+    
+    // Тратим боеприпасы для дальнобойного и метательного оружия
+    if (!isSpell) {
+      const weaponData = Weapons.find(w => w.name === weapon.name);
+      if (weaponData) {
+        const isThrown = weaponData.properties?.includes('thrown');
+        const isRanged = weaponData.type === 'ranged';
+        
+        // Для дальнобойного и метательного оружия тратим боеприпасы
+        if (isRanged || isThrown) {
+          consumeAmmunition(weaponData.key);
+        }
+      }
+    }
     
     // Обновляем состояние критических попаданий
     if (isCritical) {
@@ -1161,11 +1291,19 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       // Передаем результат броска через параметры
       onRoll(isSpell ? weapon : weapon.name, ability, bonus, "Атака", undefined, attackRoll);
     }
+    
+    // Задержка 1 секунда перед сбросом состояния загрузки
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoadingAttacks(prev => ({ ...prev, [key]: false }));
   };
 
   // Функция для обработки урона с сбросом критического попадания
-  const handleDamage = (weapon: any, ability: string, modifier: number, damage: string, isSpell: boolean = false) => {
+  const handleDamage = async (weapon: any, ability: string, modifier: number, damage: string, isSpell: boolean = false) => {
     const key = isSpell ? `spell-${weapon}` : `${weapon.name}-${weapon.slot}`;
+    
+    // Устанавливаем состояние загрузки для урона
+    setLoadingDamage(prev => ({ ...prev, [key]: true }));
+    
     const isCritical = criticalHits[key];
     
     // Сбрасываем критическое попадание при клике на урон
@@ -1179,6 +1317,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     
     // Вызываем оригинальную функцию onRoll
     onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, "Урон", damage);
+    
+    // Задержка 1 секунда перед сбросом состояния загрузки
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLoadingDamage(prev => ({ ...prev, [key]: false }));
   };
 
   // Функция для получения русского названия заклинания
@@ -1280,9 +1422,18 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для получения веса предмета
   const getItemWeight = (itemName: any) => {
+    // Если это объект, используем его свойство weight
+    if (typeof itemName === 'object' && itemName !== null) {
+      const weight = itemName.weight;
+      const quantity = itemName.quantity || 1;
+      return (typeof weight === 'number' ? weight : 0) * quantity;
+    }
+    
+    // Если это строка, ищем в массивах
     if (typeof itemName !== 'string') {
       return 0;
     }
+    
     const cleanName = itemName.replace(/^\d+x\s+/, '');
     
     // Ищем в разных массивах
@@ -1372,6 +1523,352 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       return parseInt(match[1]);
     }
     return 1;
+  };
+
+  // Функция для получения количества боеприпасов для конкретного оружия
+  const getAmmunitionCount = (weaponKey: string) => {
+    if (!characterData?.equipment) return 0;
+    
+    // Находим боеприпасы, которые подходят для этого оружия
+    const compatibleAmmo = Ammunitions.filter(ammo => 
+      ammo.weapon && ammo.weapon.includes(weaponKey)
+    );
+    
+    let totalCount = 0;
+    characterData.equipment.forEach((item: any) => {
+      if (typeof item === 'object' && item.name) {
+        const ammo = compatibleAmmo.find(a => a.name === item.name);
+        if (ammo) {
+          totalCount += item.quantity || 1;
+        }
+      } else if (typeof item === 'string') {
+        const ammo = compatibleAmmo.find(a => a.name === item);
+        if (ammo) {
+          totalCount += getItemQuantity(item);
+        }
+      }
+    });
+    
+    return totalCount;
+  };
+
+  // Функция для проверки, нужно ли оружие боеприпасы
+  const needsAmmunition = (weaponName: string) => {
+    const weaponData = Weapons.find(w => w.name === weaponName);
+    if (!weaponData) return false;
+    
+    const isThrown = weaponData.properties?.includes('thrown');
+    const isRanged = weaponData.type === 'ranged';
+    
+    // Метательное оружие не требует боеприпасов - само оружие и есть боеприпас
+    return isRanged && !isThrown;
+  };
+
+  // Функция для проверки доступности боеприпасов
+  const hasAmmunition = (weaponName: string) => {
+    const weaponData = Weapons.find(w => w.name === weaponName);
+    if (!weaponData) return true; // Если оружие не найдено, считаем что боеприпасы есть
+    
+    if (!needsAmmunition(weaponName)) return true; // Если боеприпасы не нужны, считаем что они есть
+    
+    const ammoCount = getAmmunitionCount(weaponData.key);
+    return ammoCount > 0;
+  };
+
+  // Функция для проверки доступности оружия (включая метательное)
+  const hasWeaponAvailable = (weaponName: string) => {
+    const weaponData = Weapons.find(w => w.name === weaponName);
+    if (!weaponData) return true; // Если оружие не найдено, считаем что доступно
+    
+    const isThrown = weaponData.properties?.includes('thrown');
+    
+    if (isThrown) {
+      // Для метательного оружия проверяем наличие самого оружия в инвентаре
+      return hasThrownWeapon(weaponName);
+    } else {
+      // Для дальнобойного оружия проверяем боеприпасы
+      return hasAmmunition(weaponName);
+    }
+  };
+
+  // Функция для проверки доступности урона (учитывает критическое попадание)
+  const hasDamageAvailable = (weaponName: string, weaponSlot: number) => {
+    const weaponData = Weapons.find(w => w.name === weaponName);
+    if (!weaponData) return true; // Если оружие не найдено, считаем что доступно
+    
+    // Если есть критическое попадание, урон всегда доступен
+    const key = `${weaponName}-${weaponSlot}`;
+    if (criticalHits[key]) return true;
+    
+    const isThrown = weaponData.properties?.includes('thrown');
+    
+    if (isThrown) {
+      // Для метательного оружия проверяем наличие самого оружия в инвентаре
+      return hasThrownWeapon(weaponName);
+    } else {
+      // Для дальнобойного оружия проверяем боеприпасы
+      return hasAmmunition(weaponName);
+    }
+  };
+
+  // Функция для проверки доступности метательного оружия
+  const hasThrownWeapon = (weaponName: string) => {
+    if (!characterData?.equipment) return false;
+    
+    // Ищем само оружие в инвентаре
+    let weaponCount = 0;
+    characterData.equipment.forEach((item: any) => {
+      if (typeof item === 'object' && item.name) {
+        if (item.name === weaponName) {
+          weaponCount += item.quantity || 1;
+        }
+      } else if (typeof item === 'string') {
+        const cleanName = getCleanItemName(item);
+        if (cleanName === weaponName) {
+          weaponCount += getItemQuantity(item);
+        }
+      }
+    });
+    
+    return weaponCount > 0;
+  };
+
+  // Функция для траты боеприпасов
+  const consumeAmmunition = (weaponKey: string) => {
+    if (!characterData?.equipment || !setDraft) return false;
+    
+    // Проверяем, является ли оружие метательным
+    const weaponData = Weapons.find(w => w.key === weaponKey);
+    const isThrown = weaponData?.properties?.includes('thrown');
+    
+    if (isThrown) {
+      // Для метательного оружия тратим само оружие из инвентаря
+      const weaponName = weaponData.name;
+      
+      for (let i = 0; i < characterData.equipment.length; i++) {
+        const item = characterData.equipment[i];
+        
+        if (typeof item === 'object' && item.name) {
+          if (item.name === weaponName && item.quantity > 0) {
+            // Уменьшаем количество на 1
+            const newEquipment = [...characterData.equipment];
+            newEquipment[i] = {
+              ...item,
+              quantity: item.quantity - 1
+            };
+            
+            // Если количество стало 0, удаляем предмет
+            if (newEquipment[i].quantity === 0) {
+              newEquipment.splice(i, 1);
+            }
+            
+            // Обновляем экипировку персонажа
+            setTimeout(() => {
+              setDraft(prev => ({
+                ...prev,
+                basics: {
+                  ...prev.basics,
+                  equipment: newEquipment
+                }
+              }));
+            }, 0);
+            
+            return true;
+          }
+        } else if (typeof item === 'string') {
+          const cleanName = getCleanItemName(item);
+          if (cleanName === weaponName) {
+            const quantity = getItemQuantity(item);
+            if (quantity > 1) {
+              // Уменьшаем количество в строке
+              const newQuantity = quantity - 1;
+              const newEquipment = [...characterData.equipment];
+              newEquipment[i] = `${newQuantity}x ${cleanName}`;
+              
+              // Обновляем экипировку персонажа
+              setDraft(prev => ({
+                ...prev,
+                basics: {
+                  ...prev.basics,
+                  equipment: newEquipment
+                }
+              }));
+              
+              return true;
+            } else {
+              // Удаляем предмет полностью
+              const newEquipment = characterData.equipment.filter((_, index) => index !== i);
+              
+              // Обновляем экипировку персонажа
+              setDraft(prev => ({
+                ...prev,
+                basics: {
+                  ...prev.basics,
+                  equipment: newEquipment
+                }
+              }));
+              
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false; // Метательное оружие не найдено в инвентаре
+    } else {
+      // Для дальнобойного оружия ищем боеприпасы
+      const compatibleAmmo = Ammunitions.filter(ammo => 
+        ammo.weapon && ammo.weapon.includes(weaponKey)
+      );
+      
+      // Ищем первый доступный боеприпас
+      for (let i = 0; i < characterData.equipment.length; i++) {
+        const item = characterData.equipment[i];
+        
+        if (typeof item === 'object' && item.name) {
+          const ammo = compatibleAmmo.find(a => a.name === item.name);
+          if (ammo && item.quantity > 0) {
+            // Уменьшаем количество на 1
+            const newEquipment = [...characterData.equipment];
+            newEquipment[i] = {
+              ...item,
+              quantity: item.quantity - 1
+            };
+            
+            // Если количество стало 0, удаляем предмет
+            if (newEquipment[i].quantity === 0) {
+              newEquipment.splice(i, 1);
+            }
+            
+            // Обновляем экипировку персонажа
+            setTimeout(() => {
+              setDraft(prev => ({
+                ...prev,
+                basics: {
+                  ...prev.basics,
+                  equipment: newEquipment
+                }
+              }));
+            }, 0);
+            
+            return true;
+          }
+        } else if (typeof item === 'string') {
+          const ammo = compatibleAmmo.find(a => a.name === item);
+          if (ammo) {
+            const quantity = getItemQuantity(item);
+            if (quantity > 1) {
+              // Уменьшаем количество в строке
+              const cleanName = getCleanItemName(item);
+              const newQuantity = quantity - 1;
+              const newEquipment = [...characterData.equipment];
+              newEquipment[i] = `${newQuantity}x ${cleanName}`;
+              
+              // Обновляем экипировку персонажа
+              setDraft(prev => ({
+                ...prev,
+                basics: {
+                  ...prev.basics,
+                  equipment: newEquipment
+                }
+              }));
+              
+              return true;
+            } else {
+              // Удаляем предмет полностью
+              const newEquipment = characterData.equipment.filter((_, index) => index !== i);
+              
+              // Обновляем экипировку персонажа
+              setDraft(prev => ({
+                ...prev,
+                basics: {
+                  ...prev.basics,
+                  equipment: newEquipment
+                }
+              }));
+              
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false;
+    }
+  };
+
+  // Функция для отображения боеприпасов под оружием
+  const renderAmmunitionInfo = (itemName: string, noMargin: boolean = false) => {
+    const weaponData = Weapons.find(w => w.name === itemName);
+    if (!weaponData) return null;
+    
+    // Проверяем, является ли оружие метательным или дальнобойным
+    const isThrown = weaponData.properties?.includes('thrown');
+    const isRanged = weaponData.type === 'ranged';
+    
+    if (!isThrown && !isRanged) return null;
+    
+    if (isThrown) {
+      // Для метательного оружия показываем количество самого оружия в инвентаре
+      const weaponCount = hasThrownWeapon(itemName) ? 
+        characterData?.equipment?.reduce((count: number, item: any) => {
+          if (typeof item === 'object' && item.name === itemName) {
+            return count + (item.quantity || 1);
+          } else if (typeof item === 'string') {
+            const cleanName = getCleanItemName(item);
+            if (cleanName === itemName) {
+              return count + getItemQuantity(item);
+            }
+          }
+          return count;
+        }, 0) || 0 : 0;
+      
+      if (weaponCount === 0) {
+        return (
+          <div className={`text-xs text-red-400 ${noMargin ? '' : 'mt-1'}`}>
+            Закончились снаряды
+          </div>
+        );
+      }
+      
+      return (
+        <div className={`text-xs text-blue-400 ${noMargin ? '' : 'mt-1'}`}>
+          Доступно: {weaponCount} шт.
+        </div>
+      );
+    } else {
+      // Для дальнобойного оружия показываем боеприпасы
+      const ammoCount = getAmmunitionCount(weaponData.key);
+      
+      // Определяем название боеприпаса
+      let ammoName = '';
+      let ammoNameOutOfStock = '';
+      if (weaponData.key === 'shortbow' || weaponData.key === 'longbow') {
+        ammoName = 'стрел';
+        ammoNameOutOfStock = 'стрелы';
+      } else if (weaponData.key === 'light-crossbow' || weaponData.key === 'hand-crossbow' || weaponData.key === 'heavy-crossbow') {
+        ammoName = 'болтов';
+        ammoNameOutOfStock = 'болты';
+      } else if (weaponData.key === 'blowgun') {
+        ammoName = 'игл';
+        ammoNameOutOfStock = 'иглы';
+      }
+      
+      // Если боеприпасы закончились, показываем соответствующее сообщение
+      if (ammoCount === 0) {
+        return (
+          <div className={`text-xs text-red-400 ${noMargin ? '' : 'mt-1'}`}>
+            Закончились {ammoNameOutOfStock}
+          </div>
+        );
+      }
+      
+      return (
+        <div className={`text-xs text-blue-400 ${noMargin ? '' : 'mt-1'}`}>
+          Доступно: {ammoCount} {ammoName}
+        </div>
+      );
+    }
   };
 
   // Функция для очистки названия предмета от количества
@@ -1532,6 +2029,73 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return (currentUsedSlots <= 2) || (otherUsedSlots + 2 <= 2);
   };
 
+  // Функция для автоматического сохранения изменений экипировки
+  const autoSaveEquipmentChanges = (newLocalEquipped: typeof localEquipped) => {
+    if (!equipped) return;
+    
+    // Конвертируем локальное состояние обратно в формат equipped
+    const mainWeapons = newLocalEquipped.mainSet
+      .filter(item => getItemType(item.name) === 'weapon')
+      .map(item => ({
+        name: item.name,
+        type: 'weapon' as const,
+        slots: item.slots,
+        isVersatile: item.isVersatile,
+        versatileMode: item.versatileMode
+      }));
+    
+    const additionalWeapons = newLocalEquipped.additionalSet
+      .filter(item => getItemType(item.name) === 'weapon')
+      .map(item => ({
+        name: item.name,
+        type: 'weapon' as const,
+        slots: item.slots,
+        isVersatile: item.isVersatile,
+        versatileMode: item.versatileMode
+      }));
+    
+    const mainShields = newLocalEquipped.mainSet
+      .filter(item => getItemType(item.name) === 'shield')
+      .map(item => ({
+        name: item.name,
+        type: 'shield' as const,
+        slots: item.slots,
+        isVersatile: item.isVersatile,
+        versatileMode: item.versatileMode
+      }));
+    
+    const additionalShields = newLocalEquipped.additionalSet
+      .filter(item => getItemType(item.name) === 'shield')
+      .map(item => ({
+        name: item.name,
+        type: 'shield' as const,
+        slots: item.slots,
+        isVersatile: item.isVersatile,
+        versatileMode: item.versatileMode
+      }));
+    
+    // Обновляем equipped
+    const updatedEquipped = {
+      ...equipped,
+      weaponSlot1: mainWeapons,
+      weaponSlot2: additionalWeapons,
+      shield1: mainShields[0] || null,
+      shield2: additionalShields[0] || null,
+      armor: newLocalEquipped.armor ? {
+        name: newLocalEquipped.armor,
+        type: 'armor' as const,
+        slots: 1,
+        isVersatile: false,
+        versatileMode: false
+      } : null
+    };
+    
+    // Вызываем функцию обновления equipped из родительского компонента
+    if (onUpdateEquipped) {
+      onUpdateEquipped(updatedEquipped);
+    }
+  };
+
   // Функция для переключения универсального режима оружия
   const toggleVersatileMode = (itemName: string) => {
     if (!canToggleVersatileMode(itemName)) {
@@ -1561,15 +2125,17 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       const currentUsedSlots = getUsedSlots(currentSet) - item.slots + newSlots;
       const otherUsedSlots = getUsedSlots(otherSet);
       
+      let newState = prev;
+      
       if (currentUsedSlots <= 2) {
         // Помещается в текущий набор
         if (mainItem) {
-          return {
+          newState = {
             ...prev,
             mainSet: prev.mainSet.map(i => i.name === cleanName ? updatedItem : i)
           };
         } else {
-          return {
+          newState = {
             ...prev,
             additionalSet: prev.additionalSet.map(i => i.name === cleanName ? updatedItem : i)
           };
@@ -1577,13 +2143,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       } else if (otherUsedSlots + newSlots <= 2) {
         // Помещается в другой набор
         if (mainItem) {
-          return {
+          newState = {
             ...prev,
             mainSet: prev.mainSet.filter(i => i.name !== cleanName),
             additionalSet: [...prev.additionalSet, updatedItem]
           };
         } else {
-          return {
+          newState = {
             ...prev,
             additionalSet: prev.additionalSet.filter(i => i.name !== cleanName),
             mainSet: [...prev.mainSet, updatedItem]
@@ -1592,17 +2158,22 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       } else {
         // Не помещается ни в один набор, заменяем текущий
         if (mainItem) {
-          return {
+          newState = {
             ...prev,
             mainSet: [updatedItem]
           };
         } else {
-          return {
+          newState = {
             ...prev,
             additionalSet: [updatedItem]
           };
         }
       }
+      
+      // Автоматически сохраняем изменения
+      autoSaveEquipmentChanges(newState);
+      
+      return newState;
     });
   };
 
@@ -1612,12 +2183,15 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     const itemType = getItemType(itemName);
     
     setLocalEquipped(prev => {
+      let newState = prev;
+      
       switch (itemType) {
         case 'armor':
-          return {
+          newState = {
             ...prev,
             armor: prev.armor === cleanName ? null : cleanName
           };
+          break;
           
         case 'weapon':
         case 'shield':
@@ -1626,56 +2200,61 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           const additionalItem = prev.additionalSet.find(item => item.name === cleanName);
           
           if (mainItem) {
-            return {
+            newState = {
               ...prev,
               mainSet: prev.mainSet.filter(item => item.name !== cleanName)
             };
-          }
-          if (additionalItem) {
-            return {
+          } else if (additionalItem) {
+            newState = {
               ...prev,
               additionalSet: prev.additionalSet.filter(item => item.name !== cleanName)
             };
-          }
-          
-          // Если не экипирован, добавляем в подходящий набор
-          const isVersatile = isVersatileWeapon(itemName);
-          const requiredSlots = getItemSlots(itemName, false); // По умолчанию одноручный режим
-          const mainUsedSlots = getUsedSlots(prev.mainSet);
-          const additionalUsedSlots = getUsedSlots(prev.additionalSet);
-          
-          const newItem = {
-            name: cleanName,
-            slots: requiredSlots,
-            isVersatile,
-            versatileMode: false
-          };
-          
-          // Сначала пытаемся добавить в основной набор
-          if (mainUsedSlots + requiredSlots <= 2) {
-            return {
-              ...prev,
-              mainSet: [...prev.mainSet, newItem]
+          } else {
+            // Если не экипирован, добавляем в подходящий набор
+            const isVersatile = isVersatileWeapon(itemName);
+            const requiredSlots = getItemSlots(itemName, false); // По умолчанию одноручный режим
+            const mainUsedSlots = getUsedSlots(prev.mainSet);
+            const additionalUsedSlots = getUsedSlots(prev.additionalSet);
+            
+            const newItem = {
+              name: cleanName,
+              slots: requiredSlots,
+              isVersatile,
+              versatileMode: false
             };
+            
+            // Сначала пытаемся добавить в основной набор
+            if (mainUsedSlots + requiredSlots <= 2) {
+              newState = {
+                ...prev,
+                mainSet: [...prev.mainSet, newItem]
+              };
+            }
+            // Если не помещается в основной, добавляем в дополнительный
+            else if (additionalUsedSlots + requiredSlots <= 2) {
+              newState = {
+                ...prev,
+                additionalSet: [...prev.additionalSet, newItem]
+              };
+            }
+            // Если не помещается ни в один, заменяем основной набор
+            else {
+              newState = {
+                ...prev,
+                mainSet: [newItem]
+              };
+            }
           }
-          // Если не помещается в основной, добавляем в дополнительный
-          else if (additionalUsedSlots + requiredSlots <= 2) {
-            return {
-              ...prev,
-              additionalSet: [...prev.additionalSet, newItem]
-            };
-          }
-          // Если не помещается ни в один, заменяем основной набор
-          else {
-            return {
-              ...prev,
-              mainSet: [newItem]
-            };
-          }
+          break;
           
         default:
-          return prev;
+          newState = prev;
       }
+      
+      // Автоматически сохраняем изменения
+      autoSaveEquipmentChanges(newState);
+      
+      return newState;
     });
   };
 
@@ -1725,10 +2304,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
     
     let totalWeight = 0;
-    characterData.equipment.forEach((item: string) => {
+    characterData.equipment.forEach((item: any) => {
       const weight = getItemWeight(item);
       totalWeight += weight;
     });
+    
     return totalWeight;
   };
 
@@ -1766,6 +2346,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           <div 
             className="w-4 h-4 flex items-center justify-center"
             onMouseEnter={(e) => {
+              // Очищаем предыдущий таймаут
+              if (currencyTimeout) {
+                clearTimeout(currencyTimeout);
+                setCurrencyTimeout(null);
+              }
+              
               const rect = e.currentTarget.getBoundingClientRect();
               setHoveredCurrency('platinum');
               setCurrencyPosition({
@@ -1774,8 +2360,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               });
             }}
             onMouseLeave={() => {
-              setHoveredCurrency(null);
-              setCurrencyPosition(null);
+              // Устанавливаем таймаут для скрытия подсказки
+              const timeout = setTimeout(() => {
+                setHoveredCurrency(null);
+                setCurrencyPosition(null);
+                setCurrencyTimeout(null);
+              }, 100);
+              setCurrencyTimeout(timeout);
             }}
           >
             {/* Ромб (платина) */}
@@ -1792,6 +2383,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           <div 
             className="w-4 h-4 flex items-center justify-center"
             onMouseEnter={(e) => {
+              // Очищаем предыдущий таймаут
+              if (currencyTimeout) {
+                clearTimeout(currencyTimeout);
+                setCurrencyTimeout(null);
+              }
+              
               const rect = e.currentTarget.getBoundingClientRect();
               setHoveredCurrency('gold');
               setCurrencyPosition({
@@ -1800,8 +2397,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               });
             }}
             onMouseLeave={() => {
-              setHoveredCurrency(null);
-              setCurrencyPosition(null);
+              // Устанавливаем таймаут для скрытия подсказки
+              const timeout = setTimeout(() => {
+                setHoveredCurrency(null);
+                setCurrencyPosition(null);
+                setCurrencyTimeout(null);
+              }, 100);
+              setCurrencyTimeout(timeout);
             }}
           >
             {/* Круг (золото) */}
@@ -1818,6 +2420,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           <div 
             className="w-4 h-4 flex items-center justify-center"
             onMouseEnter={(e) => {
+              // Очищаем предыдущий таймаут
+              if (currencyTimeout) {
+                clearTimeout(currencyTimeout);
+                setCurrencyTimeout(null);
+              }
+              
               const rect = e.currentTarget.getBoundingClientRect();
               setHoveredCurrency('electrum');
               setCurrencyPosition({
@@ -1826,8 +2434,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               });
             }}
             onMouseLeave={() => {
-              setHoveredCurrency(null);
-              setCurrencyPosition(null);
+              // Устанавливаем таймаут для скрытия подсказки
+              const timeout = setTimeout(() => {
+                setHoveredCurrency(null);
+                setCurrencyPosition(null);
+                setCurrencyTimeout(null);
+              }, 100);
+              setCurrencyTimeout(timeout);
             }}
           >
             {/* Шестиугольник (электрум) */}
@@ -1850,6 +2463,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           <div 
             className="w-4 h-4 flex items-center justify-center"
             onMouseEnter={(e) => {
+              // Очищаем предыдущий таймаут
+              if (currencyTimeout) {
+                clearTimeout(currencyTimeout);
+                setCurrencyTimeout(null);
+              }
+              
               const rect = e.currentTarget.getBoundingClientRect();
               setHoveredCurrency('silver');
               setCurrencyPosition({
@@ -1858,8 +2477,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               });
             }}
             onMouseLeave={() => {
-              setHoveredCurrency(null);
-              setCurrencyPosition(null);
+              // Устанавливаем таймаут для скрытия подсказки
+              const timeout = setTimeout(() => {
+                setHoveredCurrency(null);
+                setCurrencyPosition(null);
+                setCurrencyTimeout(null);
+              }, 100);
+              setCurrencyTimeout(timeout);
             }}
           >
             {/* Треугольник (серебро) */}
@@ -1882,6 +2506,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           <div 
             className="w-4 h-4 flex items-center justify-center"
             onMouseEnter={(e) => {
+              // Очищаем предыдущий таймаут
+              if (currencyTimeout) {
+                clearTimeout(currencyTimeout);
+                setCurrencyTimeout(null);
+              }
+              
               const rect = e.currentTarget.getBoundingClientRect();
               setHoveredCurrency('copper');
               setCurrencyPosition({
@@ -1890,8 +2520,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               });
             }}
             onMouseLeave={() => {
-              setHoveredCurrency(null);
-              setCurrencyPosition(null);
+              // Устанавливаем таймаут для скрытия подсказки
+              const timeout = setTimeout(() => {
+                setHoveredCurrency(null);
+                setCurrencyPosition(null);
+                setCurrencyTimeout(null);
+              }, 100);
+              setCurrencyTimeout(timeout);
             }}
           >
             {/* Квадрат (медь) */}
@@ -1903,7 +2538,18 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
     
   return (
-      <div className="flex items-center gap-3">
+      <div 
+        className="flex items-center gap-3"
+        onMouseLeave={() => {
+          // Очищаем таймаут и сразу скрываем подсказку
+          if (currencyTimeout) {
+            clearTimeout(currencyTimeout);
+            setCurrencyTimeout(null);
+          }
+          setHoveredCurrency(null);
+          setCurrencyPosition(null);
+        }}
+      >
         {currencyItems}
       </div>
     );
@@ -2084,51 +2730,67 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div key={`weapon-${action.index}`}>
                             <div className={`grid gap-2 text-sm py-1 items-center ${!weapon.isActive ? 'opacity-60' : ''}`}
                                  style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr' }}>
-                              <div className="text-gray-200 truncate flex items-center justify-start">
-                                <span className="text-sm text-gray-500 mr-1 w-3 inline-block text-center">{weapon.slot === 1 ? 'I' : 'II'}</span>
-                                {weapon.name}
-                                {weaponData?.mastery && char?.chosen?.weaponMastery && Object.values(char.chosen.weaponMastery).flat().includes(weaponData.key) && (
-                                  <span 
-                                    className="ml-1 text-lg cursor-help relative"
-                                    style={{ color: getFrameColor(frameColor) }}
-                                    onMouseEnter={(e) => {
-                                      const rect = e.currentTarget.getBoundingClientRect();
-                                      setHoveredWeapon(`${weapon.name}-${weapon.slot}`);
-                                      setStarPosition({
-                                        x: rect.left + rect.width / 2,
-                                        y: rect.top
-                                      });
-                                    }}
-                                    onMouseLeave={() => {
-                                      setHoveredWeapon(null);
-                                      setStarPosition(null);
-                                    }}
-                                  >
-                                    ★
-                                  </span>
-                                )}
+                              <div className="text-gray-200 flex flex-col justify-start relative">
+                                <div className="flex items-center">
+                                  <span className="text-sm text-gray-500 mr-1 w-3 inline-block text-center">{weapon.slot === 1 ? 'I' : 'II'}</span>
+                                  <div className="flex items-center">
+                                    {weapon.name}
+                                    {weaponData?.mastery && char?.chosen?.weaponMastery && Object.values(char.chosen.weaponMastery).flat().includes(weaponData.key) && (
+                                      <span 
+                                        className="ml-1 text-lg cursor-help relative"
+                                        style={{ color: getFrameColor(frameColor) }}
+                                        onMouseEnter={(e) => {
+                                          const rect = e.currentTarget.getBoundingClientRect();
+                                          setHoveredWeapon(`${weapon.name}-${weapon.slot}`);
+                                          setStarPosition({
+                                            x: rect.left + rect.width / 2,
+                                            y: rect.top
+                                          });
+                                        }}
+                                        onMouseLeave={() => {
+                                          setHoveredWeapon(null);
+                                          setStarPosition(null);
+                                        }}
+                                      >
+                                        ★
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {/* Показываем количество боеприпасов для дальнобойного оружия с отступом под номер слота */}
+                                <div className="ml-4">
+                                  {renderAmmunitionInfo(weapon.name, true)}
+                                </div>
                               </div>
                               <div className="text-gray-300 flex items-center justify-center">{range}</div>
                               <div 
-                                className="text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
+                                className={`text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 transition-all duration-200 flex items-center justify-center mx-auto ${
+                                  hasWeaponAvailable(weapon.name) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                }`}
                                 style={{
-                                  borderColor: `${getFrameColor(frameColor)}40`,
+                                  borderColor: hasWeaponAvailable(weapon.name) ? `${getFrameColor(frameColor)}40` : '#6B7280',
                                   backgroundColor: 'transparent'
                                 }}
-                                onClick={() => handleAttack(weapon, weaponData?.type === 'ranged' ? 'dex' : 'str', attackBonus)}
+                                onClick={() => hasWeaponAvailable(weapon.name) && handleAttack(weapon, weaponData?.type === 'ranged' ? 'dex' : 'str', attackBonus)}
                                 onMouseEnter={(e) => {
+                                  if (!hasWeaponAvailable(weapon.name)) return;
                                   const lightColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
                                     ? '#F59E0B' 
                                     : getFrameColor(frameColor);
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                 }}
                                 onMouseLeave={(e) => {
+                                  if (!hasWeaponAvailable(weapon.name)) return;
                                   e.currentTarget.style.backgroundColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
                                     ? '#F59E0B20' 
                                     : 'transparent';
                                 }}
                               >
-                                {attackBonus > 0 ? `+${attackBonus}` : attackBonus === 0 ? '0' : attackBonus}
+                                {loadingAttacks[`${weapon.name}-${weapon.slot}`] ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  attackBonus > 0 ? `+${attackBonus}` : attackBonus === 0 ? '0' : attackBonus
+                                )}
                               </div>
                               <div className="relative flex items-center justify-center mx-auto">
                                 {/* Молния слева от рамки (абсолютное позиционирование) */}
@@ -2140,20 +2802,27 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                 
                                 {/* Рамка с уроном */}
                                 <div 
-                                  className={`border-2 w-[70px] rounded-md px-1 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                                    criticalHits[`${weapon.name}-${weapon.slot}`] 
-                                      ? 'text-yellow-300 font-bold animate-pulse' 
-                                      : 'text-gray-300'
+                                  className={`text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 transition-all duration-200 flex items-center justify-center ${
+                                    !hasDamageAvailable(weapon.name, weapon.slot) 
+                                      ? 'cursor-not-allowed opacity-50'
+                                      : criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                        ? 'text-yellow-300 font-bold animate-pulse cursor-pointer' 
+                                        : 'cursor-pointer'
                                   }`}
                                   style={{
-                                    borderColor: criticalHits[`${weapon.name}-${weapon.slot}`] 
-                                      ? '#F59E0B' 
-                                      : `${getFrameColor(frameColor)}40`,
-                                    backgroundColor: criticalHits[`${weapon.name}-${weapon.slot}`] 
-                                      ? '#F59E0B20' 
-                                      : 'transparent'
+                                    borderColor: !hasDamageAvailable(weapon.name, weapon.slot) 
+                                      ? '#6B7280'
+                                      : criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                        ? '#F59E0B' 
+                                        : `${getFrameColor(frameColor)}40`,
+                                    backgroundColor: !hasDamageAvailable(weapon.name, weapon.slot)
+                                      ? 'transparent'
+                                      : criticalHits[`${weapon.name}-${weapon.slot}`] 
+                                        ? '#F59E0B20' 
+                                        : 'transparent'
                                   }}
                                   onClick={() => {
+                                    if (!hasDamageAvailable(weapon.name, weapon.slot)) return;
                                     const weaponData = Weapons.find(w => w.name === weapon.name);
                                     const weaponType = weaponData?.type || 'melee';
                                     const abilityModifier = weaponType === 'ranged' ? 
@@ -2162,18 +2831,24 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                     handleDamage(weapon, weaponType === 'ranged' ? 'dex' : 'str', abilityModifier, damage);
                                   }}
                                   onMouseEnter={(e) => {
+                                    if (!hasDamageAvailable(weapon.name, weapon.slot)) return;
                                     const lightColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
                                       ? '#F59E0B' 
                                       : getFrameColor(frameColor);
                                     e.currentTarget.style.backgroundColor = `${lightColor}20`;
                                   }}
                                   onMouseLeave={(e) => {
+                                    if (!hasDamageAvailable(weapon.name, weapon.slot)) return;
                                     e.currentTarget.style.backgroundColor = criticalHits[`${weapon.name}-${weapon.slot}`] 
                                       ? '#F59E0B20' 
                                       : 'transparent';
                                   }}
                                 >
-                                  {damage}
+                                  {loadingDamage[`${weapon.name}-${weapon.slot}`] ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    damage
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -2242,7 +2917,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                     : 'transparent';
                                 }}
                               >
-                                {spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus}
+                                {loadingAttacks[`spell-${spellName}`] ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus
+                                )}
                               </div>
                               <div className="relative flex items-center justify-center mx-auto">
                                 {/* Иконка типа урона слева от рамки для заклинаний */}
@@ -2262,10 +2941,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                 
                                 {/* Рамка с уроном заклинания */}
                                 <div 
-                                  className={`border-2 w-[70px] rounded-md px-1 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                  className={`text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center ${
                                     criticalHits[`spell-${spellName}`] 
                                       ? 'font-bold animate-pulse' 
-                                      : 'text-gray-300'
+                                      : ''
                                   }`}
                                   style={{
                                     borderColor: criticalHits[`spell-${spellName}`] 
@@ -2296,10 +2975,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                       : 'transparent';
                                   }}
                                 >
-                                  {criticalHits[`spell-${spellName}`] ? 
-                                    spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
-                                    spellDamage
-                                  }
+                                  {loadingDamage[`spell-${spellName}`] ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    criticalHits[`spell-${spellName}`] ? 
+                                      spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
+                                      spellDamage
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -2426,7 +3108,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                     : 'transparent';
                                 }}
                               >
-                                {spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus}
+                                {loadingAttacks[`spell-${spellName}`] ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus
+                                )}
                               </div>
                               <div className="relative flex items-center justify-center mx-auto">
                                 {/* Иконка типа урона слева от рамки для заклинаний */}
@@ -2446,10 +3132,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                 
                                 {/* Рамка с уроном заклинания */}
                                 <div 
-                                  className={`border-2 w-[70px] rounded-md px-1 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                  className={`text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center ${
                                     criticalHits[`spell-${spellName}`] 
                                       ? 'font-bold animate-pulse' 
-                                      : 'text-gray-300'
+                                      : ''
                                   }`}
                                   style={{
                                     borderColor: criticalHits[`spell-${spellName}`] 
@@ -2480,10 +3166,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                       : 'transparent';
                                   }}
                                 >
-                                  {criticalHits[`spell-${spellName}`] ? 
-                                    spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
-                                    spellDamage
-                                  }
+                                  {loadingDamage[`spell-${spellName}`] ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    criticalHits[`spell-${spellName}`] ? 
+                                      spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
+                                      spellDamage
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -2674,7 +3363,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         const equippedItems = getEquippedItems();
         const backpackItems = getBackpackItems();
         
-        // Функция для сохранения изменений в драфт
+
+        // Функция для сохранения изменений в драфт (оставляем для совместимости)
         const saveEquipmentChanges = () => {
           if (!equipped) return;
           
@@ -2753,17 +3443,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               </div>
               <div className="flex items-center gap-4">
                 <CurrencyDisplay />
-                <button
-                  className="px-3 py-1 text-xs font-semibold rounded border"
-                  style={{
-                    borderColor: getFrameColor(frameColor),
-                    backgroundColor: getFrameColor(frameColor),
-                    color: '#000'
-                  }}
-                  onClick={saveEquipmentChanges}
-                >
-                  СОХРАНИТЬ
-                </button>
               </div>
             </div>
             
@@ -2782,7 +3461,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   <div className="flex items-center justify-start">✓</div>
                   <div className="flex items-center justify-start">НАЗВАНИЕ</div>
                   <div className="text-center">ВЕС</div>
-                  <div className="text-center">КЛВ</div>
                   <div className="text-center">ЦЕНА</div>
                 </div>
                 
@@ -2822,7 +3500,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                              <div className="text-xs text-gray-500 mt-1">{getItemCategory(item.name)}</div>
                            </div>
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
-                          <div className="text-gray-400 text-center">{item.quantity}</div>
                           <div className="text-gray-400 text-center">{item.cost}</div>
                         </div>
                       </div>
@@ -2877,6 +3554,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             <div className="flex-1 cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
                               <div>{getCleanItemName(item.name)}</div>
                               <div className="text-xs text-gray-500 mt-1">{getItemCategory(item.name)}</div>
+                              {renderAmmunitionInfo(item.name)}
                             </div>
                             {item.isVersatile && (
                               <div className="flex items-center gap-1">
@@ -2899,7 +3577,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             )}
                           </div>
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
-                          <div className="text-gray-400 text-center">{item.quantity}</div>
                           <div className="text-gray-400 text-center">{item.cost}</div>
                         </div>
                         {index < equippedItems.filter(item => item.set === 'main').length - 1 && (
@@ -2962,6 +3639,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             <div className="flex-1 cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
                               <div>{getCleanItemName(item.name)}</div>
                               <div className="text-xs text-gray-500 mt-1">{getItemCategory(item.name)}</div>
+                              {renderAmmunitionInfo(item.name)}
                             </div>
                             {item.isVersatile && (
                               <div className="flex items-center gap-1">
@@ -2984,7 +3662,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             )}
                           </div>
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
-                          <div className="text-gray-400 text-center">{item.quantity}</div>
                           <div className="text-gray-400 text-center">{item.cost}</div>
                         </div>
                         {index < equippedItems.filter(item => item.set === 'additional').length - 1 && (
@@ -3023,7 +3700,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 {/* Заголовки таблицы */}
                 <div className="grid gap-2 text-sm font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
                      style={{ 
-                       gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr',
+                       gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr 1fr',
                        borderBottom: `1px solid ${getFrameColor(frameColor)}20` 
                      }}>
                   <div className="flex items-center justify-start">✓</div>
@@ -3048,7 +3725,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       return (
                       <div key={index}>
                         <div className="grid gap-2 text-sm py-1 items-center"
-                             style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr' }}>
+                             style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr 1fr' }}>
                           <div className="flex justify-start items-center">
                             {(itemType === 'weapon' || itemType === 'armor' || itemType === 'shield') ? (
                               <div 
@@ -3286,20 +3963,25 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs text-gray-400">
-                                      {item.cost}
+                                      {translateCurrency(item.cost)}
                                     </span>
                                     <div className="flex gap-1">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          // TODO: Купить предмет
+                                          handlePurchaseItem(item, 1);
                                         }}
-                                        className="p-1 text-white rounded transition-colors hover:opacity-80 relative group"
+                                        disabled={loadingPurchase.has(`${item.type}-${item.key}`)}
+                                        className="p-1 text-white rounded transition-colors hover:opacity-80 relative group disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{
                                           backgroundColor: getFrameColor(frameColor),
                                         }}
                                       >
-                                        <Coins className="w-4 h-4" />
+                                        {loadingPurchase.has(`${item.type}-${item.key}`) ? (
+                                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        ) : (
+                                          <Coins className="w-4 h-4" />
+                                        )}
                                         {/* Красивый tooltip */}
                                         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
                                           <div className="text-white font-semibold">Купить</div>
@@ -3345,7 +4027,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                           <span className="font-medium">Категория:</span> {item.category}
                                         </div>
                                         <div className="text-gray-300 mb-2">
-                                          <span className="font-medium">Стоимость:</span> {item.cost}
+                                          <span className="font-medium">Стоимость:</span> {translateCurrency(item.cost)}
                                         </div>
                                         <div className="text-gray-300">
                                           <span className="font-medium">Вес:</span> {item.weight} фнт.
@@ -3361,12 +4043,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                         {itemDetails.category}
                                       </div>
 
-                                      {/* Источник вверху (только для не-оружия) */}
-                                      {itemDetails.itemType !== 'weapon' && (itemDetails as any).source && (
-                                        <div className="text-gray-500 text-[10px] mb-2">
-                                          Источник: {(itemDetails as any).source}
-                                        </div>
-                                      )}
                                       
                                       <div className="space-y-2">
                                         {/* Для оружия показываем специальные параметры */}
@@ -3435,111 +4111,40 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                           </>
                                         )}
 
-                                        {/* Блок количества и добавления (для всех предметов) */}
-                                        <div className="mt-3 pt-3 border-t border-gray-700">
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-white font-medium">Количество:</span>
-                                              <button
-                                                onClick={() => decrementQuantity(itemDetails.key)}
-                                                disabled={getQuantityForItem(itemDetails.key) <= 1}
-                                                className="w-6 h-6 flex items-center justify-center text-white rounded transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-bold"
-                                                style={{ backgroundColor: getFrameColor(frameColor) }}
-                                              >
-                                                −
-                                              </button>
-                                              <input
-                                                type="number"
-                                                min="1"
-                                                value={getQuantityForItem(itemDetails.key)}
-                                                onChange={(e) => updateItemQuantity(itemDetails.key, parseInt(e.target.value) || 1)}
-                                                className="w-16 px-2 py-1 text-center text-gray-200 bg-neutral-800 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                style={{ 
-                                                  borderColor: getFrameColor(frameColor) + '40',
-                                                  '--tw-ring-color': getFrameColor(frameColor) + '40'
-                                                } as any}
-                                              />
-                                              <button
-                                                onClick={() => incrementQuantity(itemDetails.key)}
-                                                className="w-6 h-6 flex items-center justify-center text-white rounded transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-bold"
-                                                style={{ backgroundColor: getFrameColor(frameColor) }}
-                                              >
-                                                +
-                                              </button>
-                                              <button
-                                                onClick={() => {
-                                                  const quantity = getQuantityForItem(itemDetails.key);
-                                                  handlePurchaseItem(itemDetails, quantity);
-                                                }}
-                                                disabled={loadingPurchase.has(`${itemDetails.itemType}-${itemDetails.key}`)}
-                                                className="h-6 w-16 flex items-center justify-center text-white rounded transition-colors hover:bg-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed text-xs border"
-                                                style={{ 
-                                                  borderColor: getFrameColor(frameColor),
-                                                  '--hover-bg': getFrameColor(frameColor) + '20'
-                                                } as any}
-                                                onMouseEnter={(e) => {
-                                                  e.currentTarget.style.backgroundColor = getFrameColor(frameColor) + '20';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                                }}
-                                              >
-                                                {loadingPurchase.has(`${itemDetails.itemType}-${itemDetails.key}`) ? (
-                                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                ) : (
-                                                  'КУПИТЬ'
-                                                )}
-                                              </button>
-                                              <button
-                                                onClick={() => {
-                                                  const quantity = getQuantityForItem(itemDetails.key);
-                                                  handleAddItemWithQuantity(itemDetails, quantity);
-                                                }}
-                                                disabled={loadingItems.has(`${itemDetails.itemType}-${itemDetails.key}`)}
-                                                className="h-6 w-20 flex items-center justify-center text-white rounded transition-colors hover:bg-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed text-xs border"
-                                                style={{ 
-                                                  borderColor: getFrameColor(frameColor),
-                                                  '--hover-bg': getFrameColor(frameColor) + '20'
-                                                } as any}
-                                                onMouseEnter={(e) => {
-                                                  e.currentTarget.style.backgroundColor = getFrameColor(frameColor) + '20';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                                }}
-                                              >
-                                                {loadingItems.has(`${itemDetails.itemType}-${itemDetails.key}`) ? (
-                                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                ) : (
-                                                  'ДОБАВИТЬ'
-                                                )}
-                                              </button>
-                                            </div>
-                                            
-                                            {/* Блок стоимости покупки */}
-                                            <div className="mt-3">
-                                              <div className="flex items-center gap-2">
-                                                <span className="text-white font-medium">Стоимость покупки:</span>
-                                                <span className="text-gray-200 font-semibold">
-                                                  {calculatePurchaseCost(itemDetails, getQuantityForItem(itemDetails.key))}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </div>
 
                                         {/* Для доспехов */}
                                         {itemDetails.itemType === 'armor' && (
                                           <>
                                             <div className="text-gray-400">
-                                              <span className="font-medium text-gray-200">КД:</span> {(itemDetails as any).baseAC}
+                                              <span className="font-medium text-gray-200">Владение:</span> {(() => {
+                                                // Проверяем владение доспехами по категориям
+                                                const armorCategory = itemDetails.category === 'Лёгкий доспех' ? 'light' :
+                                                                     itemDetails.category === 'Средний доспех' ? 'medium' :
+                                                                     itemDetails.category === 'Тяжёлый доспех' ? 'heavy' :
+                                                                     itemDetails.category === 'Щит' ? 'shield' :
+                                                                     itemDetails.category;
+                                                
+                                                const hasArmorProficiency = characterData?.armors?.includes(armorCategory) || 
+                                                                           characterData?.armors?.includes(itemDetails.key);
+                                                return hasArmorProficiency ? 'Да' : 'Нет';
+                                              })()}
                                             </div>
-                                            {(itemDetails as any).maxDexBonus !== undefined && (
+                                            <div className="text-gray-400">
+                                              <span className="font-medium text-gray-200">Класс брони:</span> {(itemDetails as any).baseAC}
+                                            </div>
+                                            {itemDetails.weight !== undefined && (
                                               <div className="text-gray-400">
-                                                <span className="font-medium text-gray-200">Макс. бонус ЛОВ:</span> {(itemDetails as any).maxDexBonus}
+                                                <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
                                               </div>
                                             )}
-                                            {(itemDetails as any).disadvantageStealth && (
+                                            {itemDetails.cost && (
                                               <div className="text-gray-400">
-                                                <span className="font-medium text-gray-200">Помеха:</span> Помеха к Скрытности
+                                                <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
+                                              </div>
+                                            )}
+                                            {(itemDetails as any).source && (
+                                              <div className="text-gray-400">
+                                                <span className="font-medium text-gray-200">Источник:</span> {(itemDetails as any).source}
                                               </div>
                                             )}
                                             {(itemDetails as any).requirements && (itemDetails as any).requirements.strength && (
@@ -3554,7 +4159,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                         {itemDetails.itemType === 'tool' && (itemDetails as any).ability && (
                                           <>
                                             <div className="text-gray-400">
-                                              <span className="font-medium text-gray-200">Характеристика:</span> {(itemDetails as any).ability}
+                                              <span className="font-medium text-gray-200">Характеристика:</span> {translateAbility((itemDetails as any).ability)}
                                             </div>
                                             {(itemDetails as any).utilize && (
                                               <div className="text-gray-400">
@@ -3564,17 +4169,17 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                           </>
                                         )}
 
-                                        {/* Стоимость и вес для всех предметов (кроме оружия) */}
-                                        {itemDetails.itemType !== 'weapon' && (
+                                        {/* Стоимость и вес для инструментов и других предметов (кроме оружия и доспехов) */}
+                                        {itemDetails.itemType !== 'weapon' && itemDetails.itemType !== 'armor' && (
                                           <>
-                                            {itemDetails.cost && (
-                                              <div className="text-gray-400">
-                                                <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
-                                              </div>
-                                            )}
                                             {itemDetails.weight !== undefined && (
                                               <div className="text-gray-400">
                                                 <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
+                                              </div>
+                                            )}
+                                            {itemDetails.cost && (
+                                              <div className="text-gray-400">
+                                                <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
                                               </div>
                                             )}
                                           </>
@@ -3636,6 +4241,97 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                           </div>
                                         </div>
                                       )}
+
+                                      {/* Блок количества и добавления (для всех предметов) */}
+                                      <div className="mt-3 pt-3 border-t border-gray-700">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-white font-medium">Количество:</span>
+                                            <button
+                                              onClick={() => decrementQuantity(itemDetails.key)}
+                                              disabled={getQuantityForItem(itemDetails.key) <= 1}
+                                              className="w-6 h-6 flex items-center justify-center text-white rounded transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-bold"
+                                              style={{ backgroundColor: getFrameColor(frameColor) }}
+                                            >
+                                              −
+                                            </button>
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              value={getQuantityForItem(itemDetails.key)}
+                                              onChange={(e) => updateItemQuantity(itemDetails.key, parseInt(e.target.value) || 1)}
+                                              className="w-16 px-2 py-1 text-center text-gray-200 bg-neutral-800 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                              style={{ 
+                                                borderColor: getFrameColor(frameColor) + '40',
+                                                '--tw-ring-color': getFrameColor(frameColor) + '40'
+                                              } as any}
+                                            />
+                                            <button
+                                              onClick={() => incrementQuantity(itemDetails.key)}
+                                              className="w-6 h-6 flex items-center justify-center text-white rounded transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-bold"
+                                              style={{ backgroundColor: getFrameColor(frameColor) }}
+                                            >
+                                              +
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                const quantity = getQuantityForItem(itemDetails.key);
+                                                handlePurchaseItem(itemDetails, quantity);
+                                              }}
+                                              disabled={loadingPurchase.has(`${itemDetails.itemType}-${itemDetails.key}`)}
+                                              className="h-6 w-16 flex items-center justify-center text-white rounded transition-colors hover:bg-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed text-xs border"
+                                              style={{ 
+                                                borderColor: getFrameColor(frameColor),
+                                                '--hover-bg': getFrameColor(frameColor) + '20'
+                                              } as any}
+                                              onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = getFrameColor(frameColor) + '20';
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                              }}
+                                            >
+                                              {loadingPurchase.has(`${itemDetails.itemType}-${itemDetails.key}`) ? (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                              ) : (
+                                                'КУПИТЬ'
+                                              )}
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                const quantity = getQuantityForItem(itemDetails.key);
+                                                handleAddItemWithQuantity(itemDetails, quantity);
+                                              }}
+                                              disabled={loadingItems.has(`${itemDetails.itemType}-${itemDetails.key}`)}
+                                              className="h-6 w-20 flex items-center justify-center text-white rounded transition-colors hover:bg-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed text-xs border"
+                                              style={{ 
+                                                borderColor: getFrameColor(frameColor),
+                                                '--hover-bg': getFrameColor(frameColor) + '20'
+                                              } as any}
+                                              onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = getFrameColor(frameColor) + '20';
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                              }}
+                                            >
+                                              {loadingItems.has(`${itemDetails.itemType}-${itemDetails.key}`) ? (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                              ) : (
+                                                'ДОБАВИТЬ'
+                                              )}
+                                            </button>
+                                          </div>
+                                          
+                                          {/* Блок стоимости покупки */}
+                                          <div className="mt-3">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-white font-medium">Стоимость покупки:</span>
+                                              <span className="text-gray-200 font-semibold">
+                                                {calculatePurchaseCost(itemDetails, getQuantityForItem(itemDetails.key))}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
                                     </div>
                                   );
                                 })()}
@@ -3859,7 +4555,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     {itemDetails.itemType === 'tool' && (itemDetails as any).ability && (
                       <>
                         <div className="text-gray-400">
-                          <span className="font-medium text-gray-200">Характеристика:</span> {(itemDetails as any).ability}
+                          <span className="font-medium text-gray-200">Характеристика:</span> {translateAbility((itemDetails as any).ability)}
                         </div>
                         {(itemDetails as any).utilize && (
                           <div className="text-gray-400">
@@ -3869,15 +4565,15 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       </>
                     )}
 
-                    {/* Стоимость и вес для всех предметов */}
-                    {itemDetails.cost && (
-                      <div className="text-gray-400">
-                        <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
-                      </div>
-                    )}
+                    {/* Вес и стоимость для всех предметов */}
                     {itemDetails.weight !== undefined && (
                       <div className="text-gray-400">
                         <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
+                      </div>
+                    )}
+                    {itemDetails.cost && (
+                      <div className="text-gray-400">
+                        <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
                       </div>
                     )}
                   </div>
