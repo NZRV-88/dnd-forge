@@ -62,7 +62,6 @@ export default function CharacterList() {
     // frame color from context
     const { frameColor, setFrameColor } = useFrameColor();
 
-
     // Load character by id from Supabase
     useEffect(() => {
         (async () => {
@@ -109,8 +108,44 @@ export default function CharacterList() {
                 }
                 
                 setCharWithLog(draft);
-                setCurHp(draft.basics?.hpCurrent ?? 0);
-                setTempHp(draft.basics?.hpTemp ?? 0);
+                
+                // Вычисляем максимальные хиты для установки curHp
+                const calculateHpMax = () => {
+                    const b = draft.basics;
+                    if (!b) return 0;
+                    
+                    const die: Record<string, number> = {
+                        barbarian: 12, bard: 8, fighter: 10, wizard: 6, druid: 8,
+                        cleric: 8, warlock: 8, monk: 8, paladin: 10, rogue: 8,
+                        ranger: 10, sorcerer: 6,
+                    };
+                    const d = die[b.class as keyof typeof die] || 8;
+                    const con = (finalStats as any).con ?? 0;
+                    const conMod = Math.floor((con - 10) / 2);
+                    const level = b.level || 1;
+                    const hpMode = b.hpMode || "fixed";
+                    let hp = d + conMod;
+                    if (level > 1) {
+                        if (hpMode === "fixed") {
+                            hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
+                        } else {
+                            const rolls: number[] = Array.isArray(draft.hpRolls) ? draft.hpRolls : [];
+                            for (let lvl = 2; lvl <= level; lvl++) {
+                                const idx = lvl - 2;
+                                const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
+                                hp += dieValue + conMod;
+                            }
+                        }
+                    }
+                    const extra = ((finalStats as any)._extraHp || 0) * level;
+                    return Math.max(0, hp + extra);
+                };
+                
+                const hpMax = calculateHpMax();
+                // Если hpCurrent равен null или 0, устанавливаем его равным hpMax
+                const initialHp = draft.basics?.hpCurrent === null || draft.basics?.hpCurrent === 0 ? hpMax : (draft.basics?.hpCurrent ?? 0);
+                setCurHp(initialHp);
+                setTempHp(draft.basics?.tempHp ?? 0);
             } catch {
                 setCharWithLog(null);
             }
@@ -162,6 +197,78 @@ export default function CharacterList() {
             _extraHp: 0, // TODO: добавить расчет HP если нужно
         };
     }, [char, char?.basics?.currency]);
+
+    // Обновляем curHp при изменении hpMax (например, при повышении уровня)
+    useEffect(() => {
+        if (char && char.basics) {
+            // Вычисляем hpMax здесь, чтобы избежать проблем с порядком хуков
+            const b = char.basics;
+            const level = b.level || 1;
+            const conValue = (finalStats as any).con || 10;
+            const conMod = Math.floor((conValue - 10) / 2);
+            
+            let hp = 0;
+            if (b.class === 'barbarian') {
+                hp = 12 + conMod;
+                for (let i = 2; i <= level; i++) {
+                    hp += 7 + conMod; // 1d12 = 7 в среднем
+                }
+            } else if (b.class === 'fighter' || b.class === 'paladin' || b.class === 'ranger') {
+                hp = 10 + conMod;
+                for (let i = 2; i <= level; i++) {
+                    hp += 6 + conMod; // 1d10 = 6 в среднем
+                }
+            } else if (b.class === 'bard' || b.class === 'cleric' || b.class === 'druid' || b.class === 'monk' || b.class === 'rogue' || b.class === 'warlock') {
+                hp = 8 + conMod;
+                for (let i = 2; i <= level; i++) {
+                    hp += 5 + conMod; // 1d8 = 5 в среднем
+                }
+            } else if (b.class === 'sorcerer' || b.class === 'wizard') {
+                hp = 6 + conMod;
+                for (let i = 2; i <= level; i++) {
+                    hp += 4 + conMod; // 1d6 = 4 в среднем
+                }
+            }
+            
+            const extra = ((finalStats as any)._extraHp || 0) * level;
+            const calculatedHpMax = Math.max(0, hp + extra);
+            
+            const currentHp = b.hpCurrent;
+            // Если hpCurrent равен null, обновляем его до hpMax
+            // Если hpCurrent не null, но больше hpMax (например, при понижении уровня), обновляем его
+            if (currentHp === null || (currentHp !== null && currentHp > calculatedHpMax)) {
+                setCurHp(calculatedHpMax);
+                
+                // Обновляем hpCurrent в базе данных
+                if (char.id) {
+                    const updatedChar = {
+                        ...char,
+                        basics: {
+                            ...char.basics,
+                            hpCurrent: calculatedHpMax
+                        }
+                    };
+                    
+                    // Сохраняем в базу данных
+                    supabase.from("characters")
+                        .update({ 
+                            data: updatedChar,
+                            updated_at: new Date()
+                        })
+                        .eq("id", char.id)
+                        .then(({ error }) => {
+                            if (error) {
+                                console.error('Error updating hpCurrent in database:', error);
+                            } else {
+                                console.log('Successfully updated hpCurrent in database');
+                                // Обновляем локальное состояние
+                                setChar(updatedChar);
+                            }
+                        });
+                }
+            }
+        }
+    }, [char, finalStats]);
 
     // Get all character data including proficiencies
     const characterData = useMemo(() => {
@@ -526,6 +633,60 @@ export default function CharacterList() {
         }
     };
 
+    // Handle HP changes
+    const handleHpChange = async (newHp: number) => {
+        if (!char) return;
+        const updated = { 
+            ...char, 
+            basics: { 
+                ...char.basics, 
+                hpCurrent: newHp 
+            } 
+        };
+        setCharWithLog(updated);
+        setCurHp(newHp);
+        
+        // Save to Supabase
+        try {
+            const { error } = await supabase
+                .from("characters")
+                .update({ data: updated, updated_at: new Date() })
+                .eq("id", id);
+            if (error) {
+                console.error("Ошибка сохранения здоровья:", error);
+            }
+        } catch (error) {
+            console.error("Ошибка сохранения здоровья:", error);
+        }
+    };
+
+    // Handle temp HP changes
+    const handleTempHpChange = async (newTempHp: number) => {
+        if (!char) return;
+        const updated = { 
+            ...char, 
+            basics: { 
+                ...char.basics, 
+                tempHp: newTempHp 
+            } 
+        };
+        setCharWithLog(updated);
+        setTempHp(newTempHp);
+        
+        // Save to Supabase
+        try {
+            const { error } = await supabase
+                .from("characters")
+                .update({ data: updated, updated_at: new Date() })
+                .eq("id", id);
+            if (error) {
+                console.error("Ошибка сохранения временных хитов:", error);
+            }
+        } catch (error) {
+            console.error("Ошибка сохранения временных хитов:", error);
+        }
+    };
+
     // small helper to format ability mods
     const formatMod = (v: number) => {
         const m = Math.floor((v - 10) / 2);
@@ -599,9 +760,9 @@ export default function CharacterList() {
                     <div className="pt-3">
                         <HealthBlock
                             curHp={curHp}
-                            setCurHp={setCurHp}
+                            setCurHp={handleHpChange}
                             tempHp={tempHp}
-                            setTempHp={setTempHp}
+                            setTempHp={handleTempHpChange}
                             hpMax={hpMax}
                         />
                     </div>

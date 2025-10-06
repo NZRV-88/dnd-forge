@@ -70,7 +70,7 @@ function calcMaxHP(
 export default function ClassPick() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
-    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, loadFromSupabase, isLoading } = useCharacter();
+    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, loadFromSupabase, isLoading, setHpCurrent } = useCharacter();
     
     // Модальные окна
     const [previewClass, setPreviewClass] = useState<string | null>(null);
@@ -93,6 +93,17 @@ export default function ClassPick() {
     const conMod = Math.floor((conScore - 10) / 2);
 
     const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls);
+
+    // Автоматически устанавливаем hpCurrent равным maxHP при выборе класса или изменении уровня
+    useEffect(() => {
+        if (draft.basics.class && maxHP > 0) {
+            // Если hpCurrent равен null, обновляем его до maxHP
+            // Если hpCurrent не null, но больше maxHP (например, при понижении уровня), обновляем его
+            if (draft.basics.hpCurrent === null || (draft.basics.hpCurrent !== null && draft.basics.hpCurrent > maxHP)) {
+                setHpCurrent(maxHP);
+            }
+        }
+    }, [draft.basics.class, draft.basics.level, draft.basics.hpMode, draft.hpRolls, maxHP, setHpCurrent]);
 
     const feats = useMemo(() => {
         if (!info) return [];
@@ -402,6 +413,7 @@ export default function ClassPick() {
                 onClose={() => setShowHealthSettings(false)}
                 onHpRoll={setHpRollAtLevel}
                 onResetHpRolls={resetHpRolls}
+                onSetHpCurrent={setHpCurrent}
             />
         </div>
     );

@@ -506,6 +506,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const getBackpackItems = () => {
     if (!characterData?.equipment || characterData.equipment.length === 0) return [];
     
+    console.log('getBackpackItems: characterData.equipment:', characterData.equipment);
+    
     // Получаем все надетые предметы
     const allEquippedItems = [
       ...(localEquipped.armor ? [localEquipped.armor] : []),
@@ -521,13 +523,17 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         const cleanName = getCleanItemName(itemName);
         const isNotEquipped = !allEquippedItems.includes(cleanName);
         
+        console.log('getBackpackItems: filtering item:', { item, itemName, cleanName, isNotEquipped });
+        
         return isNotEquipped;
       })
       .map((item: any) => {
         const itemName = typeof item === 'string' ? item : (item.name || String(item));
         const itemType = typeof item === 'object' && item.type ? item.type : getItemType(itemName);
         
-        return {
+        console.log('getBackpackItems: mapping item:', { item, itemName, itemType });
+        
+        const result = {
           name: itemName,
           type: itemType,
           category: typeof item === 'object' && item.category ? item.category : getItemCategory(itemName),
@@ -536,8 +542,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           quantity: typeof item === 'object' && typeof item.quantity === 'number' ? item.quantity : getItemQuantity(itemName),
           equipped: false
         };
+        
+        console.log('getBackpackItems: mapped result:', result);
+        
+        return result;
       });
     
+    console.log('getBackpackItems: final result:', result);
     return result;
   };
 
@@ -1102,8 +1113,16 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     weaponsContent: characterData?.weapons?.map(w => ({ key: w, type: typeof w })),
     weaponsArray: characterData?.weapons,
     char,
-    charWeapons: char?.weapons
+    charWeapons: char?.weapons,
+    equipment: characterData?.equipment,
+    equipmentLength: characterData?.equipment?.length
   });
+  
+  // Детальный лог characterData
+  console.log('CharacterData keys:', Object.keys(characterData || {}));
+  console.log('CharacterData equipment:', characterData?.equipment);
+  console.log('CharacterData equipment type:', typeof characterData?.equipment);
+  console.log('CharacterData equipment length:', characterData?.equipment?.length);
   
   // Детальный лог валюты
   if (characterData?.currency) {
@@ -1199,7 +1218,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       Math.floor((stats.dex - 10) / 2) : 
       Math.floor((stats.str - 10) / 2);
     
-    return abilityModifier + proficiencyBonus;
+    // Добавляем бонус к атаке из данных оружия
+    const weaponBonus = weaponData?.bonusAttack || 0;
+    
+    return abilityModifier + proficiencyBonus + weaponBonus;
   };
 
   // Получаем урон для оружия
@@ -1236,7 +1258,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       Math.floor((stats.dex - 10) / 2) : 
       Math.floor((stats.str - 10) / 2);
     
-    const modifierStr = abilityModifier >= 0 ? `+${abilityModifier}` : abilityModifier.toString();
+    // Добавляем бонус к урону из данных оружия
+    const weaponDamageBonus = weaponData?.bonusDamage || 0;
+    const totalModifier = abilityModifier + weaponDamageBonus;
+    
+    const modifierStr = totalModifier >= 0 ? `+${totalModifier}` : totalModifier.toString();
     
     // Проверяем, есть ли критическое попадание для этого оружия
     const weaponKey = `${weapon.name}-${weapon.slot}`;
@@ -1479,37 +1505,48 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
     const cleanName = itemName.replace(/^\d+x\s+/, '');
     
+    console.log('getItemCost called with:', { itemName, cleanName });
+    
     // Ищем в разных массивах
     let item = Gears.find(g => g.name === cleanName);
     if (item) {
+      console.log('Found in Gears:', item.cost);
       return translateCurrency(item.cost || 'Неизвестно');
     }
     
     item = Ammunitions.find(a => a.name === cleanName);
     if (item) {
+      console.log('Found in Ammunitions:', item.cost);
       return translateCurrency(item.cost || 'Неизвестно');
     }
     
     const weapon = Weapons.find(w => w.name === cleanName);
     if (weapon) {
+      console.log('Found in Weapons:', weapon.cost);
       return translateCurrency(weapon.cost || 'Неизвестно');
     }
     
     const armor = Armors.find(a => a.name === cleanName);
     if (armor) {
+      console.log('Found in Armors:', armor.cost);
       return translateCurrency(armor.cost || 'Неизвестно');
     }
     
     const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
     if (pack) {
+      console.log('Found in EQUIPMENT_PACKS:', pack.cost);
       return translateCurrency(pack.cost || 'Неизвестно');
     }
     
     const tool = Tools.find(t => t.name === cleanName);
     if (tool) {
-      return translateCurrency(tool.cost || 'Неизвестно');
+      console.log('Found in Tools:', tool.cost);
+      const translated = translateCurrency(tool.cost || 'Неизвестно');
+      console.log('Translated cost:', translated);
+      return translated;
     }
     
+    console.log('Item not found in any category');
     return 'Неизвестно';
   };
 
@@ -3333,6 +3370,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         const getBackpackItems = () => {
           if (!characterData?.equipment) return [];
           
+          console.log('getBackpackItems (second): characterData.equipment:', characterData.equipment);
+          
           // Получаем все экипированные предметы
           const allEquippedItems = [
             ...(localEquipped.armor ? [localEquipped.armor] : []),
@@ -3345,18 +3384,36 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               // Если item - это объект, используем item.name
               const itemName = typeof item === 'string' ? item : (item.name || String(item));
               const cleanName = getCleanItemName(itemName);
-              return !allEquippedItems.includes(cleanName);
+              const isNotEquipped = !allEquippedItems.includes(cleanName);
+              
+              console.log('getBackpackItems (second): filtering item:', { item, itemName, cleanName, isNotEquipped });
+              
+              return isNotEquipped;
             })
             .map((item: any) => {
               const itemName = typeof item === 'string' ? item : (item.name || String(item));
-              return {
+              
+              console.log('getBackpackItems (second): mapping item:', { item, itemName });
+              
+              // Специальная обработка для игральных костей
+              if (itemName === 'Игральные кости') {
+                console.log('Игральные кости - детали объекта:', item);
+                console.log('Игральные кости - item.cost:', item.cost);
+                console.log('Игральные кости - typeof item.cost:', typeof item.cost);
+              }
+              
+              const result = {
                 name: itemName,
                 type: typeof item === 'object' && item.type ? item.type : getItemType(itemName),
                 weight: typeof item === 'object' && typeof item.weight === 'number' ? item.weight : getItemWeight(itemName),
-                cost: typeof item === 'object' && item.cost ? item.cost : getItemCost(itemName),
+                cost: (typeof item === 'object' && item.cost && item.cost !== 'Неизвестно') ? item.cost : getItemCost(itemName),
                 quantity: typeof item === 'object' && typeof item.quantity === 'number' ? item.quantity : getItemQuantity(itemName),
                 equipped: false
               };
+              
+              console.log('getBackpackItems (second): mapped result:', result);
+              
+              return result;
             });
         };
         
@@ -4083,6 +4140,16 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                             <div className="text-gray-400">
                                               <span className="font-medium text-gray-200">Тип урона:</span> {(itemDetails as any).damageTypeTranslated}
                                             </div>
+                                            {(itemDetails as any).bonusAttack && (
+                                              <div className="text-gray-400">
+                                                <span className="font-medium text-gray-200">Бонус к атаке:</span> +{(itemDetails as any).bonusAttack}
+                                              </div>
+                                            )}
+                                            {(itemDetails as any).bonusDamage && (
+                                              <div className="text-gray-400">
+                                                <span className="font-medium text-gray-200">Бонус к урону:</span> +{(itemDetails as any).bonusDamage}
+                                              </div>
+                                            )}
                                             {itemDetails.weight !== undefined && (
                                               <div className="text-gray-400">
                                                 <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
@@ -4514,6 +4581,16 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         <div className="text-gray-400">
                           <span className="font-medium text-gray-200">Тип урона:</span> {(itemDetails as any).damageTypeTranslated}
                         </div>
+                        {(itemDetails as any).bonusAttack && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Бонус к атаке:</span> +{(itemDetails as any).bonusAttack}
+                          </div>
+                        )}
+                        {(itemDetails as any).bonusDamage && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Бонус к урону:</span> +{(itemDetails as any).bonusDamage}
+                          </div>
+                        )}
                         {(itemDetails as any).properties && (itemDetails as any).properties.length > 0 && (
                           <div className="text-gray-400">
                             <span className="font-medium text-gray-200">Свойства:</span> {(itemDetails as any).properties.join(', ')}

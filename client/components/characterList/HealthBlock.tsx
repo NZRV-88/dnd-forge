@@ -16,7 +16,7 @@ export default function HealthBlock({
   setTempHp,
   hpMax,
 }: HealthBlockProps) {
-  const [hpChange, setHpChange] = useState<number>(0);
+  const [hpChange, setHpChange] = useState<number>(1);
 
   const ROW_PX = 32;
   const LEFT_W = 80;

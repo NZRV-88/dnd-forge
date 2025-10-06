@@ -235,6 +235,9 @@ export default function Characters() {
                         const displayName = b.name || "Безымянный";
                         
                         const hpMax = calcMaxHPForCard(b, char.data.stats, char.data.hpRolls);
+                        
+                        // Если hpCurrent равен null, используем hpMax
+                        const currentHp = b.hpCurrent ?? hpMax;
 
                         // Используем мемоизированные каталоги для быстрого поиска
                         const classInfo = classCatalogMap.get((b.class || '').toLowerCase());
@@ -252,6 +255,7 @@ export default function Characters() {
                                 raceInfo={raceInfo}
                                 displayName={displayName}
                                 hpMax={hpMax}
+                                currentHp={currentHp}
                                 editing={editing}
                                 onEdit={edit}
                                 onRemove={remove}
@@ -285,6 +289,7 @@ const CharacterCard = memo(({
     raceInfo, 
     displayName, 
     hpMax, 
+    currentHp,
     editing, 
     onEdit, 
     onRemove, 
@@ -296,6 +301,7 @@ const CharacterCard = memo(({
     raceInfo: any;
     displayName: string;
     hpMax: number;
+    currentHp: number;
     editing: string | null;
     onEdit: (id: string) => void;
     onRemove: (id: string) => void;
@@ -359,7 +365,7 @@ const CharacterCard = memo(({
                 <div>
                     <span className="uppercase opacity-70 mr-1">Здоровье:</span>
                     <span className="font-semibold">
-                        {Math.max(0, b.hpCurrent ?? 0)} / {hpMax}
+                        {currentHp} / {hpMax}
                     </span>
                 </div>
 

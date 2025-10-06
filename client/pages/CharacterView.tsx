@@ -30,6 +30,17 @@ export default function CharacterView() {
     const [curHp, setCurHp] = useState<number>(0);
     const [tempHp, setTempHp] = useState<number>(0);
 
+    // Функция для обновления хитов
+    const updateHpIfNeeded = () => {
+        if (char && char.basics && hpMax > 0) {
+            const currentHp = char.basics.hpCurrent;
+            // Если hpCurrent равен null или меньше hpMax, обновляем его
+            if (currentHp === null || currentHp < hpMax) {
+                setCurHp(hpMax);
+            }
+        }
+    };
+
     // roll log UI
     const [rollLog, setRollLog] = useState<string[]>([]);
     const [showLog, setShowLog] = useState(false);
@@ -72,7 +83,43 @@ export default function CharacterView() {
                     draft.skills = [];
                 }
                 setChar(draft);
-                setCurHp(draft.basics?.hpCurrent ?? 0);
+                
+                // Вычисляем максимальные хиты для установки curHp
+                const calculateHpMax = () => {
+                    const b = draft.basics;
+                    if (!b) return 0;
+                    
+                    const die: Record<string, number> = {
+                        barbarian: 12, bard: 8, fighter: 10, wizard: 6, druid: 8,
+                        cleric: 8, warlock: 8, monk: 8, paladin: 10, rogue: 8,
+                        ranger: 10, sorcerer: 6,
+                    };
+                    const d = die[b.class as keyof typeof die] || 8;
+                    const con = (finalStats as any).con ?? 0;
+                    const conMod = Math.floor((con - 10) / 2);
+                    const level = b.level || 1;
+                    const hpMode = b.hpMode || "fixed";
+                    let hp = d + conMod;
+                    if (level > 1) {
+                        if (hpMode === "fixed") {
+                            hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
+                        } else {
+                            const rolls: number[] = Array.isArray(draft.hpRolls) ? draft.hpRolls : [];
+                            for (let lvl = 2; lvl <= level; lvl++) {
+                                const idx = lvl - 2;
+                                const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
+                                hp += dieValue + conMod;
+                            }
+                        }
+                    }
+                    const extra = ((finalStats as any)._extraHp || 0) * level;
+                    return Math.max(0, hp + extra);
+                };
+                
+                const hpMax = calculateHpMax();
+                // Если hpCurrent равен null или 0, устанавливаем его равным hpMax
+                const initialHp = draft.basics?.hpCurrent === null || draft.basics?.hpCurrent === 0 ? hpMax : (draft.basics?.hpCurrent ?? 0);
+                setCurHp(initialHp);
                 setTempHp(draft.basics?.hpTemp ?? 0);
             } catch {
                 setChar(null);
@@ -210,6 +257,11 @@ export default function CharacterView() {
         if (level >= 5) return 3;
         return 2;
     })();
+
+    // Обновляем curHp при изменении hpMax (например, при повышении уровня)
+    useEffect(() => {
+        updateHpIfNeeded();
+    }, [hpMax, char]);
 
     // skill profs set (normalized)
     const skillProfs: string[] = Array.isArray(char.skills) ? char.skills : [];

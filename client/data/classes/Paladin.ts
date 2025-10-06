@@ -34,7 +34,7 @@ export const Paladin: ClassInfo = {
                         { type: "armor", key: "shield" },
                         { type: "weapon", key: "longsword" },
                         { type: "weapon", key: "javelin", quantity: 6 },
-                        { type: "equipment-pack", key: "priest-pack" }
+                        { type: "equipment-pack", key: "priests-pack" }
                     ],
                     gold: 9
                 },

@@ -15,6 +15,7 @@ interface HealthSettingsModalProps {
     onClose: () => void;
     onHpRoll: (level: number, value: number) => void;
     onResetHpRolls: () => void;
+    onSetHpCurrent?: (hp: number) => void;
 }
 
 export default function HealthSettingsModal({
@@ -28,6 +29,7 @@ export default function HealthSettingsModal({
     onClose,
     onHpRoll,
     onResetHpRolls,
+    onSetHpCurrent,
 }: HealthSettingsModalProps) {
     const [localHpRolls, setLocalHpRolls] = useState<number[]>(hpRolls);
 
@@ -150,10 +152,22 @@ export default function HealthSettingsModal({
                             СБРОСИТЬ
                         </Button>
                     )}
+                    {onSetHpCurrent && (
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                onSetHpCurrent(currentMaxHP);
+                                onClose();
+                            }}
+                            className="flex-1 rounded-none border-0 bg-green-500 hover:bg-green-600 text-white border-green-500 hover:border-green-600"
+                        >
+                            УСТАНОВИТЬ ТЕКУЩЕЕ ЗДОРОВЬЕ
+                        </Button>
+                    )}
                     <Button
                         type="button"
                         onClick={onClose}
-                        className={hpMode === "roll" ? "flex-1 rounded-none" : "w-full rounded-none"}
+                        className="flex-1 rounded-none"
                     >
                         ЗАКРЫТЬ
                     </Button>

@@ -97,6 +97,8 @@ export interface Weapon {
     weight: number;             // вес в фунтах
     properties: WeaponProperty[]; // свойства оружия
     range?: string;             // дальность (напр. "20/60"), если применимо
+    bonusAttack?: number;       // бонус к атаке (напр. 1)
+    bonusDamage?: number;       // бонус к урону (напр. 1)
 }
 
 /* --------------------------
@@ -388,6 +390,22 @@ export const Weapons: Weapon[] = [
         properties: ["heavy", "two-handed"],
     },
     {
+        key: "greatsword-3",
+        source: "PH24",
+        nameEn: "Greatsword +3",
+        name: "Двуручный меч +3",
+        category: "martial",
+        type: "melee",
+        cost: "--",
+        damage: "2d6",
+        damageType: "slashing",
+        weight: 6,
+        mastery: "graze",
+        properties: ["heavy", "two-handed"],
+        bonusAttack: 3,
+        bonusDamage: 3,
+    },
+    {
         key: "halberd",
         source: "PH24",
         nameEn: "Halberd",
@@ -569,6 +587,22 @@ export const Weapons: Weapon[] = [
         weight: 3,
         mastery: "slow",
         properties: ["finesse", "reach"],
+    },
+    {
+        key: "test-sword",
+        source: "TEST",
+        nameEn: "Test Sword +1",
+        name: "Тестовый меч +1",
+        category: "simple",
+        type: "melee",
+        cost: "100 gp",
+        damage: "1d8",
+        damageType: "slashing",
+        weight: 3,
+        mastery: "graze",
+        properties: ["versatile"],
+        bonusAttack: 1,
+        bonusDamage: 1,
     },
 
     // --- Martial ranged ---

@@ -810,19 +810,40 @@ export default function EquipmentPick() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [notification, setNotification] = useState<{ message: string; type: 'buy' | 'add' | 'error' } | null>(null);
 
-    // Загружаем инвентарь из драфта только при инициализации компонента
+    // Загружаем инвентарь из драфта при изменении equipment
     useEffect(() => {
-        console.log('=== ЗАГРУЗКА ИНВЕНТАРЯ ИЗ ДРАФТА (ИНИЦИАЛИЗАЦИЯ) ===');
+        console.log('=== ЗАГРУЗКА ИНВЕНТАРЯ ИЗ ДРАФТА ===');
         console.log('draft.basics.equipment:', draft.basics.equipment);
         console.log('Array.isArray(draft.basics.equipment):', Array.isArray(draft.basics.equipment));
         console.log('draft.basics.equipment.length:', draft.basics.equipment?.length);
+        console.log('draft.id:', draft.id);
         
         if (draft.basics.equipment && Array.isArray(draft.basics.equipment) && draft.basics.equipment.length > 0) {
-            const convertedInventory = convertStringsToInventory(draft.basics.equipment);
-            console.log('convertedInventory:', convertedInventory);
-            setAddedInventory(convertedInventory);
+            // Проверяем, являются ли элементы строками или объектами
+            const firstItem = draft.basics.equipment[0];
+            if (typeof firstItem === 'string') {
+                // Если это строки, конвертируем их в объекты (для обратной совместимости)
+                const convertedInventory = convertStringsToInventory(draft.basics.equipment);
+                console.log('convertedInventory (from strings):', convertedInventory);
+                setAddedInventory(convertedInventory);
+            } else if (typeof firstItem === 'object' && firstItem !== null) {
+                // Если это уже объекты, используем их напрямую
+                console.log('inventory (already objects):', draft.basics.equipment);
+                setAddedInventory(draft.basics.equipment as unknown as Array<{
+                    name: string;
+                    type: string;
+                    category: string;
+                    weight: number;
+                    cost: string;
+                    quantity: number;
+                }>);
+            }
+        } else {
+            // Если equipment пустой или undefined, очищаем инвентарь
+            console.log('equipment is empty or undefined, clearing inventory');
+            setAddedInventory([]);
         }
-    }, []); // Пустой массив зависимостей - выполняется только при монтировании
+    }, [draft.basics.equipment]); // Загружаем при изменении equipment в драфте
 
     // Загружаем валюту из драфта
     useEffect(() => {
@@ -1427,7 +1448,7 @@ export default function EquipmentPick() {
         };
     };
 
-    // Функция для конвертации объектов в строки для совместимости с setBasics
+    // Функция для конвертации объектов в строки для совместимости с setBasics (ОТКЛЮЧЕНА)
     const convertInventoryToStrings = (inventory: Array<{
         name: string;
         type: string;
@@ -1435,20 +1456,13 @@ export default function EquipmentPick() {
         weight: number;
         cost: string;
         quantity: number;
-    }>): string[] => {
-        console.log('=== КОНВЕРТАЦИЯ ИНВЕНТАРЯ В СТРОКИ ===');
+    }>): any[] => {
+        console.log('=== СОХРАНЕНИЕ ИНВЕНТАРЯ КАК ОБЪЕКТОВ ===');
         console.log('Входной inventory:', inventory);
         
-        const result = inventory.map(item => {
-            if (item.quantity > 1) {
-                return `${item.quantity}x ${item.name}`;
-            } else {
-                return item.name;
-            }
-        });
-        
-        console.log('Результат конвертации:', result);
-        return result;
+        // Возвращаем объекты напрямую, не конвертируя в строки
+        console.log('Результат (объекты):', inventory);
+        return inventory;
     };
 
     // Функция для конвертации строк в объекты для загрузки из драфта
@@ -1622,13 +1636,17 @@ export default function EquipmentPick() {
             updateCurrencyInDraft(newCurrency);
         }
         
+        // Добавляем новые предметы к существующему инвентарю
+        const updatedInventory = [...addedInventory, ...newItems];
+        setAddedInventory(updatedInventory);
+        
         // Сохраняем в драфт и устанавливаем флаг
         const finalCurrency = totalGold > 0 
             ? { ...currency, gold: currency.gold + totalGold }
             : currency;
         
         setBasics({ 
-            equipment: convertInventoryToStrings(addedInventory), 
+            equipment: convertInventoryToStrings(updatedInventory), 
             gold: currency.gold + totalGold,
             currency: finalCurrency,
             isStartEquipmentAdded: true
@@ -2159,10 +2177,9 @@ export default function EquipmentPick() {
                                                                                      setLoadingItems(prev => new Set(prev).add(item.key));
                                                                                      
                                                                                      try {
-                                                                                         // Добавляем предмет в инвентарь
+                                                                                         // Создаем объект предмета
                                                                                          const itemObject = createItemObject(itemData.name, itemData.type, 1);
                                                                                          await new Promise(resolve => setTimeout(resolve, 500));
-                                                                                         addItemToInventory(itemObject);
                                                                                      
                                                                                          // Вычитаем стоимость из валюты
                                                                                          const newGoldInCopper = currentGoldInCopper - costInCopper;
@@ -2185,11 +2202,28 @@ export default function EquipmentPick() {
                                                                                          };
                                                                                          setCurrency(newCurrency);
                                                                                          
-                                                                                         // Сохраняем в драфт (addedInventory уже обновлен через addItemToInventory)
-                                                                                         setBasics({
-                                                                                             equipment: convertInventoryToStrings(addedInventory),
-                                                                                             gold: newTotalGold,
-                                                                                             currency: newCurrency
+                                                                                         // Обновляем инвентарь и сохраняем в драфт
+                                                                                         setAddedInventory(prev => {
+                                                                                             const updatedInventory = [...prev];
+                                                                                             const existingItemIndex = updatedInventory.findIndex(item => item.name === itemObject.name);
+                                                                                             
+                                                                                             if (existingItemIndex >= 0) {
+                                                                                                 updatedInventory[existingItemIndex] = {
+                                                                                                     ...updatedInventory[existingItemIndex],
+                                                                                                     quantity: updatedInventory[existingItemIndex].quantity + 1
+                                                                                                 };
+                                                                                             } else {
+                                                                                                 updatedInventory.push(itemObject);
+                                                                                             }
+                                                                                             
+                                                                                             // Сохраняем в драфт
+                                                                                             setBasics({
+                                                                                                 equipment: convertInventoryToStrings(updatedInventory),
+                                                                                                 gold: newTotalGold,
+                                                                                                 currency: newCurrency
+                                                                                             });
+                                                                                             
+                                                                                             return updatedInventory;
                                                                                          });
                                                                                          
                                                                                          // Показываем уведомление
@@ -2224,16 +2258,32 @@ export default function EquipmentPick() {
                                                                                  setLoadingItems(prev => new Set(prev).add(item.key));
                                                                                  
                                                                                  try {
-                                                                                     // Добавляем предмет в инвентарь без трат
+                                                                                     // Создаем объект предмета
                                                                                      const itemObject = createItemObject(itemData.name, itemData.type, 1);
                                                                                      await new Promise(resolve => setTimeout(resolve, 500));
-                                                                                     addItemToInventory(itemObject);
                                                                                  
-                                                                                 // Сохраняем в драфт (addedInventory уже обновлен через addItemToInventory)
-                                                                                 setBasics({
-                                                                                     equipment: convertInventoryToStrings(addedInventory),
-                                                                                     gold: currency.gold,
-                                                                                     currency: currency
+                                                                                 // Обновляем инвентарь и сохраняем в драфт
+                                                                                 setAddedInventory(prev => {
+                                                                                     const updatedInventory = [...prev];
+                                                                                     const existingItemIndex = updatedInventory.findIndex(item => item.name === itemObject.name);
+                                                                                     
+                                                                                     if (existingItemIndex >= 0) {
+                                                                                         updatedInventory[existingItemIndex] = {
+                                                                                             ...updatedInventory[existingItemIndex],
+                                                                                             quantity: updatedInventory[existingItemIndex].quantity + 1
+                                                                                         };
+                                                                                     } else {
+                                                                                         updatedInventory.push(itemObject);
+                                                                                     }
+                                                                                     
+                                                                                     // Сохраняем в драфт
+                                                                                     setBasics({
+                                                                                         equipment: convertInventoryToStrings(updatedInventory),
+                                                                                         gold: currency.gold,
+                                                                                         currency: currency
+                                                                                     });
+                                                                                     
+                                                                                     return updatedInventory;
                                                                                  });
                                                                                  
                                                                                  // Показываем уведомление

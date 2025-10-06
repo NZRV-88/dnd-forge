@@ -29,7 +29,8 @@ export type Basics = {
     subclass: string;
     level: number;
     hpMode: HpMode;
-    hpCurrent?: number;
+    hpCurrent?: number | null;
+    tempHp?: number;
     background: string;
     equipment?: string[];
     gold?: number;
@@ -200,7 +201,8 @@ const makeDefaultDraft = (id?: string): CharacterDraft => ({
         alignment: "",
         level: 1,
         hpMode: "fixed",
-        hpCurrent: 0,
+        hpCurrent: null, // Будет установлен равным hpMax при загрузке
+        tempHp: 0,
         equipment: [],
         gold: 0,
         isStartEquipmentAdded: false,
@@ -360,14 +362,23 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const setBasics = (updates: Partial<CharacterDraft["basics"]>) =>
+    const setBasics = (updates: Partial<CharacterDraft["basics"]>) => {
         setDraft(d => ({ ...d, basics: { ...d.basics, ...updates } }));
+        
+        // Автоматически сохраняем в БД при изменении basics
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
 
     const setLevel = (level: number) =>
         setBasics({ level });
 
     const setSubclass = (subclass: string) =>
         setBasics({ subclass });
+
+    const setHpCurrent = (hpCurrent: number) =>
+        setBasics({ hpCurrent });
 
     const setBackground = (background: string | null) => {
         setDraft((d) => {
@@ -1246,6 +1257,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setBasics,
         setLevel,
         setSubclass,
+        setHpCurrent,
         setBackground,
 
         setAbilitiesMode,
