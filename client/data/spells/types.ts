@@ -1,9 +1,11 @@
 import type { SOURCES } from "@/data/sources";
 export type SourceKey = keyof typeof SOURCES;
+import type { DamageTypes } from "@/data/damageTypes";
+import { Abilities, ABILITIES } from "@/data/abilities";
 
 export interface Damage {
     dice: string;
-    type: string;
+    type: DamageTypes;
 }
 
 export interface CantripScaling {
@@ -25,23 +27,29 @@ export interface SlotScaling {
 
 export type Scaling = CantripScaling | SlotScaling;
 
+export type SpellComponent = "В" | "С" | "М";
+export type SpellSchool = "Воплощение" | "Иллюзия" | "Некромантия" | "Ограждение"| "Очарование"| "Преобразование"| "Призыв"| "Прорицание";
+export type CastingTime = "Действие" | "Бонусное действие" | "Реакция" | "Ритуал";
+
 export interface Spell {
     key: string;
     source: SourceKey;
     name: string;
     nameEn?: string;
     level: number;         // 0 = заговор, 1+ = заклинание
-    school: string;
+    school: SpellSchool;
     desc: string;
     isCombat: boolean;
     isRitual?: boolean;
-    castingTime: string;
-    range: number;
-    components: string[];  // В, С, М
+    needConcentration?: boolean;
+    castingTime: CastingTime[];
+    range: string;
+    components: SpellComponent[];  // В, С, М
     duration: string;
     area?: string;
     damage?: Damage;
-    save?: string;
+    heal?: string;
+    save?: keyof Abilities;
     scaling?: Scaling;
     tags?: string[];
     classes?: string[];

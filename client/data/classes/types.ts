@@ -81,6 +81,7 @@ export interface ClassInfo {
 
 export interface SpellcastingInfo {
     ability: "int" | "wis" | "cha"; // основная характеристика
+    preparedFormula?: string; // формула для подготовленных заклинаний (для всех уровней)
     progression: Record<number, SpellcastingLevel>; // данные по уровням
 }
 

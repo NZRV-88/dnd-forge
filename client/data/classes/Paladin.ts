@@ -224,6 +224,7 @@ export const Paladin: ClassInfo = {
 },
     spellcasting: {
         ability: "cha",
+        preparedFormula: "Math.max(1, chaMod + Math.floor(level / 2))", // Формула для всех уровней
         progression: {
             1: { slots: [2] },               // 2 ячейки заклинаний 1 уровня
             2: { slots: [2] },

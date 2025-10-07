@@ -1269,13 +1269,65 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         clearClassChoices,
     };
 
-    if (!isInitialized) {
-        return <div className="p-4">Загрузка...</div>;
-    }
+    // Создаем fallback API для случая, когда провайдер еще не инициализирован
+    const fallbackApi: CharacterContextType = {
+        draft: makeDefaultDraft(),
+        setDraft: () => {},
+        skills: [],
+        tools: [],
+        languages: [],
+        spells: [],
+        feats: [],
+        weapons: [],
+        armors: [],
+        savingThrows: [],
+        abilityBonuses: {},
+        setChosenAbilities: () => {},
+        removeChosenAbility: () => {},
+        setChosenSkills: () => {},
+        removeChosenSkill: () => {},
+        setChosenTools: () => {},
+        removeChosenTool: () => {},
+        setChosenToolProficiencies: () => {},
+        removeChosenToolProficiency: () => {},
+        setChosenLanguages: () => {},
+        removeChosenLanguage: () => {},
+        setChosenSpells: () => {},
+        removeChosenSpell: () => {},
+        setChosenWeaponMastery: () => {},
+        removeChosenWeaponMastery: () => {},
+        setChosenFeats: () => {},
+        removeChosenFeat: () => {},
+        equipItem: () => {},
+        unequipItem: () => {},
+        toggleVersatileMode: () => {},
+        setActiveWeaponSlot: () => {},
+        calculateMaxCarryWeight: () => 0,
+        calculateCurrentSpeed: () => 0,
+        equipCapacityItem: () => {},
+        unequipCapacityItem: () => {},
+        setBasics: () => {},
+        setHpCurrent: () => {},
+        saveToSupabase: async () => {},
+        loadFromSupabase: async () => {},
+        createNewCharacter: async () => {},
+        resetCharacter: () => {},
+        initNewCharacter: () => {},
+        setLevel: () => {},
+        setHpRollAtLevel: () => {},
+        resetHpRolls: () => {},
+        clearClassChoices: () => {}
+    };
 
+    console.log('CharacterProvider render:', { isInitialized, hasApi: !!api, hasFallback: !!fallbackApi });
+    
     return (
-        <CharacterContext.Provider value={api}>
-            {children}
+        <CharacterContext.Provider value={isInitialized ? api : fallbackApi}>
+            {!isInitialized ? (
+                <div className="p-4">Загрузка...</div>
+            ) : (
+                children
+            )}
         </CharacterContext.Provider>
     );
 }
@@ -1286,6 +1338,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
 export const useCharacter = () => {
     const ctx = useContext(CharacterContext);
+    console.log('useCharacter called:', { ctx, isUndefined: ctx === undefined, isNull: ctx === null });
     if (!ctx) {
         console.error("useCharacter must be used within CharacterProvider. Context value:", ctx);
         throw new Error("useCharacter must be used within CharacterProvider");

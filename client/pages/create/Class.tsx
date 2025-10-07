@@ -12,6 +12,7 @@ import FeatureBlock from "@/components/ui/FeatureBlock";
 import ClassPreviewModal from "@/components/ui/ClassPreviewModal";
 import ClassRemoveModal from "@/components/ui/ClassRemoveModal";
 import HealthSettingsModal from "@/components/ui/HealthSettingsModal";
+import { SpellsLevel1 } from "@/data/spells/spellLevel1";
 
 const ALL_CLASSES = [
     "fighter",
@@ -70,12 +71,25 @@ function calcMaxHP(
 export default function ClassPick() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
-    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, loadFromSupabase, isLoading, setHpCurrent } = useCharacter();
+    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, setChosenSpells, removeChosenSpell, loadFromSupabase, isLoading, abilityBonuses } = useCharacter();
     
     // Модальные окна
     const [previewClass, setPreviewClass] = useState<string | null>(null);
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [showHealthSettings, setShowHealthSettings] = useState(false);
+    
+    // Состояние для управления вкладками и сворачиванием
+    const [activeTab, setActiveTab] = useState<'features' | 'spells'>('features');
+    const [isFeaturesCollapsed, setIsFeaturesCollapsed] = useState(false);
+    const [isSpellsCollapsed, setIsSpellsCollapsed] = useState(false);
+    
+    // Состояние для управления заклинаниями
+    const [isPreparedSpellsOpen, setIsPreparedSpellsOpen] = useState(false);
+    const [isAddSpellsOpen, setIsAddSpellsOpen] = useState(false);
+    const [expandedSpells, setExpandedSpells] = useState<Set<number>>(new Set());
+    
+    // Получаем подготовленные заклинания из драфта
+    const preparedSpells = draft.basics.class ? (draft.chosen.spells[draft.basics.class] || []) : [];
     
     // Загружаем персонажа при редактировании
     useEffect(() => {
@@ -100,10 +114,10 @@ export default function ClassPick() {
             // Если hpCurrent равен null, обновляем его до maxHP
             // Если hpCurrent не null, но больше maxHP (например, при понижении уровня), обновляем его
             if (draft.basics.hpCurrent === null || (draft.basics.hpCurrent !== null && draft.basics.hpCurrent > maxHP)) {
-                setHpCurrent(maxHP);
+                setBasics({ hpCurrent: maxHP });
             }
         }
-    }, [draft.basics.class, draft.basics.level, draft.basics.hpMode, draft.hpRolls, maxHP, setHpCurrent]);
+    }, [draft.basics.class, draft.basics.level, draft.basics.hpMode, draft.hpRolls, maxHP, setBasics]);
 
     const feats = useMemo(() => {
         if (!info) return [];
@@ -181,6 +195,192 @@ export default function ClassPick() {
     };
 
     const hasSelectedClass = Boolean(draft.basics.class);
+
+    // Функции для обработки кликов по заголовкам
+    const handleFeaturesClick = () => {
+        if (activeTab === 'features') {
+            // Если вкладка уже активна, сворачиваем/разворачиваем
+            setIsFeaturesCollapsed(!isFeaturesCollapsed);
+        } else {
+            // Если вкладка не активна, переключаемся и разворачиваем
+            setActiveTab('features');
+            setIsFeaturesCollapsed(false);
+        }
+    };
+
+    const handleSpellsClick = () => {
+        if (activeTab === 'spells') {
+            // Если вкладка уже активна, сворачиваем/разворачиваем
+            setIsSpellsCollapsed(!isSpellsCollapsed);
+        } else {
+            // Если вкладка не активна, переключаемся и разворачиваем
+            setActiveTab('spells');
+            setIsSpellsCollapsed(false);
+        }
+    };
+
+    // Функция для переключения состояния карточки заклинания
+    const toggleSpellExpansion = (index: number) => {
+        setExpandedSpells(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    };
+
+    // Функция для форматирования компонентов заклинания
+    const formatComponents = (components: string[]) => {
+        return components.map(comp => {
+            switch (comp) {
+                case 'В': return 'Вербальный';
+                case 'С': return 'Соматический';
+                case 'М': return 'Материальный';
+                default: return comp;
+            }
+        }).join(', ');
+    };
+
+    // Функция для перевода английских ключей спасбросков в русские названия
+    const translateSave = (saveKey: string) => {
+        switch (saveKey.toLowerCase()) {
+            case 'str': return 'Сила';
+            case 'dex': return 'Ловкость';
+            case 'con': return 'Телосложение';
+            case 'int': return 'Интеллект';
+            case 'wis': return 'Мудрость';
+            case 'cha': return 'Харизма';
+            default: return saveKey; // Если ключ не найден, возвращаем как есть
+        }
+    };
+
+    // Компонент для отображения поля заклинания
+    const SpellField = ({ label, value }: { label: string; value: string }) => (
+        <div className="py-1">
+            <span className="font-medium text-foreground text-xs">{label}: </span>
+            <span className="text-muted-foreground text-xs">{value}</span>
+        </div>
+    );
+
+    // Функция для форматирования описания с markdown
+    const formatSpellDescription = (text: string) => {
+        if (!text) return '';
+        
+        // Заменяем \n\n на параграфы
+        const paragraphs = text.split('\n\n').map((paragraph, index) => {
+            if (!paragraph.trim()) return null;
+            
+            // Обрабатываем курсив *текст* как жирный курсив
+            const formattedParagraph = paragraph.replace(/\*([^*]+)\*/g, '<em class="italic font-bold">$1</em>');
+            
+            return (
+                <p key={index} className="mb-2 last:mb-0">
+                    <span dangerouslySetInnerHTML={{ __html: formattedParagraph }} />
+                </p>
+            );
+        }).filter(Boolean);
+        
+        return paragraphs;
+    };
+
+    // Компонент для отображения описания заклинания
+    const SpellDescription = ({ spell }: { spell: any }) => (
+        <div className="space-y-2">
+            {/* Основные поля */}
+            <div className="-space-y-2">
+                {spell.castingTime && <SpellField label="Время сотворения" value={spell.castingTime} />}
+                {spell.range && <SpellField label="Дистанция" value={spell.range} />}
+                {spell.components && spell.components.length > 0 && (
+                    <SpellField label="Компоненты" value={formatComponents(spell.components)} />
+                )}
+                {spell.duration && <SpellField label="Длительность" value={spell.duration} />}
+                {spell.heal && <SpellField label="Лечение" value={spell.heal} />}
+                {spell.damage?.dice && <SpellField label="Урон" value={spell.damage.dice} />}
+                {spell.damage?.type && <SpellField label="Тип урона" value={spell.damage.type} />}
+                {spell.save && <SpellField label="Спасбросок" value={translateSave(spell.save)} />}
+                {spell.source && <SpellField label="Источник" value={spell.source} />}
+            </div>
+            
+            {/* Разделитель */}
+            <div className="border-t border-border my-2"></div>
+            
+            {/* Описание */}
+            {spell.desc && (
+                <div className="text-xs text-muted-foreground leading-relaxed">
+                    {formatSpellDescription(spell.desc)}
+                </div>
+            )}
+        </div>
+    );
+
+    // Функция для расчета максимального количества подготовленных заклинаний
+    const getMaxPreparedSpells = () => {
+        if (!info?.spellcasting) return 0;
+        
+        // Получаем формулу из данных класса (приоритет: уровень -> класс -> умолчание)
+        const levelSlots = info.spellcasting.progression[draft.basics.level as keyof typeof info.spellcasting.progression];
+        const formula = levelSlots?.prepared || info.spellcasting.preparedFormula || "Math.max(1, level + chaMod)";
+        
+        // Получаем модификатор основной характеристики из финальных данных
+        const abilityKey = info.spellcasting.ability;
+        const baseAbilityScore = Number(draft.stats?.[abilityKey]) || 10;
+        const abilityBonus = abilityBonuses?.[abilityKey] || 0;
+        const finalAbilityScore = baseAbilityScore + abilityBonus;
+        const abilityMod = Math.floor((finalAbilityScore - 10) / 2);
+        
+        // Выполняем формулу из данных класса
+        const level = draft.basics.level;
+        const chaMod = abilityMod; // Для паладина это chaMod
+        
+        try {
+            // Безопасное выполнение формулы
+            const processedFormula = formula
+                .replace(/level/g, level.toString())
+                .replace(/chaMod/g, chaMod.toString());
+            
+            // eslint-disable-next-line no-eval
+            return Math.max(1, eval(processedFormula));
+        } catch (error) {
+            console.error('Ошибка в формуле подготовленных заклинаний:', error);
+            return 1; // Fallback значение
+        }
+    };
+
+    // Функция для получения информации о слотах заклинаний
+    const getSpellSlotsInfo = () => {
+        if (!info?.spellcasting) return null;
+        
+        const levelSlots = info.spellcasting.progression[draft.basics.level as keyof typeof info.spellcasting.progression];
+        if (!levelSlots) return null;
+        
+        return {
+            slots: levelSlots.slots,
+            maxLevel: levelSlots.slots.length,
+            totalSlots: levelSlots.slots.reduce((sum, count) => sum + count, 0)
+        };
+    };
+
+    // Функция для получения доступных заклинаний класса
+    const getAvailableSpells = () => {
+        if (!info?.spellcasting) return [];
+        
+        // Получаем доступные слоты заклинаний для текущего уровня
+        const levelSlots = info.spellcasting.progression[draft.basics.level as keyof typeof info.spellcasting.progression];
+        if (!levelSlots) return [];
+        
+        // Определяем максимальный уровень заклинаний, доступный на текущем уровне
+        const maxSpellLevel = levelSlots.slots.length;
+        
+        // Фильтруем заклинания по классу и уровню
+        return SpellsLevel1.filter((spell) => 
+            spell.classes && 
+            spell.classes.includes(info.key) &&
+            spell.level <= maxSpellLevel
+        );
+    };
 
     return (
         <div className="container mx-auto py-10">
@@ -361,27 +561,272 @@ export default function ClassPick() {
                         </CardHeader>
 
                         <CardContent className="space-y-6 pt-6">
-                            <h3 className="text-base font-bold uppercase tracking-wider text-foreground mb-3 border-l-2 border-primary pl-2">
-                                Особенности
-                            </h3>
-                            <div className="grid grid-cols-1 gap-4">
-                                {feats.map((f, idx) => (
-                                    <FeatureBlock
-                                        key={f.uniqueId}
-                                        name={f.name}
-                                        desc={f.desc}
-                                        featureLevel={f.featureLevel}
-                                        source="class"
-                                        idx={idx}
-                                        choices={f.choices}
-                                        originalIndex={f.originalIndex}
-                                        originalLevel={f.originalLevel}
-                                        isSubclass={f.isSubclass}
-                                        uniqueId={f.uniqueId}
-                                        classInfo={info}
+                            {/* Заголовки вкладок */}
+                            <div className="flex items-center gap-6 mb-3">
+                                <button
+                                    onClick={handleFeaturesClick}
+                                    className={`flex items-center gap-2 text-base font-bold uppercase tracking-wider border-l-2 pl-2 transition-colors ${
+                                        activeTab === 'features'
+                                            ? 'text-foreground border-primary'
+                                            : 'text-muted-foreground border-transparent hover:text-foreground'
+                                    }`}
+                                >
+                                    <span>Особенности</span>
+                                    <Icons.ChevronDown 
+                                        className={`w-4 h-4 transition-transform ${
+                                            activeTab === 'features' && !isFeaturesCollapsed ? 'rotate-180' : ''
+                                        }`} 
                                     />
-                                ))}
+                                </button>
+                                
+                                <button
+                                    onClick={handleSpellsClick}
+                                    className={`flex items-center gap-2 text-base font-bold uppercase tracking-wider border-l-2 pl-2 transition-colors ${
+                                        activeTab === 'spells'
+                                            ? 'text-foreground border-primary'
+                                            : 'text-muted-foreground border-transparent hover:text-foreground'
+                                    }`}
+                                >
+                                    <span>Заклинания</span>
+                                    <Icons.ChevronDown 
+                                        className={`w-4 h-4 transition-transform ${
+                                            activeTab === 'spells' && !isSpellsCollapsed ? 'rotate-180' : ''
+                                        }`} 
+                                    />
+                                </button>
                             </div>
+                            
+                            {/* Контент вкладки особенностей */}
+                            {activeTab === 'features' && !isFeaturesCollapsed && (
+                                <div className="grid grid-cols-1 gap-4">
+                                    {feats.map((f, idx) => (
+                                        <FeatureBlock
+                                            key={f.uniqueId}
+                                            name={f.name}
+                                            desc={f.desc}
+                                            featureLevel={f.featureLevel}
+                                            source="class"
+                                            idx={idx}
+                                            choices={f.choices}
+                                            originalIndex={f.originalIndex}
+                                            originalLevel={f.originalLevel}
+                                            isSubclass={f.isSubclass}
+                                            uniqueId={f.uniqueId}
+                                            classInfo={info}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                            
+                            {/* Контент вкладки заклинаний */}
+                            {activeTab === 'spells' && !isSpellsCollapsed && (
+                                <div className="space-y-4">
+                                    
+                                    {/* Шапка "Подготовленные Заклинания" */}
+                                    <div className="border rounded-lg">
+                                        <button
+                                            onClick={() => setIsPreparedSpellsOpen(!isPreparedSpellsOpen)}
+                                            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+                                        >
+                                            <span className="font-semibold">Подготовленные Заклинания</span>
+                                            <Icons.ChevronDown 
+                                                className={`w-5 h-5 transition-transform ${isPreparedSpellsOpen ? 'rotate-180' : ''}`} 
+                                            />
+                                        </button>
+                                        
+                                        {isPreparedSpellsOpen && (
+                                            <div className="px-4 pb-4 border-t">
+                                                {preparedSpells.length === 0 ? (
+                                                    <p className="text-muted-foreground py-4">
+                                                        Подготовленные заклинания отсутствуют
+                                                    </p>
+                                                ) : (
+                                                    <div className="py-4 space-y-2">
+                                                        {preparedSpells.map((spellName, index) => {
+                                                            // Находим полную информацию о заклинании
+                                                            const spell = getAvailableSpells().find(s => s.name === spellName);
+                                                            if (!spell) return null;
+                                                            
+                                                            const isExpanded = expandedSpells.has(-index - 1); // Используем отрицательные числа для подготовленных заклинаний
+                                                            
+                                                            return (
+                                                                <div key={index} className="border rounded-lg bg-muted/30">
+                                                                    {/* Шапка карточки */}
+                                                                    <div className="flex items-center justify-between p-3">
+                                                                        <button
+                                                                            onClick={() => toggleSpellExpansion(-index - 1)}
+                                                                            className="flex-1 text-left hover:bg-muted/50 rounded transition-colors"
+                                                                        >
+                                                                            <div className="font-medium text-base flex items-center gap-2">
+                                                                                {spell.name}
+                                                                                {/* Индикаторы */}
+                                                                                <div className="flex gap-1">
+                                                                                    {spell.needConcentration && (
+                                                                                        <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                            К
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {spell.isRitual && (
+                                                                                        <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                            Р
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="text-sm text-muted-foreground mt-1">
+                                                                                {spell.level}-й уровень • {spell.school}
+                                                                            </div>
+                                                                        </button>
+                                                                        <div className="flex items-center gap-2 ml-3">
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    if (draft.basics.class) {
+                                                                                        const newSpells = preparedSpells.filter((_, i) => i !== index);
+                                                                                        setChosenSpells(draft.basics.class, newSpells);
+                                                                                    }
+                                                                                }}
+                                                                                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors"
+                                                                                title="Удалить заклинание"
+                                                                            >
+                                                                                <Icons.X className="w-4 h-4" />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => toggleSpellExpansion(-index - 1)}
+                                                                                className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
+                                                                                title={isExpanded ? "Свернуть" : "Развернуть"}
+                                                                            >
+                                                                                <Icons.ChevronDown 
+                                                                                    className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                                                                />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    {/* Описание заклинания */}
+                                                                    {isExpanded && (
+                                                                        <div className="px-3 pb-3 border-t bg-muted/20">
+                                                                            <div className="pt-3">
+                                                                                <SpellDescription spell={spell} />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Шапка "Добавить Заклинание" */}
+                                    <div className="border rounded-lg">
+                                        <button
+                                            onClick={() => setIsAddSpellsOpen(!isAddSpellsOpen)}
+                                            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+                                        >
+                                            <span className="font-semibold">Добавить Заклинание</span>
+                                            <Icons.ChevronDown 
+                                                className={`w-5 h-5 transition-transform ${isAddSpellsOpen ? 'rotate-180' : ''}`} 
+                                            />
+                                        </button>
+                                        
+                                        {isAddSpellsOpen && (
+                                            <div className="px-4 pb-4 border-t">
+                                                {/* Информация о подготовленных заклинаниях */}
+                                                <div className="text-sm text-muted-foreground text-center py-3 border-b">
+                                                    Подготовленные заклинания: {preparedSpells.length}/{getMaxPreparedSpells()}
+                                                </div>
+                                                
+                                                <div className="py-4 space-y-2">
+                                                    {getAvailableSpells().map((spell, index) => {
+                                                        const isExpanded = expandedSpells.has(index);
+                                                        return (
+                                                            <div key={index} className="border rounded-lg bg-muted/30">
+                                                        {/* Шапка карточки */}
+                                                        <div className="flex items-center justify-between p-3">
+                                                            <button
+                                                                onClick={() => toggleSpellExpansion(index)}
+                                                                className="flex-1 text-left hover:bg-muted/50 rounded transition-colors"
+                                                            >
+                                                                <div className="font-medium text-base flex items-center gap-2">
+                                                                    {spell.name}
+                                                                    {/* Индикаторы */}
+                                                                    <div className="flex gap-1">
+                                                                        {spell.needConcentration && (
+                                                                            <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                К
+                                                                            </span>
+                                                                        )}
+                                                                        {spell.isRitual && (
+                                                                            <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                Р
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-sm text-muted-foreground mt-1">
+                                                                    {spell.level}-й уровень • {spell.school}
+                                                                </div>
+                                                            </button>
+                                                            <div className="flex items-center gap-2 ml-3">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (draft.basics.class) {
+                                                                            if (preparedSpells.includes(spell.name)) {
+                                                                                // Убираем заклинание из подготовленных
+                                                                                const newSpells = preparedSpells.filter(name => name !== spell.name);
+                                                                                setChosenSpells(draft.basics.class, newSpells);
+                                                                            } else if (preparedSpells.length < getMaxPreparedSpells()) {
+                                                                                // Добавляем заклинание в подготовленные
+                                                                                const newSpells = [...preparedSpells, spell.name];
+                                                                                setChosenSpells(draft.basics.class, newSpells);
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    disabled={!preparedSpells.includes(spell.name) && preparedSpells.length >= getMaxPreparedSpells()}
+                                                                    className={
+                                                                        preparedSpells.includes(spell.name)
+                                                                            ? 'p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors'
+                                                                            : 'px-3 py-1.5 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
+                                                                    }
+                                                                    title={preparedSpells.includes(spell.name) ? "Убрать заклинание" : "Подготовить заклинание"}
+                                                                >
+                                                                    {preparedSpells.includes(spell.name) ? (
+                                                                        <Icons.X className="w-4 h-4" />
+                                                                    ) : (
+                                                                        'ПОДГОТОВИТЬ'
+                                                                    )}
+                                                                </button>
+                                                                        <button
+                                                                            onClick={() => toggleSpellExpansion(index)}
+                                                                            className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
+                                                                            title={isExpanded ? "Свернуть" : "Развернуть"}
+                                                                        >
+                                                                            <Icons.ChevronDown 
+                                                                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                                                            />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {/* Описание заклинания */}
+                                                                {isExpanded && (
+                                                                    <div className="px-3 pb-3 border-t bg-muted/20">
+                                                                        <div className="pt-3">
+                                                                            <SpellDescription spell={spell} />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}
@@ -413,7 +858,7 @@ export default function ClassPick() {
                 onClose={() => setShowHealthSettings(false)}
                 onHpRoll={setHpRollAtLevel}
                 onResetHpRolls={resetHpRolls}
-                onSetHpCurrent={setHpCurrent}
+                onSetHpCurrent={(hp) => setBasics({ hpCurrent: hp })}
             />
         </div>
     );

@@ -16,6 +16,7 @@ export {
     Hourglass,
     Languages,
     X,
+    Plus,
     Shield,
     Clock,
     ChevronLeft,
