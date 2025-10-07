@@ -533,6 +533,9 @@ export default function CharacterList() {
             }
         };
         
+        // Обновляем локальное состояние char
+        setChar(updatedChar);
+        
         // Сохраняем изменения в БД с обновленными данными
         setTimeout(() => {
             saveAllWithData(updatedChar);
@@ -603,9 +606,7 @@ export default function CharacterList() {
                 .from("characters")
                 .update({ data: updated, updated_at: new Date() })
                 .eq("id", id);
-            if (!error) {
-                setCharWithLog(updated);
-            } else {
+            if (error) {
                 console.error("Error updating character:", error);
             }
         } catch (error) {

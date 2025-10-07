@@ -891,7 +891,9 @@ export default function EquipmentPick() {
 
     // Функция для расчета общего количества в ЗМ
     const calculateTotalGold = () => {
-        return currency.platinum * 10 + currency.gold + currency.electrum * 0.5 + currency.silver * 0.1 + currency.copper * 0.01;
+        // Конвертируем все в медные монеты, затем в золотые
+        const totalCopper = currency.platinum * 1000 + currency.gold * 100 + currency.electrum * 50 + currency.silver * 10 + currency.copper;
+        return totalCopper / 100; // 1 ЗМ = 100 ММ
     };
 
     // Функция для обновления валюты в драфте
@@ -2193,13 +2195,13 @@ export default function EquipmentPick() {
                                                                                          const newSilver = Math.floor(remainingAfterGold);
                                                                                          const newCopper = Math.round((remainingAfterGold % 1) * 10);
                                                                                          
-                                                                                         const newCurrency = {
-                                                                                             platinum: newPlatinum,
-                                                                                             gold: newGold,
-                                                                                             electrum: 0, // Пока не используем электрум
-                                                                                             silver: newSilver,
-                                                                                             copper: newCopper
-                                                                                         };
+                                                                                        const newCurrency = {
+                                                                                            platinum: newPlatinum,
+                                                                                            gold: newGold,
+                                                                                            electrum: currency.electrum, // Сохраняем электрум
+                                                                                            silver: newSilver,
+                                                                                            copper: newCopper
+                                                                                        };
                                                                                          setCurrency(newCurrency);
                                                                                          
                                                                                          // Обновляем инвентарь и сохраняем в драфт

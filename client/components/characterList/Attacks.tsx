@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useFrameColor } from "@/contexts/FrameColorContext";
 import DynamicFrame from "@/components/ui/DynamicFrame";
@@ -164,6 +164,268 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const [currencyPosition, setCurrencyPosition] = useState<{ x: number; y: number } | null>(null);
   const [currencyTimeout, setCurrencyTimeout] = useState<NodeJS.Timeout | null>(null);
   
+  // ===== УТИЛИТАРНЫЕ ФУНКЦИИ =====
+  
+  // Универсальная функция для обновления equipment
+  const updateEquipment = (newEquipment: any[]) => {
+    if (onUpdateEquipment) {
+      onUpdateEquipment(newEquipment);
+    }
+  };
+  
+  // Универсальная функция для обновления валюты
+  const updateCurrency = (newCurrency: any) => {
+    if (onUpdateCurrency) {
+      onUpdateCurrency(newCurrency);
+    }
+  };
+  
+  // Функция для очистки названия предмета от количества
+  const getCleanItemName = (itemName: any) => {
+    if (typeof itemName !== 'string') {
+      return String(itemName);
+    }
+    return itemName.replace(/^\d+x\s+/, '');
+  };
+
+  // Функция для определения типа предмета
+  const getItemType = (itemName: any) => {
+    if (typeof itemName !== 'string') {
+      return 'other';
+    }
+    const cleanName = itemName.replace(/^\d+x\s+/, '');
+    
+    // Проверяем оружие
+    const weapon = Weapons.find(w => w.name === cleanName);
+    if (weapon) return 'weapon';
+    
+    // Проверяем доспехи и щиты
+    const armor = Armors.find(a => a.name === cleanName);
+    if (armor) {
+      if (armor.category === 'shield') return 'shield';
+      return 'armor';
+    }
+    
+    // Проверяем инструменты
+    const tool = Tools.find(t => t.name === cleanName);
+    if (tool) return 'tool';
+    
+    // Проверяем снаряжение
+    const gear = Gears.find(g => g.name === cleanName);
+    if (gear) return 'gear';
+    
+    // Проверяем боеприпасы
+    const ammo = Ammunitions.find(a => a.name === cleanName);
+    if (ammo) return 'ammunition';
+    
+    return 'other';
+  };
+
+  // Функция для получения категории предмета
+  const getItemCategory = (itemName: any) => {
+    if (typeof itemName !== 'string') {
+      return 'Неизвестно';
+    }
+    const cleanName = itemName.replace(/^\d+x\s+/, '');
+    
+    // Проверяем оружие
+    const weapon = Weapons.find(w => w.name === cleanName);
+    if (weapon) {
+      if (weapon.type === 'melee') {
+        if (weapon.properties?.includes('finesse')) return 'Фехтовальное оружие';
+        if (weapon.properties?.includes('thrown')) return 'Метательное оружие';
+        return 'Рукопашное оружие';
+      } else {
+        return 'Дальнобойное оружие';
+      }
+    }
+    
+    // Проверяем доспехи
+    const armor = Armors.find(a => a.name === cleanName);
+    if (armor) {
+      if (armor.category === 'shield') return 'Щит';
+      return 'Доспех';
+    }
+    
+    // Проверяем инструменты
+    const tool = Tools.find(t => t.name === cleanName);
+    if (tool) {
+      const TOOL_CATEGORY_LABELS: Record<string, string> = {
+        'artisan': 'Ремесленные инструменты',
+        'musical': 'Музыкальный инструмент',
+        'kit': 'Набор инструментов',
+        'other': 'Другие инструменты'
+      };
+      return TOOL_CATEGORY_LABELS[tool.category] || tool.category;
+    }
+    
+    // Проверяем снаряжение
+    const gear = Gears.find(g => g.name === cleanName);
+    if (gear) return 'Снаряжение';
+    
+    // Проверяем боеприпасы
+    const ammo = Ammunitions.find(a => a.name === cleanName);
+    if (ammo) return 'Боеприпасы';
+    
+    return 'Неизвестно';
+  };
+
+  // Функция для получения веса предмета
+  const getItemWeight = (itemName: any) => {
+    // Если это объект, используем его свойство weight
+    if (typeof itemName === 'object' && itemName !== null) {
+      const weight = itemName.weight;
+      const quantity = itemName.quantity || 1;
+      return (typeof weight === 'number' ? weight : 0) * quantity;
+    }
+    
+    // Если это строка, ищем в массивах
+    if (typeof itemName !== 'string') {
+      return 0;
+    }
+    const cleanName = itemName.replace(/^\d+x\s+/, '');
+    
+    // Ищем в разных массивах
+    let item = Gears.find(g => g.name === cleanName);
+    if (item) return item.weight || 0;
+    
+    item = Ammunitions.find(a => a.name === cleanName);
+    if (item) return item.weight || 0;
+    
+    const weapon = Weapons.find(w => w.name === cleanName);
+    if (weapon) return weapon.weight || 0;
+    
+    const armor = Armors.find(a => a.name === cleanName);
+    if (armor) return armor.weight || 0;
+    
+    const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
+    if (pack) return pack.weight || 0;
+    
+    const tool = Tools.find(t => t.name === cleanName);
+    if (tool) return tool.weight || 0;
+    
+    return 0;
+  };
+
+  // Функция для получения стоимости предмета
+  const getItemCost = (itemName: any) => {
+    if (typeof itemName !== 'string') {
+      return 'Неизвестно';
+    }
+    const cleanName = itemName.replace(/^\d+x\s+/, '');
+    
+    // Ищем в разных массивах
+    let item = Gears.find(g => g.name === cleanName);
+    if (item) {
+      return translateCurrency(item.cost || 'Неизвестно');
+    }
+    
+    item = Ammunitions.find(a => a.name === cleanName);
+    if (item) {
+      return translateCurrency(item.cost || 'Неизвестно');
+    }
+    
+    const weapon = Weapons.find(w => w.name === cleanName);
+    if (weapon) {
+      return translateCurrency(weapon.cost || 'Неизвестно');
+    }
+    
+    const armor = Armors.find(a => a.name === cleanName);
+    if (armor) {
+      return translateCurrency(armor.cost || 'Неизвестно');
+    }
+    
+    const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
+    if (pack) {
+      return translateCurrency(pack.cost || 'Неизвестно');
+    }
+    
+    const tool = Tools.find(t => t.name === cleanName);
+    if (tool) {
+      return translateCurrency(tool.cost || 'Неизвестно');
+    }
+    
+    return 'Неизвестно';
+  };
+
+  // Функция для получения количества предмета
+  const getItemQuantity = (itemName: any) => {
+    if (typeof itemName !== 'string') {
+      return 1;
+    }
+    const match = itemName.match(/^(\d+)x\s+(.+)$/);
+    if (match) {
+      return parseInt(match[1]);
+    }
+    return 1;
+  };
+  
+  // Универсальная функция для получения свойств предмета
+  const getItemProperty = (item: any, property: 'weight' | 'cost' | 'quantity' | 'type' | 'category') => {
+    if (typeof item === 'object' && item !== null) {
+      switch (property) {
+        case 'weight':
+          return (typeof item.weight === 'number' ? item.weight : 0) * (item.quantity || 1);
+        case 'cost':
+          return item.cost || 'Неизвестно';
+        case 'quantity':
+          return item.quantity || 1;
+        case 'type':
+          return item.type || getItemType(item.name || item);
+        case 'category':
+          return item.category || getItemCategory(item.name || item);
+        default:
+          return null;
+      }
+    }
+    
+    // Для строк используем существующие функции
+    const itemName = typeof item === 'string' ? item : (item.name || String(item));
+    switch (property) {
+      case 'weight':
+        return getItemWeight(itemName);
+      case 'cost':
+        return getItemCost(itemName);
+      case 'quantity':
+        return getItemQuantity(itemName);
+      case 'type':
+        return getItemType(itemName);
+      case 'category':
+        return getItemCategory(itemName);
+      default:
+        return null;
+    }
+  };
+  
+  // Универсальная функция для получения статуса предмета
+  const getItemStatus = (itemName: string) => {
+    const cleanName = getCleanItemName(itemName);
+    const itemType = getItemType(cleanName);
+    
+    // Проверяем, экипирован ли предмет
+    const isEquipped = localEquipped.armor === cleanName ||
+      localEquipped.mainSet.some(item => item.name === cleanName) ||
+      localEquipped.additionalSet.some(item => item.name === cleanName);
+    
+    // Проверяем, можно ли экипировать предмет
+    const canEquip = itemType === 'weapon' || itemType === 'armor' || itemType === 'shield';
+    
+    // Проверяем, является ли оружие универсальным
+    const isVersatile = itemType === 'weapon' && isVersatileWeapon(cleanName);
+    
+    // Проверяем, можно ли переключить универсальный режим
+    const canToggleVersatile = isVersatile && isEquipped;
+    
+    return {
+      isEquipped,
+      canEquip,
+      isVersatile,
+      canToggleVersatile,
+      itemType
+    };
+  };
+  
+  
   // Функция для расчета итоговой стоимости покупки
   const calculatePurchaseCost = (item: any, quantity: number) => {
     const itemCost = item.cost || 'Неизвестно';
@@ -254,9 +516,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       }
 
       // Обновляем только equipment (рюкзак), не затрагивая экипировку
-      if (onUpdateEquipment) {
-        onUpdateEquipment(newEquipment);
-      }
+      updateEquipment(newEquipment);
 
       // Показываем toast с успехом
       toast({
@@ -502,11 +762,21 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return null;
   };
 
+  // Функция для определения приоритета сортировки предметов
+  const getItemSortPriority = (item: any) => {
+    const itemType = item.type;
+    
+    // Приоритеты: 1 - доспехи, 2 - оружие, 3 - щиты, 4 - остальное
+    if (itemType === 'armor') return 1;
+    if (itemType === 'weapon') return 2;
+    if (itemType === 'shield') return 3;
+    return 4;
+  };
+
   // Функция для получения предметов из рюкзака (не надетых)
   const getBackpackItems = () => {
     if (!characterData?.equipment || characterData.equipment.length === 0) return [];
     
-    console.log('getBackpackItems: characterData.equipment:', characterData.equipment);
     
     // Получаем все надетые предметы
     const allEquippedItems = [
@@ -523,7 +793,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         const cleanName = getCleanItemName(itemName);
         const isNotEquipped = !allEquippedItems.includes(cleanName);
         
-        console.log('getBackpackItems: filtering item:', { item, itemName, cleanName, isNotEquipped });
         
         return isNotEquipped;
       })
@@ -531,24 +800,33 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         const itemName = typeof item === 'string' ? item : (item.name || String(item));
         const itemType = typeof item === 'object' && item.type ? item.type : getItemType(itemName);
         
-        console.log('getBackpackItems: mapping item:', { item, itemName, itemType });
         
         const result = {
           name: itemName,
-          type: itemType,
-          category: typeof item === 'object' && item.category ? item.category : getItemCategory(itemName),
-          weight: typeof item === 'object' && typeof item.weight === 'number' ? item.weight : getItemWeight(itemName),
-          cost: typeof item === 'object' && item.cost ? item.cost : getItemCost(itemName),
-          quantity: typeof item === 'object' && typeof item.quantity === 'number' ? item.quantity : getItemQuantity(itemName),
+          type: getItemProperty(item, 'type'),
+          category: getItemProperty(item, 'category'),
+          weight: getItemProperty(item, 'weight'),
+          cost: getItemProperty(item, 'cost'),
+          quantity: getItemProperty(item, 'quantity'),
           equipped: false
         };
         
-        console.log('getBackpackItems: mapped result:', result);
         
         return result;
+      })
+      .sort((a, b) => {
+        // Сначала сортируем по приоритету типа предмета
+        const priorityA = getItemSortPriority(a);
+        const priorityB = getItemSortPriority(b);
+        
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        
+        // Если приоритеты одинаковые, сортируем по алфавиту
+        return a.name.localeCompare(b.name);
       });
     
-    console.log('getBackpackItems: final result:', result);
     return result;
   };
 
@@ -617,9 +895,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       }
 
       // Обновляем только equipment (рюкзак), не затрагивая экипировку
-      if (onUpdateEquipment) {
-        onUpdateEquipment(newEquipment);
-      }
+      updateEquipment(newEquipment);
 
       // Показываем toast с успехом
       toast({
@@ -834,33 +1110,77 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         });
       }
 
-      // Конвертируем все монеты в медные для точного расчета
-      let totalCopper = convertedCurrency.platinum * 1000 + 
-                       convertedCurrency.gold * 100 + 
-                       convertedCurrency.electrum * 50 + 
-                       convertedCurrency.silver * 10 + 
-                       convertedCurrency.copper;
+      // Вычитаем стоимость покупки из каждого типа монет по порядку
+      // Порядок: Медь → Серебро → Электрум → Золото → Платина
+      let remainingCost = costInCopper;
+      let newCopper = convertedCurrency.copper;
+      let newSilver = convertedCurrency.silver;
+      let newElectrum = convertedCurrency.electrum;
+      let newGold = convertedCurrency.gold;
+      let newPlatinum = convertedCurrency.platinum;
       
-      console.log('Total copper after conversion:', totalCopper);
+      console.log('Starting deduction. Remaining cost:', remainingCost);
       
-      // Вычитаем стоимость покупки
-      totalCopper -= costInCopper;
-      console.log('Total copper after purchase:', totalCopper);
+      // Сначала тратим медь
+      if (remainingCost > 0 && newCopper > 0) {
+        const copperToSpend = Math.min(newCopper, remainingCost);
+        newCopper -= copperToSpend;
+        remainingCost -= copperToSpend;
+        console.log(`Spent ${copperToSpend} copper. Remaining cost: ${remainingCost}`);
+      }
       
-      // Распределяем обратно по типам монет, начиная с самых крупных
-      const newPlatinum = Math.floor(totalCopper / 1000);
-      totalCopper %= 1000;
+      // Затем тратим серебро (1 СМ = 10 ММ)
+      if (remainingCost > 0 && newSilver > 0) {
+        const silverToSpend = Math.min(newSilver, Math.ceil(remainingCost / 10));
+        newSilver -= silverToSpend;
+        remainingCost -= silverToSpend * 10;
+        console.log(`Spent ${silverToSpend} silver. Remaining cost: ${remainingCost}`);
+      }
       
-      const newGold = Math.floor(totalCopper / 100);
-      totalCopper %= 100;
+      // Затем тратим электрум (1 ЭМ = 50 ММ)
+      if (remainingCost > 0 && newElectrum > 0) {
+        const electrumToSpend = Math.min(newElectrum, Math.ceil(remainingCost / 50));
+        newElectrum -= electrumToSpend;
+        remainingCost -= electrumToSpend * 50;
+        console.log(`Spent ${electrumToSpend} electrum. Remaining cost: ${remainingCost}`);
+      }
       
-      const newElectrum = Math.floor(totalCopper / 50);
-      totalCopper %= 50;
+      // Затем тратим золото (1 ЗМ = 100 ММ)
+      if (remainingCost > 0 && newGold > 0) {
+        const goldToSpend = Math.min(newGold, Math.ceil(remainingCost / 100));
+        newGold -= goldToSpend;
+        remainingCost -= goldToSpend * 100;
+        console.log(`Spent ${goldToSpend} gold. Remaining cost: ${remainingCost}`);
+      }
       
-      const newSilver = Math.floor(totalCopper / 10);
-      totalCopper %= 10;
+      // Наконец, тратим платину (1 ПМ = 1000 ММ)
+      if (remainingCost > 0 && newPlatinum > 0) {
+        const platinumToSpend = Math.min(newPlatinum, Math.ceil(remainingCost / 1000));
+        newPlatinum -= platinumToSpend;
+        remainingCost -= platinumToSpend * 1000;
+        console.log(`Spent ${platinumToSpend} platinum. Remaining cost: ${remainingCost}`);
+      }
       
-      const newCopper = totalCopper;
+      // Если осталась "сдача" (отрицательный remainingCost), добавляем её обратно
+      if (remainingCost < 0) {
+        const change = Math.abs(remainingCost);
+        console.log(`Change to give back: ${change} copper`);
+        
+        // Распределяем сдачу: Золото → Серебро → Медь (электрум не создается)
+        const changeGold = Math.floor(change / 100);
+        let remainingChange = change % 100;
+        
+        const changeSilver = Math.floor(remainingChange / 10);
+        remainingChange = remainingChange % 10;
+        
+        const changeCopper = remainingChange;
+        
+        newGold += changeGold;
+        newSilver += changeSilver;
+        newCopper += changeCopper;
+        
+        console.log(`Change distributed: ${changeGold} gold, ${changeSilver} silver, ${changeCopper} copper`);
+      }
       
       const newCurrency = {
         platinum: newPlatinum,
@@ -872,20 +1192,34 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       
       console.log('Final currency:', newCurrency);
       
-      // Обновляем валюту
-      if (onUpdateCurrency) {
-        console.log('Calling onUpdateCurrency with:', newCurrency);
-        onUpdateCurrency(newCurrency);
+      // Обновляем валюту и equipment одновременно
+      if (onUpdateCurrency && onUpdateEquipment) {
+        // Создаем обновленный объект char с новой валютой и equipment
+        const updatedChar = {
+          ...char,
+          basics: {
+            ...char.basics,
+            currency: newCurrency,
+            equipment: newEquipment
+          }
+        };
+        
+        // Обновляем состояние через setChar
+        if (setChar) {
+          setChar(updatedChar);
+        }
+        
+        // Сохраняем в БД
+        setTimeout(() => {
+          if (onSaveAll) {
+            onSaveAll();
+          }
+        }, 50);
       } else {
-        console.log('onUpdateCurrency is not defined!');
-      }
-      
-      // Небольшая задержка перед обновлением инвентаря
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Обновляем только equipment (рюкзак), не затрагивая экипировку
-      if (onUpdateEquipment) {
-        onUpdateEquipment(newEquipment);
+        // Fallback к отдельным обновлениям
+        updateCurrency(newCurrency);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        updateEquipment(newEquipment);
       }
       
       // Дополнительная задержка для стабилизации состояния
@@ -986,9 +1320,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       }
 
       // Обновляем только equipment (рюкзак), не затрагивая экипировку
-      if (onUpdateEquipment) {
-        onUpdateEquipment(newEquipment);
-      }
+      updateEquipment(newEquipment);
 
       // Показываем toast с успехом
       toast({
@@ -1180,6 +1512,125 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
   }, [equipped]);
 
+  // Мемоизируем тяжелые вычисления
+  const equippedItems = useMemo(() => {
+    if (!characterData?.equipment) return [];
+    
+    const equippedItems = [];
+    
+    // Доспехи
+    if (localEquipped.armor) {
+      equippedItems.push({
+        name: localEquipped.armor,
+        type: 'armor',
+        set: 'armor',
+        weight: getItemProperty(localEquipped.armor, 'weight'),
+        cost: getItemProperty(localEquipped.armor, 'cost'),
+        quantity: getItemProperty(localEquipped.armor, 'quantity'),
+        equipped: true,
+        slots: 1,
+        isVersatile: false,
+        versatileMode: false
+      });
+    }
+    
+    // Основной набор
+    localEquipped.mainSet.forEach(item => {
+      const itemType = getItemType(item.name);
+      equippedItems.push({
+        name: item.name,
+        type: itemType,
+        set: 'main',
+        weight: getItemProperty(item.name, 'weight'),
+        cost: getItemProperty(item.name, 'cost'),
+        quantity: getItemProperty(item.name, 'quantity'),
+        equipped: true,
+        slots: item.slots,
+        isVersatile: item.isVersatile,
+        versatileMode: item.versatileMode
+      });
+    });
+    
+    // Дополнительный набор
+    localEquipped.additionalSet.forEach(item => {
+      const itemType = getItemType(item.name);
+      equippedItems.push({
+        name: item.name,
+        type: itemType,
+        set: 'additional',
+        weight: getItemProperty(item.name, 'weight'),
+        cost: getItemProperty(item.name, 'cost'),
+        quantity: getItemProperty(item.name, 'quantity'),
+        equipped: true,
+        slots: item.slots,
+        isVersatile: item.isVersatile,
+        versatileMode: item.versatileMode
+      });
+    });
+    
+    return equippedItems;
+  }, [localEquipped, characterData?.equipment]);
+
+  const backpackItems = useMemo(() => {
+    if (!characterData?.equipment || characterData.equipment.length === 0) return [];
+    
+    // Получаем все надетые предметы
+    const allEquippedItems = [
+      ...(localEquipped.armor ? [localEquipped.armor] : []),
+      ...localEquipped.mainSet.map(item => item.name),
+      ...localEquipped.additionalSet.map(item => item.name)
+    ];
+    
+    // Функция для определения приоритета сортировки предметов
+    const getItemSortPriority = (item: any) => {
+      const itemType = item.type;
+      if (itemType === 'armor') return 1;
+      if (itemType === 'weapon') return 2;
+      if (itemType === 'shield') return 3;
+      return 4;
+    };
+    
+    // Фильтруем предметы, которые не надеты, и преобразуем в объекты
+    const result = characterData.equipment
+      .filter((item: any) => {
+        // Если item - это объект, используем item.name
+        const itemName = typeof item === 'string' ? item : (item.name || String(item));
+        const cleanName = getCleanItemName(itemName);
+        const isNotEquipped = !allEquippedItems.includes(cleanName);
+        
+        return isNotEquipped;
+      })
+      .map((item: any) => {
+        const itemName = typeof item === 'string' ? item : (item.name || String(item));
+        const itemType = typeof item === 'object' && item.type ? item.type : getItemType(itemName);
+        
+        const result = {
+          name: itemName,
+          type: getItemProperty(item, 'type'),
+          category: getItemProperty(item, 'category'),
+          weight: getItemProperty(item, 'weight'),
+          cost: getItemProperty(item, 'cost'),
+          quantity: getItemProperty(item, 'quantity'),
+          equipped: false
+        };
+        
+        return result;
+      })
+      .sort((a, b) => {
+        // Сначала сортируем по приоритету типа предмета
+        const priorityA = getItemSortPriority(a);
+        const priorityB = getItemSortPriority(b);
+        
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        
+        // Если приоритеты одинаковые, сортируем по алфавиту
+        return a.name.localeCompare(b.name);
+      });
+    
+    return result;
+  }, [characterData?.equipment, localEquipped]);
 
   // Получаем все оружие с информацией о слоте
   const getAllWeapons = () => {
@@ -1446,121 +1897,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return attacks;
   };
 
-  // Функция для получения веса предмета
-  const getItemWeight = (itemName: any) => {
-    // Если это объект, используем его свойство weight
-    if (typeof itemName === 'object' && itemName !== null) {
-      const weight = itemName.weight;
-      const quantity = itemName.quantity || 1;
-      return (typeof weight === 'number' ? weight : 0) * quantity;
-    }
-    
-    // Если это строка, ищем в массивах
-    if (typeof itemName !== 'string') {
-      return 0;
-    }
-    
-    const cleanName = itemName.replace(/^\d+x\s+/, '');
-    
-    // Ищем в разных массивах
-    let item = Gears.find(g => g.name === cleanName);
-    if (item) {
-      return typeof item.weight === 'number' ? item.weight : 0;
-    }
-    
-    item = Ammunitions.find(a => a.name === cleanName);
-    if (item) {
-      return typeof item.weight === 'number' ? item.weight : 0;
-    }
-    
-    const weapon = Weapons.find(w => w.name === cleanName);
-    if (weapon) {
-      return typeof weapon.weight === 'number' ? weapon.weight : 0;
-    }
-    
-    const armor = Armors.find(a => a.name === cleanName);
-    if (armor) {
-      return typeof armor.weight === 'number' ? armor.weight : 0;
-    }
-    
-    const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
-    if (pack) {
-      return typeof pack.weight === 'number' ? pack.weight : 0;
-    }
-    
-    const tool = Tools.find(t => t.name === cleanName);
-    if (tool) {
-      return typeof tool.weight === 'number' ? tool.weight : 0;
-    }
-    
-    return 0;
-  };
 
   // Функция для перевода валютных единиц на русский
 
-  // Функция для получения стоимости предмета
-  const getItemCost = (itemName: any) => {
-    if (typeof itemName !== 'string') {
-      return 'Неизвестно';
-    }
-    const cleanName = itemName.replace(/^\d+x\s+/, '');
-    
-    console.log('getItemCost called with:', { itemName, cleanName });
-    
-    // Ищем в разных массивах
-    let item = Gears.find(g => g.name === cleanName);
-    if (item) {
-      console.log('Found in Gears:', item.cost);
-      return translateCurrency(item.cost || 'Неизвестно');
-    }
-    
-    item = Ammunitions.find(a => a.name === cleanName);
-    if (item) {
-      console.log('Found in Ammunitions:', item.cost);
-      return translateCurrency(item.cost || 'Неизвестно');
-    }
-    
-    const weapon = Weapons.find(w => w.name === cleanName);
-    if (weapon) {
-      console.log('Found in Weapons:', weapon.cost);
-      return translateCurrency(weapon.cost || 'Неизвестно');
-    }
-    
-    const armor = Armors.find(a => a.name === cleanName);
-    if (armor) {
-      console.log('Found in Armors:', armor.cost);
-      return translateCurrency(armor.cost || 'Неизвестно');
-    }
-    
-    const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
-    if (pack) {
-      console.log('Found in EQUIPMENT_PACKS:', pack.cost);
-      return translateCurrency(pack.cost || 'Неизвестно');
-    }
-    
-    const tool = Tools.find(t => t.name === cleanName);
-    if (tool) {
-      console.log('Found in Tools:', tool.cost);
-      const translated = translateCurrency(tool.cost || 'Неизвестно');
-      console.log('Translated cost:', translated);
-      return translated;
-    }
-    
-    console.log('Item not found in any category');
-    return 'Неизвестно';
-  };
-
-  // Функция для получения количества предмета
-  const getItemQuantity = (itemName: any) => {
-    if (typeof itemName !== 'string') {
-      return 1;
-    }
-    const match = itemName.match(/^(\d+)x\s+(.+)$/);
-    if (match) {
-      return parseInt(match[1]);
-    }
-    return 1;
-  };
 
   // Функция для получения количества боеприпасов для конкретного оружия
   const getAmmunitionCount = (weaponKey: string) => {
@@ -1700,15 +2039,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             }
             
             // Обновляем экипировку персонажа
-            setTimeout(() => {
-              setDraft(prev => ({
-                ...prev,
-                basics: {
-                  ...prev.basics,
-                  equipment: newEquipment
-                }
-              }));
-            }, 0);
+            updateEquipment(newEquipment);
             
             return true;
           }
@@ -1723,13 +2054,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               newEquipment[i] = `${newQuantity}x ${cleanName}`;
               
               // Обновляем экипировку персонажа
-              setDraft(prev => ({
-                ...prev,
-                basics: {
-                  ...prev.basics,
-                  equipment: newEquipment
-                }
-              }));
+              updateEquipment(newEquipment);
               
               return true;
             } else {
@@ -1737,13 +2062,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               const newEquipment = characterData.equipment.filter((_, index) => index !== i);
               
               // Обновляем экипировку персонажа
-              setDraft(prev => ({
-                ...prev,
-                basics: {
-                  ...prev.basics,
-                  equipment: newEquipment
-                }
-              }));
+              updateEquipment(newEquipment);
               
               return true;
             }
@@ -1778,15 +2097,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             }
             
             // Обновляем экипировку персонажа
-            setTimeout(() => {
-              setDraft(prev => ({
-                ...prev,
-                basics: {
-                  ...prev.basics,
-                  equipment: newEquipment
-                }
-              }));
-            }, 0);
+            updateEquipment(newEquipment);
             
             return true;
           }
@@ -1802,13 +2113,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               newEquipment[i] = `${newQuantity}x ${cleanName}`;
               
               // Обновляем экипировку персонажа
-              setDraft(prev => ({
-                ...prev,
-                basics: {
-                  ...prev.basics,
-                  equipment: newEquipment
-                }
-              }));
+              updateEquipment(newEquipment);
               
               return true;
             } else {
@@ -1816,13 +2121,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               const newEquipment = characterData.equipment.filter((_, index) => index !== i);
               
               // Обновляем экипировку персонажа
-              setDraft(prev => ({
-                ...prev,
-                basics: {
-                  ...prev.basics,
-                  equipment: newEquipment
-                }
-              }));
+              updateEquipment(newEquipment);
               
               return true;
             }
@@ -1908,87 +2207,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
   };
 
-  // Функция для очистки названия предмета от количества
-  const getCleanItemName = (itemName: any) => {
-    if (typeof itemName !== 'string') {
-      return String(itemName);
-    }
-    return itemName.replace(/^\d+x\s+/, '');
-  };
 
-  // Функция для определения типа предмета
-  const getItemType = (itemName: any) => {
-    if (typeof itemName !== 'string') {
-      return 'other';
-    }
-    const cleanName = itemName.replace(/^\d+x\s+/, '');
-    
-    // Проверяем оружие
-    const weapon = Weapons.find(w => w.name === cleanName);
-    if (weapon) return 'weapon';
-    
-    // Проверяем доспехи и щиты
-    const armor = Armors.find(a => a.name === cleanName);
-    if (armor) {
-      if (armor.category === 'shield') {
-        return 'shield';
-      }
-      return 'armor';
-    }
-    
-    return 'other';
-  };
 
-  // Функция для получения категории предмета
-  const getItemCategory = (itemName: any) => {
-    if (typeof itemName !== 'string') {
-      return 'Неизвестно';
-    }
-    const cleanName = itemName.replace(/^\d+x\s+/, '');
-    
-    // Проверяем оружие
-    const weapon = Weapons.find(w => w.name === cleanName);
-    if (weapon) {
-      if (weapon.type === 'melee') {
-        if (weapon.properties?.includes('finesse')) return 'Фехтовальное оружие';
-        if (weapon.properties?.includes('versatile')) return 'Универсальное оружие';
-        if (weapon.properties?.includes('two-handed')) return 'Двуручное оружие';
-        return 'Оружие ближнего боя';
-      } else if (weapon.type === 'ranged') {
-        if (weapon.properties?.includes('thrown')) return 'Метательное оружие';
-        return 'Оружие дальнего боя';
-      }
-      return 'Оружие';
-    }
-    
-    // Проверяем доспехи и щиты
-    const armor = Armors.find(a => a.name === cleanName);
-    if (armor) {
-      if (armor.category === 'shield') return 'Щит';
-      if (armor.category === 'light') return 'Легкий доспех';
-      if (armor.category === 'medium') return 'Средний доспех';
-      if (armor.category === 'heavy') return 'Тяжелый доспех';
-      return 'Доспех';
-    }
-    
-    // Проверяем инструменты
-    const tool = Tools.find(t => t.name === cleanName);
-    if (tool) return 'Инструмент';
-    
-    // Проверяем снаряжение
-    const gear = Gears.find(g => g.name === cleanName);
-    if (gear) return 'Снаряжение';
-    
-    // Проверяем боеприпасы
-    const ammo = Ammunitions.find(a => a.name === cleanName);
-    if (ammo) return 'Боеприпасы';
-    
-    // Проверяем наборы снаряжения
-    const pack = EQUIPMENT_PACKS.find(p => p.name === cleanName);
-    if (pack) return 'Набор снаряжения';
-    
-    return 'Прочее';
-  };
 
   // Функция для проверки, является ли оружие универсальным
   const isVersatileWeapon = (itemName: string) => {
@@ -3309,116 +3529,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         const currentWeight = calculateTotalWeight();
         const maxWeight = calculateMaxCarryWeight();
         
-        // Получаем надетое снаряжение из локального состояния
-        const getEquippedItems = () => {
-          const equippedItems = [];
-          
-          // Доспехи
-          if (localEquipped.armor) {
-            equippedItems.push({
-              name: localEquipped.armor,
-              type: 'armor',
-              set: 'armor',
-              weight: getItemWeight(localEquipped.armor),
-              cost: getItemCost(localEquipped.armor),
-              quantity: getItemQuantity(localEquipped.armor),
-              equipped: true,
-              slots: 1,
-              isVersatile: false,
-              versatileMode: false
-            });
-          }
-          
-          // Основной набор
-          localEquipped.mainSet.forEach(item => {
-            const itemType = getItemType(item.name);
-            equippedItems.push({
-              name: item.name,
-              type: itemType,
-              set: 'main',
-              weight: getItemWeight(item.name),
-              cost: getItemCost(item.name),
-              quantity: getItemQuantity(item.name),
-              equipped: true,
-              slots: item.slots,
-              isVersatile: item.isVersatile,
-              versatileMode: item.versatileMode
-            });
-          });
-          
-          // Дополнительный набор
-          localEquipped.additionalSet.forEach(item => {
-            const itemType = getItemType(item.name);
-            equippedItems.push({
-              name: item.name,
-              type: itemType,
-              set: 'additional',
-              weight: getItemWeight(item.name),
-              cost: getItemCost(item.name),
-              quantity: getItemQuantity(item.name),
-              equipped: true,
-              slots: item.slots,
-              isVersatile: item.isVersatile,
-              versatileMode: item.versatileMode
-            });
-          });
-          
-          return equippedItems;
-        };
-        
-        // Получаем предметы из рюкзака (все остальные предметы)
-        const getBackpackItems = () => {
-          if (!characterData?.equipment) return [];
-          
-          console.log('getBackpackItems (second): characterData.equipment:', characterData.equipment);
-          
-          // Получаем все экипированные предметы
-          const allEquippedItems = [
-            ...(localEquipped.armor ? [localEquipped.armor] : []),
-            ...localEquipped.mainSet.map(item => item.name),
-            ...localEquipped.additionalSet.map(item => item.name)
-          ];
-          
-          return characterData.equipment
-            .filter((item: any) => {
-              // Если item - это объект, используем item.name
-              const itemName = typeof item === 'string' ? item : (item.name || String(item));
-              const cleanName = getCleanItemName(itemName);
-              const isNotEquipped = !allEquippedItems.includes(cleanName);
-              
-              console.log('getBackpackItems (second): filtering item:', { item, itemName, cleanName, isNotEquipped });
-              
-              return isNotEquipped;
-            })
-            .map((item: any) => {
-              const itemName = typeof item === 'string' ? item : (item.name || String(item));
-              
-              console.log('getBackpackItems (second): mapping item:', { item, itemName });
-              
-              // Специальная обработка для игральных костей
-              if (itemName === 'Игральные кости') {
-                console.log('Игральные кости - детали объекта:', item);
-                console.log('Игральные кости - item.cost:', item.cost);
-                console.log('Игральные кости - typeof item.cost:', typeof item.cost);
-              }
-              
-              const result = {
-                name: itemName,
-                type: typeof item === 'object' && item.type ? item.type : getItemType(itemName),
-                weight: typeof item === 'object' && typeof item.weight === 'number' ? item.weight : getItemWeight(itemName),
-                cost: (typeof item === 'object' && item.cost && item.cost !== 'Неизвестно') ? item.cost : getItemCost(itemName),
-                quantity: typeof item === 'object' && typeof item.quantity === 'number' ? item.quantity : getItemQuantity(itemName),
-                equipped: false
-              };
-              
-              console.log('getBackpackItems (second): mapped result:', result);
-              
-              return result;
-            });
-        };
-        
-        const equippedItems = getEquippedItems();
-        const backpackItems = getBackpackItems();
+        // Используем мемоизированные данные
         
 
         // Функция для сохранения изменений в драфт (оставляем для совместимости)
@@ -3769,8 +3880,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 
                 {/* Строки таблицы */}
                 <div className="space-y-1">
-                  {getBackpackItems().length > 0 ? (
-                    getBackpackItems().map((item, index) => {
+                  {backpackItems.length > 0 ? (
+                    backpackItems.map((item, index) => {
                       // item уже является объектом с нужными полями
                       const cleanName = getCleanItemName(item.name);
                       const category = item.category || getItemCategory(item.name);
@@ -3812,7 +3923,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div className="text-gray-400 text-center">{quantity}</div>
                           <div className="text-gray-400 text-center">{cost}</div>
                         </div>
-                        {index < getBackpackItems().length - 1 && (
+                        {index < backpackItems.length - 1 && (
                           <div 
                             className="my-1 h-px"
                             style={{

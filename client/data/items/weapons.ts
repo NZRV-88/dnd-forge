@@ -588,22 +588,6 @@ export const Weapons: Weapon[] = [
         mastery: "slow",
         properties: ["finesse", "reach"],
     },
-    {
-        key: "test-sword",
-        source: "TEST",
-        nameEn: "Test Sword +1",
-        name: "Тестовый меч +1",
-        category: "simple",
-        type: "melee",
-        cost: "100 gp",
-        damage: "1d8",
-        damageType: "slashing",
-        weight: 3,
-        mastery: "graze",
-        properties: ["versatile"],
-        bonusAttack: 1,
-        bonusDamage: 1,
-    },
 
     // --- Martial ranged ---
     {
