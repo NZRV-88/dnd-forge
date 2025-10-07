@@ -691,6 +691,7 @@ export const SpellsLevel1: Spell[] = [
         range: "На себя",
         components: ["В", "С"],
         duration: "1 Минута",
+        classes: ["paladin"],
         damage: { dice: "1d4", type: "Излучение" },
     },
     {

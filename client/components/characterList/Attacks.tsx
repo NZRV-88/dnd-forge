@@ -5,6 +5,7 @@ import DynamicFrame from "@/components/ui/DynamicFrame";
 import { Weapons } from "@/data/items/weapons";
 import { getClassByKey } from "@/data/classes";
 import { Cantrips } from "@/data/spells/cantrips";
+import { SpellsLevel1 } from "@/data/spells/spellLevel1";
 import { Gears, Ammunitions } from "@/data/items/gear";
 import { Armors } from "@/data/items/armors";
 import { Tools } from "@/data/items/tools";
@@ -40,6 +41,7 @@ type Props = {
   characterData?: any;
   char?: any;
   setChar?: (char: any) => void;
+  draft?: any;
 };
 
 type TabType = "actions" | "spells" | "inventory" | "features";
@@ -114,7 +116,7 @@ const getActionFrameSvg = (color: string) => {
 </svg>`;
 };
 
-export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onUpdateCurrency, setDraft, onSaveAll, characterData, char, setChar }: Props) {
+export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onUpdateCurrency, setDraft, onSaveAll, characterData, char, setChar, draft }: Props) {
   const { frameColor } = useFrameColor();
   const [criticalHits, setCriticalHits] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabType>("actions");
@@ -164,7 +166,76 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const [currencyPosition, setCurrencyPosition] = useState<{ x: number; y: number } | null>(null);
   const [currencyTimeout, setCurrencyTimeout] = useState<NodeJS.Timeout | null>(null);
   
+  // Состояние для вкладки заклинаний
+  const [spellSearch, setSpellSearch] = useState("");
+  const [spellLevelFilter, setSpellLevelFilter] = useState<number | "all">("all");
+  
   // ===== УТИЛИТАРНЫЕ ФУНКЦИИ =====
+  
+  // Функция для получения всех заклинаний персонажа
+  const getAllCharacterSpells = () => {
+    const allSpells: any[] = [];
+    
+    // Добавляем заговоры (0 уровень) - только те, что действительно заговоры
+    if (characterData?.spells?.length > 0) {
+      characterData.spells.forEach((spellKey: string) => {
+        const spellData = getSpellData(spellKey);
+        if (spellData) {
+          // Проверяем, является ли заклинание заговором по его уровню
+          const isCantrip = spellData.level === 0;
+          allSpells.push({
+            ...spellData,
+            key: spellKey,
+            level: spellData.level || 0, // Используем уровень из данных заклинания
+            isCantrip: isCantrip
+          });
+        }
+      });
+    }
+    
+    // Добавляем подготовленные заклинания (1+ уровень)
+    if (draft?.basics?.class && draft?.chosen?.spells?.[draft.basics.class]) {
+      draft.chosen.spells[draft.basics.class].forEach((spellKey: string) => {
+        const spellData = getSpellData(spellKey);
+        if (spellData) {
+          allSpells.push({
+            ...spellData,
+            key: spellKey,
+            level: spellData.level || 1, // Используем уровень из данных заклинания
+            isCantrip: false
+          });
+        }
+      });
+    }
+    
+    return allSpells;
+  };
+  
+  // Функция для фильтрации заклинаний
+  const getFilteredSpells = () => {
+    let spells = getAllCharacterSpells();
+    
+    // Фильтр по поиску
+    if (spellSearch.trim()) {
+      spells = spells.filter(spell => 
+        spell.name.toLowerCase().includes(spellSearch.toLowerCase())
+      );
+    }
+    
+    // Фильтр по уровню
+    if (spellLevelFilter !== "all") {
+      spells = spells.filter(spell => spell.level === spellLevelFilter);
+    }
+    
+    return spells;
+  };
+  
+  // Функция для получения доступных уровней заклинаний
+  const getAvailableSpellLevels = () => {
+    const spells = getAllCharacterSpells();
+    const levels = new Set(spells.map(spell => spell.level));
+    return Array.from(levels).sort((a, b) => a - b);
+  };
   
   // Универсальная функция для обновления equipment
   const updateEquipment = (newEquipment: any[]) => {
@@ -1619,25 +1690,35 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Получаем все оружие с информацией о слоте
   const getAllWeapons = () => {
-    if (!equipped) return [];
+    console.log('getAllWeapons: equipped:', equipped);
+    if (!equipped) {
+      console.log('getAllWeapons: no equipped data');
+      return [];
+    }
     
     const activeSlot = equipped.activeWeaponSlot || 1;
+    console.log('getAllWeapons: activeSlot:', activeSlot);
     const allWeapons = [];
     
     // Добавляем оружие из первого слота
+    console.log('getAllWeapons: weaponSlot1:', equipped.weaponSlot1);
     if (equipped.weaponSlot1 && equipped.weaponSlot1.length > 0) {
       equipped.weaponSlot1.forEach(weapon => {
+        console.log('getAllWeapons: adding weapon from slot 1:', weapon);
         allWeapons.push({ ...weapon, slot: 1, isActive: activeSlot === 1 });
       });
     }
     
     // Добавляем оружие из второго слота
+    console.log('getAllWeapons: weaponSlot2:', equipped.weaponSlot2);
     if (equipped.weaponSlot2 && equipped.weaponSlot2.length > 0) {
       equipped.weaponSlot2.forEach(weapon => {
+        console.log('getAllWeapons: adding weapon from slot 2:', weapon);
         allWeapons.push({ ...weapon, slot: 2, isActive: activeSlot === 2 });
       });
     }
     
+    console.log('getAllWeapons: final result:', allWeapons);
     return allWeapons;
   };
 
@@ -1716,6 +1797,18 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   };
 
   const allWeapons = getAllWeapons();
+  console.log('Attacks: equipped:', equipped);
+  console.log('Attacks: allWeapons from getAllWeapons:', allWeapons);
+  
+  // Проверяем оружие в инвентаре
+  if (characterData?.equipment) {
+    const weaponsInInventory = characterData.equipment.filter(item => 
+      item.type === 'weapon' || item.category === 'weapon'
+    );
+    console.log('Attacks: weapons in inventory:', weaponsInInventory);
+    console.log('Attacks: total equipment items:', characterData.equipment.length);
+    console.log('Attacks: equipment types:', characterData.equipment.map(item => ({ name: item.name, type: item.type, category: item.category })));
+  }
 
   // Функция для обработки атаки с проверкой критического попадания
   const handleAttack = async (weapon: any, ability: string, bonus: number, isSpell: boolean = false) => {
@@ -1787,8 +1880,16 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для получения русского названия заклинания
   const getSpellName = (spellKey: string) => {
-    const spell = Cantrips.find(s => s.key === spellKey);
-    return spell?.name || spellKey;
+    // Сначала ищем в заговорах
+    let spell = Cantrips.find(s => s.key === spellKey);
+    if (spell) return spell.name;
+    
+    // Затем ищем в заклинаниях 1-го уровня
+    spell = SpellsLevel1.find(s => s.key === spellKey);
+    if (spell) return spell.name;
+    
+    // Если не найдено, возвращаем ключ
+    return spellKey;
   };
 
   // Функция для получения иконки типа урона
@@ -1798,7 +1899,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         return "🔥";
       case "Лед":
         return "❄️";
-      case "Молния":
+      case "Электричество":
         return "⚡";
       case "Кислота":
         return "🧪";
@@ -1811,11 +1912,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       case "Психический":
         return "🧠";
       case "Силовой":
-        return "💫";
+        return "✨";
       case "Гром":
         return "💥";
-      case "Духовный":
-        return "✨";
       default:
         return "🔮";
     }
@@ -1828,7 +1927,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         return { border: "#EF4444", bg: "#EF444420", text: "#FCA5A5" }; // Красный
       case "Лед":
         return { border: "#3B82F6", bg: "#3B82F620", text: "#93C5FD" }; // Синий
-      case "Молния":
+      case "Электричество":
         return { border: "#60A5FA", bg: "#60A5FA20", text: "#93C5FD" }; // Голубой
       case "Кислота":
         return { border: "#10B981", bg: "#10B98120", text: "#6EE7B7" }; // Зеленый
@@ -1841,11 +1940,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       case "Психический":
         return { border: "#EC4899", bg: "#EC489920", text: "#F9A8D4" }; // Розовый
       case "Силовой":
-        return { border: "#C0C0C0", bg: "#C0C0C020", text: "#E5E7EB" }; // Серебряный
+        return { border: "#F59E0B", bg: "#F59E0B20", text: "#FCD34D" }; // Золотой
       case "Гром":
         return { border: "#F59E0B", bg: "#F59E0B20", text: "#FCD34D" }; // Желтый
-      case "Духовный":
-        return { border: "#F59E0B", bg: "#F59E0B20", text: "#FCD34D" }; // Золотой
       default:
         return { border: "#A855F7", bg: "#A855F720", text: "#C4B5FD" }; // Фиолетовый по умолчанию
     }
@@ -1853,7 +1950,16 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для получения данных заклинания
   const getSpellData = (spellKey: string) => {
-    return Cantrips.find(s => s.key === spellKey);
+    // Сначала ищем в заговорах
+    let spell = Cantrips.find(s => s.key === spellKey);
+    if (spell) return spell;
+    
+    // Затем ищем в заклинаниях 1-го уровня
+    spell = SpellsLevel1.find(s => s.key === spellKey);
+    if (spell) return spell;
+    
+    // Если не найдено, возвращаем undefined
+    return undefined;
   };
 
   // Получаем количество атак за действие (зависит от уровня и класса)
@@ -2927,19 +3033,35 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     const allActions = [];
                     
                     // Добавляем только активное оружие
-                    allWeapons
-                      .filter(weapon => weapon.isActive)
-                      .forEach((weapon, i) => {
-                        allActions.push({ type: 'weapon', data: weapon, index: i });
-                      });
+                    console.log('Attacks: allWeapons:', allWeapons);
+                    const activeWeapons = allWeapons.filter(weapon => weapon.isActive);
+                    console.log('Attacks: activeWeapons:', activeWeapons);
+                    activeWeapons.forEach((weapon, i) => {
+                      console.log(`Attacks: adding weapon ${weapon.name} to actions`);
+                      allActions.push({ type: 'weapon', data: weapon, index: i });
+                    });
                     
-                    // Добавляем заклинания
+                    // Добавляем заклинания только с castingTime = "Действие"
+                    console.log('Attacks: characterData:', characterData);
+                    console.log('Attacks: characterData.spells:', characterData?.spells);
                     if (characterData?.spells?.length > 0) {
+                      console.log('Attacks: characterData.spells:', characterData.spells);
                       characterData.spells.forEach((spell: string, i: number) => {
-                        allActions.push({ type: 'spell', data: spell, index: i });
+                        const spellData = getSpellData(spell);
+                        console.log(`Attacks: spell ${spell}:`, spellData);
+                        // Проверяем, является ли заклинание действием
+                        const castingTime = spellData?.castingTime;
+                        const isAction = Array.isArray(castingTime) 
+                            ? castingTime.includes("Действие")
+                            : castingTime === "Действие";
+                        console.log(`Attacks: spell ${spell} castingTime:`, castingTime, 'isAction:', isAction, 'isCombat:', spellData?.isCombat);
+                        if (isAction && spellData?.isCombat) {
+                          allActions.push({ type: 'spell', data: spell, index: i });
+                        }
                       });
                     }
                     
+                    console.log('Attacks: final allActions:', allActions);
                     if (allActions.length === 0) {
                       return (
                         <div className="text-center text-gray-500 text-sm py-4">
@@ -3029,7 +3151,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                 }}
                               >
                                 {loadingAttacks[`${weapon.name}-${weapon.slot}`] ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <div className="w-4 h-5 flex items-center justify-center">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  </div>
                                 ) : (
                                   attackBonus > 0 ? `+${attackBonus}` : attackBonus === 0 ? '0' : attackBonus
                                 )}
@@ -3087,7 +3211,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   }}
                                 >
                                   {loadingDamage[`${weapon.name}-${weapon.slot}`] ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <div className="w-4 h-5 flex items-center justify-center">
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    </div>
                                   ) : (
                                     damage
                                   )}
@@ -3120,13 +3246,17 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         
                         // Преобразуем в строку, если это число
                         if (typeof spellRange === 'number') {
-                          spellRange = spellRange.toString();
+                          spellRange = String(spellRange);
                         }
                         
-                        // Если дальность не содержит единицы измерения, добавляем "фт."
-                        if (spellRange && typeof spellRange === 'string' && !spellRange.includes('фт') && !spellRange.includes('м') && !spellRange.includes('км') && !spellRange.includes('на себя') && !spellRange.toLowerCase().includes('касание')) {
+                        // Если дальность не содержит единицы измерения, добавляем "фт." только для числовых значений
+                        if (spellRange && typeof spellRange === 'string' && !spellRange.includes('фт') && !spellRange.includes('м') && !spellRange.includes('км') && !spellRange.includes('на себя') && !spellRange.toLowerCase().includes('касание') && !isNaN(Number(spellRange))) {
                           spellRange = `${spellRange} фт.`;
                         }
+                        
+                        // Проверяем, нужно ли показывать бонус попадания
+                        const isSelfTarget = spellRange && spellRange.toLowerCase().includes('на себя');
+                        const showAttackBonus = !isSelfTarget;
                         
                         // Получаем урон из данных заклинания (без модификатора характеристики)
                         const spellDamage = spellData?.damage?.dice || "1d10";
@@ -3141,28 +3271,34 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               </div>
                               <div className="text-gray-300 flex items-center justify-center">{spellRange}</div>
                               <div 
-                                className="text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
+                                className={`text-gray-300 font-semibold w-[70px] rounded-md px-2 py-1 transition-all duration-200 flex items-center justify-center mx-auto ${
+                                  showAttackBonus ? 'cursor-pointer border-2' : 'cursor-default'
+                                }`}
                                 style={{
-                                  borderColor: `${getFrameColor(frameColor)}40`,
+                                  borderColor: showAttackBonus ? `${getFrameColor(frameColor)}40` : 'transparent',
                                   backgroundColor: 'transparent'
                                 }}
-                                onClick={() => handleAttack(spellName, spellAbility, spellAttackBonus, true)}
-                                onMouseEnter={(e) => {
+                                onClick={showAttackBonus ? () => handleAttack(spellName, spellAbility, spellAttackBonus, true) : undefined}
+                                onMouseEnter={showAttackBonus ? (e) => {
                                   const lightColor = criticalHits[`spell-${spellName}`] 
                                     ? '#F59E0B' 
                                     : getFrameColor(frameColor);
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
-                                }}
-                                onMouseLeave={(e) => {
+                                } : undefined}
+                                onMouseLeave={showAttackBonus ? (e) => {
                                   e.currentTarget.style.backgroundColor = criticalHits[`spell-${spellName}`] 
                                     ? '#F59E0B20' 
                                     : 'transparent';
-                                }}
+                                } : undefined}
                               >
                                 {loadingAttacks[`spell-${spellName}`] ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
+                                  <div className="w-4 h-5 flex items-center justify-center">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  </div>
+                                ) : showAttackBonus ? (
                                   spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus
+                                ) : (
+                                  '--'
                                 )}
                               </div>
                               <div className="relative flex items-center justify-center mx-auto">
@@ -3172,9 +3308,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                     className="absolute -left-6 text-lg animate-pulse z-10"
                                     style={{ 
                                       color: getDamageColor(spellData?.damage?.type).text,
-                                      filter: spellData?.damage?.type === "Молния" ? "hue-rotate(200deg) saturate(1.5)" : 
-                                             spellData?.damage?.type === "Силовой" ? "hue-rotate(0deg) saturate(0.3) brightness(1.2)" :
-                                             spellData?.damage?.type === "Духовный" ? "hue-rotate(45deg) saturate(1.2) brightness(1.1)" : "none"
+                                      filter: spellData?.damage?.type === "Электричество" ? "hue-rotate(200deg) saturate(1.5)" : 
+                                             spellData?.damage?.type === "Силовой" ? "hue-rotate(0deg) saturate(0.3) brightness(1.2)" : "none"
                                     }}
                                   >
                                     {getDamageIcon(spellData?.damage?.type)}
@@ -3218,7 +3353,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   }}
                                 >
                                   {loadingDamage[`spell-${spellName}`] ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <div className="w-4 h-5 flex items-center justify-center">
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    </div>
                                   ) : (
                                     criticalHits[`spell-${spellName}`] ? 
                                       spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
@@ -3278,12 +3415,17 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     
                     // Добавляем заклинания, которые являются бонусными действиями
                     if (characterData?.spells?.length > 0) {
+                      console.log('Attacks: checking bonus actions, characterData.spells:', characterData.spells);
                       characterData.spells.forEach((spell: string, i: number) => {
                         const spellData = getSpellData(spell);
+                        console.log(`Attacks: bonus spell ${spell}:`, spellData);
                         // Проверяем, является ли заклинание бонусным действием
-                        if (spellData?.castingTime === "бонусное действие" || 
-                            spellData?.castingTime === "Бонусное действие" ||
-                            spellData?.castingTime === "1 бонусное действие") {
+                        const castingTime = spellData?.castingTime;
+                        const isBonusAction = Array.isArray(castingTime) 
+                            ? castingTime.includes("Бонусное действие")
+                            : castingTime === "Бонусное действие";
+                        console.log(`Attacks: bonus spell ${spell} castingTime:`, castingTime, 'isBonusAction:', isBonusAction, 'isCombat:', spellData?.isCombat);
+                        if (isBonusAction && spellData?.isCombat) {
                           bonusActions.push({ type: 'spell', data: spell, index: i });
                         }
                       });
@@ -3311,13 +3453,17 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         
                         // Преобразуем в строку, если это число
                         if (typeof spellRange === 'number') {
-                          spellRange = spellRange.toString();
+                          spellRange = String(spellRange);
                         }
                         
-                        // Если дальность не содержит единицы измерения, добавляем "фт."
-                        if (spellRange && typeof spellRange === 'string' && !spellRange.includes('фт') && !spellRange.includes('м') && !spellRange.includes('км') && !spellRange.includes('на себя') && !spellRange.toLowerCase().includes('касание')) {
+                        // Если дальность не содержит единицы измерения, добавляем "фт." только для числовых значений
+                        if (spellRange && typeof spellRange === 'string' && !spellRange.includes('фт') && !spellRange.includes('м') && !spellRange.includes('км') && !spellRange.includes('на себя') && !spellRange.toLowerCase().includes('касание') && !isNaN(Number(spellRange))) {
                           spellRange = `${spellRange} фт.`;
                         }
+                        
+                        // Проверяем, нужно ли показывать бонус попадания
+                        const isSelfTarget = spellRange && spellRange.toLowerCase().includes('на себя');
+                        const showAttackBonus = !isSelfTarget;
                         
                         // Получаем урон из данных заклинания (без модификатора характеристики)
                         const spellDamage = spellData?.damage?.dice || "1d10";
@@ -3332,28 +3478,34 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               </div>
                               <div className="text-gray-300 flex items-center justify-center">{spellRange}</div>
                               <div 
-                                className="text-gray-300 font-semibold border-2 w-[70px] rounded-md px-2 py-1 cursor-pointer transition-all duration-200 flex items-center justify-center mx-auto"
+                                className={`text-gray-300 font-semibold w-[70px] rounded-md px-2 py-1 transition-all duration-200 flex items-center justify-center mx-auto ${
+                                  showAttackBonus ? 'cursor-pointer border-2' : 'cursor-default'
+                                }`}
                                 style={{
-                                  borderColor: `${getFrameColor(frameColor)}40`,
+                                  borderColor: showAttackBonus ? `${getFrameColor(frameColor)}40` : 'transparent',
                                   backgroundColor: 'transparent'
                                 }}
-                                onClick={() => handleAttack(spellName, spellAbility, spellAttackBonus, true)}
-                                onMouseEnter={(e) => {
+                                onClick={showAttackBonus ? () => handleAttack(spellName, spellAbility, spellAttackBonus, true) : undefined}
+                                onMouseEnter={showAttackBonus ? (e) => {
                                   const lightColor = criticalHits[`spell-${spellName}`] 
                                     ? '#F59E0B' 
                                     : getFrameColor(frameColor);
                                   e.currentTarget.style.backgroundColor = `${lightColor}20`;
-                                }}
-                                onMouseLeave={(e) => {
+                                } : undefined}
+                                onMouseLeave={showAttackBonus ? (e) => {
                                   e.currentTarget.style.backgroundColor = criticalHits[`spell-${spellName}`] 
                                     ? '#F59E0B20' 
                                     : 'transparent';
-                                }}
+                                } : undefined}
                               >
                                 {loadingAttacks[`spell-${spellName}`] ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
+                                  <div className="w-4 h-5 flex items-center justify-center">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  </div>
+                                ) : showAttackBonus ? (
                                   spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus
+                                ) : (
+                                  '--'
                                 )}
                               </div>
                               <div className="relative flex items-center justify-center mx-auto">
@@ -3363,9 +3515,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                     className="absolute -left-6 text-lg animate-pulse z-10"
                                     style={{ 
                                       color: getDamageColor(spellData?.damage?.type).text,
-                                      filter: spellData?.damage?.type === "Молния" ? "hue-rotate(200deg) saturate(1.5)" : 
-                                             spellData?.damage?.type === "Силовой" ? "hue-rotate(0deg) saturate(0.3) brightness(1.2)" :
-                                             spellData?.damage?.type === "Духовный" ? "hue-rotate(45deg) saturate(1.2) brightness(1.1)" : "none"
+                                      filter: spellData?.damage?.type === "Электричество" ? "hue-rotate(200deg) saturate(1.5)" : 
+                                             spellData?.damage?.type === "Силовой" ? "hue-rotate(0deg) saturate(0.3) brightness(1.2)" : "none"
                                     }}
                                   >
                                     {getDamageIcon(spellData?.damage?.type)}
@@ -3409,7 +3560,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   }}
                                 >
                                   {loadingDamage[`spell-${spellName}`] ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <div className="w-4 h-5 flex items-center justify-center">
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    </div>
                                   ) : (
                                     criticalHits[`spell-${spellName}`] ? 
                                       spellDamage.replace(/(\d+)d(\d+)/, (match, num, size) => `${parseInt(num) * 2}d${size}`) : 
@@ -3456,58 +3609,211 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           </div>
         );
       case "spells":
+        const filteredSpells = getFilteredSpells();
+        const availableLevels = getAvailableSpellLevels();
+        
         return (
-          <div>
-            {/* Заговоры (всегда доступны) */}
-            <div className="mb-4">
-              <div 
-                className="text-xs font-semibold uppercase mb-2 text-gray-400"
-                style={{
-                  borderBottom: `1px solid ${getFrameColor(frameColor)}20`
-                }}
-              >
-                ЗАГОВОРЫ (0 уровень)
-              </div>
-              <div className="text-sm text-gray-300 space-y-1">
-                {characterData?.spells?.length > 0 ? (
-                  characterData.spells.map((spell: string, index: number) => (
-                    <div 
-                      key={index} 
-                      className="py-2 px-3 hover:bg-gray-700 rounded cursor-pointer transition-colors duration-200 border border-transparent hover:border-gray-600"
-                      onClick={() => {
-                        const spellModifier = Math.floor(((stats?.cha || 10) - 10) / 2);
-                        const spellAttackBonus = spellModifier + (proficiencyBonus || 0);
-                        handleAttack(spell, 'cha', spellAttackBonus, true);
-                      }}
-                    >
-                      <div className="font-medium text-gray-200">{spell}</div>
-                      <div className="text-xs text-gray-400">Заговор • Действие</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-gray-500 text-center py-4">
-                    Нет заговоров
-                  </div>
-                )}
-              </div>
+          <div className="space-y-4">
+            {/* Поисковая строка */}
+            <div>
+              <input
+                type="text"
+                placeholder="Поиск заклинаний..."
+                value={spellSearch}
+                onChange={(e) => setSpellSearch(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
             
-            {/* Подготовленные заклинания */}
-            <div>
-              <div 
-                className="text-xs font-semibold uppercase mb-2 text-gray-400"
-                style={{
-                  borderBottom: `1px solid ${getFrameColor(frameColor)}20`
-                }}
+            {/* Фильтры по уровню */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSpellLevelFilter("all")}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  spellLevelFilter === "all"
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
               >
-                ПОДГОТОВЛЕННЫЕ ЗАКЛИНАНИЯ
-              </div>
-              <div className="text-sm text-gray-300">
-                <div className="text-gray-500 text-center py-4">
-                  Система подготовки заклинаний будет добавлена позже
-                </div>
-              </div>
+                ВСЕ
+              </button>
+              {availableLevels.map(level => (
+                <button
+                  key={level}
+                  onClick={() => setSpellLevelFilter(level)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    spellLevelFilter === level
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {level === 0 ? 'ЗАГОВОРЫ' : `- ${level} -`}
+                </button>
+              ))}
             </div>
+            
+            
+            {/* Таблицы заклинаний по уровням */}
+            {filteredSpells.length > 0 ? (
+              <div className="space-y-6">
+                {(() => {
+                  // Группируем заклинания по уровням
+                  console.log('Spells tab: filteredSpells:', filteredSpells);
+                  const spellsByLevel = filteredSpells.reduce((acc, spell) => {
+                    const level = spell.level;
+                    console.log('Spells tab: grouping spell', spell.name, 'level:', level);
+                    if (!acc[level]) {
+                      acc[level] = [];
+                    }
+                    acc[level].push(spell);
+                    return acc;
+                  }, {} as Record<number, any[]>);
+                  
+                  console.log('Spells tab: spellsByLevel:', spellsByLevel);
+                  
+                  // Сортируем уровни
+                  const sortedLevels = Object.keys(spellsByLevel).map(Number).sort((a, b) => a - b);
+                  console.log('Spells tab: sortedLevels:', sortedLevels);
+                  
+                  return sortedLevels.map(level => {
+                    const spells = spellsByLevel[level];
+                    const levelName = level === 0 ? 'ЗАГОВОРЫ' : `${level} УРОВЕНЬ`;
+                    console.log(`Spells tab: rendering level ${level} (${levelName}) with ${spells.length} spells:`, spells.map(s => s.name));
+                    
+                    return (
+                      <div key={level} className="space-y-2">
+                        {/* Заголовок уровня */}
+                        <div 
+                          className="text-xs font-semibold uppercase mb-2 text-gray-400"
+                          style={{
+                            borderBottom: `1px solid ${getFrameColor(frameColor)}20`
+                          }}
+                        >
+                          {levelName}
+                        </div>
+                        
+                {/* Заголовки таблицы */}
+                <div className="grid gap-2 text-xs font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
+                     style={{ 
+                       gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr 1fr',
+                       borderBottom: `1px solid ${getFrameColor(frameColor)}20` 
+                     }}>
+                  <div className="flex items-center justify-start"></div>
+                  <div className="flex items-center justify-start">НАЗВАНИЕ</div>
+                  <div className="text-center">ВРМ</div>
+                  <div className="text-center">ДЛН</div>
+                  <div className="text-center">ППД</div>
+                  <div className="text-center">ЭФФЕКТ</div>
+                </div>
+                        
+                        {/* Строки заклинаний для этого уровня */}
+                        {spells.map((spell, index) => {
+                          const spellAbility = 'cha';
+                          const spellModifier = Math.floor(((stats?.[spellAbility] || 10) - 10) / 2);
+                          const spellAttackBonus = spellModifier + (proficiencyBonus || 0);
+                          
+                          // Получаем дальность
+                          let spellRange = spell.range || "60 фт.";
+                          if (typeof spellRange === 'number') {
+                            spellRange = String(spellRange);
+                          }
+                          if (spellRange && typeof spellRange === 'string' && !spellRange.includes('фт') && !spellRange.includes('м') && !spellRange.includes('км') && !spellRange.includes('на себя') && !spellRange.toLowerCase().includes('касание') && !isNaN(Number(spellRange))) {
+                            spellRange = `${spellRange} фт.`;
+                          }
+                          
+                          // Проверяем, нужно ли показывать бонус попадания
+                          const isSelfTarget = spellRange && spellRange.toLowerCase().includes('на себя');
+                          const showAttackBonus = !isSelfTarget;
+                          
+                          // Получаем время сотворения
+                          const castingTime = Array.isArray(spell.castingTime) ? spell.castingTime[0] : spell.castingTime;
+                          
+                          // Сокращаем время сотворения
+                          const shortCastingTime = castingTime === 'Действие' ? 'Д' : 
+                                                  castingTime === 'Бонусное действие' ? 'БД' : 
+                                                  castingTime || '—';
+                          
+                          // Получаем эффект (только урон, не описание)
+                          const effect = spell.damage?.dice || '—';
+                          
+                          return (
+                            <div key={index}>
+                              <div className="grid gap-2 text-sm py-1 items-center"
+                                   style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr 1fr' }}>
+                                {/* Кнопка использования */}
+                                <div className="flex items-center justify-start">
+                                {showAttackBonus ? (
+                                  <button
+                                    onClick={() => handleAttack(spell.name, spellAbility, spellAttackBonus, true)}
+                                    disabled={loadingAttacks[`spell-${spell.name}`]}
+                                    className="w-8 h-8 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-md flex items-center justify-center transition-colors"
+                                  >
+                                    {loadingAttacks[`spell-${spell.name}`] ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <span className="text-xs font-bold">★</span>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <div className="w-8 h-8 bg-gray-600 rounded-md flex items-center justify-center">
+                                    <span className="text-xs text-gray-400">—</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                                {/* Название */}
+                                <div className="text-gray-200 flex items-center justify-start">
+                                  <span className="text-sm text-gray-500 mr-1 w-3 inline-block text-center">★</span>
+                                  <span className="break-words">{spell.name}</span>
+                                </div>
+                                
+                                {/* Время */}
+                                <div className="text-gray-300 text-center">
+                                  {shortCastingTime}
+                                </div>
+                                
+                                {/* Дальность */}
+                                <div className="text-gray-300 text-center">
+                                  {spellRange || '—'}
+                                </div>
+                                
+                                {/* Попадание */}
+                                <div className="text-gray-300 text-center">
+                                  {showAttackBonus ? (
+                                    spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus
+                                  ) : (
+                                    '—'
+                                  )}
+                                </div>
+                                
+                                {/* Эффект */}
+                                <div className="text-gray-300 text-center">
+                                  {effect}
+                                </div>
+                              </div>
+                              
+                              {/* Пунктирная линия между строками (кроме последней) */}
+                              {index < spells.length - 1 && (
+                                <div 
+                                  className="my-1"
+                                  style={{
+                                    borderBottom: `1px dashed ${getFrameColor(frameColor)}20`
+                                  }}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            ) : (
+              <div className="text-gray-500 text-center py-8">
+                {spellSearch.trim() ? 'Заклинания не найдены' : 'Нет заклинаний'}
+              </div>
+            )}
           </div>
         );
       case "inventory":

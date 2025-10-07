@@ -4,11 +4,46 @@ import { getRaceByKey } from "@/data/races";
 import { getBackgroundByKey } from "@/data/backgrounds";
 import { ALL_FEATS } from "@/data/feats/feats";
 import type { ChoiceOption } from "@/data/shared/choices";
+import { getAllCharacterData } from "@/utils/getAllCharacterData";
 
 export interface IncompleteChoice {
     page: string;
     label: string;
     path: string;
+}
+
+/**
+ * Рассчитывает максимальное количество подготовленных заклинаний для класса
+ */
+function getMaxPreparedSpells(draft: CharacterDraft, classInfo: any): number {
+    if (!classInfo?.spellcasting) return 0;
+    
+    // Получаем формулу из данных класса
+    const levelSlots = classInfo.spellcasting.progression[draft.basics.level as keyof typeof classInfo.spellcasting.progression];
+    const formula = levelSlots?.prepared || classInfo.spellcasting.preparedFormula || "Math.max(1, level + chaMod)";
+    
+    // Получаем финальные характеристики
+    const characterData = getAllCharacterData(draft);
+    
+    // Получаем модификатор основной характеристики
+    const abilityKey = classInfo.spellcasting.ability;
+    const baseAbilityScore = Number(draft.stats?.[abilityKey]) || 10;
+    const abilityBonus = characterData.abilityBonuses?.[abilityKey] || 0;
+    const finalAbilityScore = baseAbilityScore + abilityBonus;
+    const abilityMod = Math.floor((finalAbilityScore - 10) / 2);
+    
+    // Выполняем формулу
+    try {
+        const processedFormula = formula
+            .replace(/level/g, draft.basics.level.toString())
+            .replace(/chaMod/g, abilityMod.toString());
+        
+        // eslint-disable-next-line no-eval
+        return Math.max(0, Math.floor(eval(processedFormula)));
+    } catch (error) {
+        console.error('Ошибка в формуле подготовленных заклинаний:', error);
+        return 1; // Fallback значение
+    }
 }
 
 /**
@@ -153,6 +188,21 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                     });
                 }
             });
+        }
+        
+        // Проверяем подготовленные заклинания для заклинателей
+        if (classInfo?.spellcasting) {
+            const maxPreparedSpells = getMaxPreparedSpells(draft, classInfo);
+            const preparedSpells = draft.chosen.spells?.[draft.basics.class] || [];
+            const currentPreparedCount = preparedSpells.length;
+            
+            if (maxPreparedSpells > 0 && currentPreparedCount < maxPreparedSpells) {
+                incomplete.push({ 
+                    page: 'class', 
+                    label: `Заклинания: подготовлено ${currentPreparedCount}/${maxPreparedSpells} заклинаний`, 
+                    path: `/create/${draft.id}/class` 
+                });
+            }
         }
         
         // Проверяем выборы в подклассе, если он выбран

@@ -373,7 +373,13 @@ export function getAllCharacterData(draft: CharacterDraft) {
             }
         });
     });
-    Object.values(draft.chosen.spells).flat().forEach(sp => spells.add(sp));
+    console.log('getAllCharacterData: draft.chosen.spells:', draft.chosen.spells);
+    const allSpells = Object.values(draft.chosen.spells).flat();
+    console.log('getAllCharacterData: allSpells:', allSpells);
+    allSpells.forEach(sp => {
+        console.log('getAllCharacterData: adding spell:', sp);
+        spells.add(sp);
+    });
     draft.chosen.feats.forEach(f => feats.add(f));
 
     // Обрабатываем ВСЕ выбранные характеристики из всех источников

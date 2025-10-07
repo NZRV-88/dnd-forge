@@ -90,6 +90,8 @@ export default function ClassPick() {
     
     // Получаем подготовленные заклинания из драфта
     const preparedSpells = draft.basics.class ? (draft.chosen.spells[draft.basics.class] || []) : [];
+    console.log('Class: draft.chosen.spells:', draft.chosen.spells);
+    console.log('Class: preparedSpells for class', draft.basics.class, ':', preparedSpells);
     
     // Загружаем персонажа при редактировании
     useEffect(() => {
@@ -642,9 +644,9 @@ export default function ClassPick() {
                                                     </p>
                                                 ) : (
                                                     <div className="py-4 space-y-2">
-                                                        {preparedSpells.map((spellName, index) => {
+                                                        {preparedSpells.map((spellKey, index) => {
                                                             // Находим полную информацию о заклинании
-                                                            const spell = getAvailableSpells().find(s => s.name === spellName);
+                                                            const spell = getAvailableSpells().find(s => s.key === spellKey);
                                                             if (!spell) return null;
                                                             
                                                             const isExpanded = expandedSpells.has(-index - 1); // Используем отрицательные числа для подготовленных заклинаний
@@ -773,26 +775,28 @@ export default function ClassPick() {
                                                                 <button
                                                                     onClick={() => {
                                                                         if (draft.basics.class) {
-                                                                            if (preparedSpells.includes(spell.name)) {
+                                                                            if (preparedSpells.includes(spell.key)) {
                                                                                 // Убираем заклинание из подготовленных
-                                                                                const newSpells = preparedSpells.filter(name => name !== spell.name);
+                                                                                const newSpells = preparedSpells.filter(key => key !== spell.key);
+                                                                                console.log('Class: removing spell', spell.key, 'from prepared spells:', newSpells);
                                                                                 setChosenSpells(draft.basics.class, newSpells);
                                                                             } else if (preparedSpells.length < getMaxPreparedSpells()) {
                                                                                 // Добавляем заклинание в подготовленные
-                                                                                const newSpells = [...preparedSpells, spell.name];
+                                                                                const newSpells = [...preparedSpells, spell.key];
+                                                                                console.log('Class: adding spell', spell.key, 'to prepared spells:', newSpells);
                                                                                 setChosenSpells(draft.basics.class, newSpells);
                                                                             }
                                                                         }
                                                                     }}
-                                                                    disabled={!preparedSpells.includes(spell.name) && preparedSpells.length >= getMaxPreparedSpells()}
+                                                                    disabled={!preparedSpells.includes(spell.key) && preparedSpells.length >= getMaxPreparedSpells()}
                                                                     className={
-                                                                        preparedSpells.includes(spell.name)
+                                                                        preparedSpells.includes(spell.key)
                                                                             ? 'p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors'
                                                                             : 'px-3 py-1.5 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
                                                                     }
-                                                                    title={preparedSpells.includes(spell.name) ? "Убрать заклинание" : "Подготовить заклинание"}
+                                                                    title={preparedSpells.includes(spell.key) ? "Убрать заклинание" : "Подготовить заклинание"}
                                                                 >
-                                                                    {preparedSpells.includes(spell.name) ? (
+                                                                    {preparedSpells.includes(spell.key) ? (
                                                                         <Icons.X className="w-4 h-4" />
                                                                     ) : (
                                                                         'ПОДГОТОВИТЬ'
