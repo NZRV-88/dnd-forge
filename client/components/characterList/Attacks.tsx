@@ -478,7 +478,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   };
 
 
-  // Функция для удаления предмета (удаляет только 1 штуку)
+  // Функция для удаления предмета (удаляет всю стопку)
   const handleDeleteItem = async (itemName: string) => {
     const itemKey = `delete-${itemName}`;
     
@@ -489,39 +489,24 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       // Имитируем задержку (в реальном приложении здесь будет API вызов)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Удаляем только 1 предмет из characterData.equipment
+      // Удаляем всю стопку предметов из characterData.equipment
       const newEquipment = [...(characterData.equipment || [])];
       const cleanItemName = getCleanItemName(itemName);
       
-      // Находим первый предмет с таким именем
-      const itemIndex = newEquipment.findIndex(item => {
+      // Находим все предметы с таким именем и удаляем их полностью
+      const filteredEquipment = newEquipment.filter(item => {
         const itemNameToCheck = typeof item === 'string' ? item : (item.name || String(item));
         const cleanItemNameToCheck = getCleanItemName(itemNameToCheck);
-        return cleanItemNameToCheck === cleanItemName;
+        return cleanItemNameToCheck !== cleanItemName;
       });
 
-      if (itemIndex !== -1) {
-        const item = newEquipment[itemIndex];
-        
-        if (typeof item === 'object' && item.quantity && item.quantity > 1) {
-          // Если это объект с количеством больше 1, уменьшаем количество
-          newEquipment[itemIndex] = {
-            ...item,
-            quantity: item.quantity - 1
-          };
-        } else {
-          // Если это строка или объект с количеством 1, удаляем полностью
-          newEquipment.splice(itemIndex, 1);
-        }
-      }
-
       // Обновляем только equipment (рюкзак), не затрагивая экипировку
-      updateEquipment(newEquipment);
+      updateEquipment(filteredEquipment);
 
       // Показываем toast с успехом
       toast({
         title: "Предмет удален!",
-        description: `1x ${getCleanItemName(itemName)} удален из рюкзака`,
+        description: `${getCleanItemName(itemName)} удален из рюкзака`,
         duration: 3000,
       });
       
