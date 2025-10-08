@@ -62,7 +62,7 @@ export default function HealthBlock({
       }}
     >
       {/* Левая колонка */}
-<div className="flex flex-col items-center justify-center space-y-2 mt-20 ml-3">
+<div className="flex flex-col items-center justify-center space-y-2 mt-20 ml-3 relative z-10">
   <button
     onClick={heal}
     className="w-20 h-6 text-green-500 hover:text-green-400 hover:border-green-400 hover:bg-green-800/95 border border-green-500 text-xs font-bold uppercase rounded flex items-center justify-center bg-transparent"
@@ -90,6 +90,7 @@ export default function HealthBlock({
 
       {/* Правая колонка */}
       <div
+        className="relative z-10"
         style={{
           gridColumn: 2,
           gridRow: 1,

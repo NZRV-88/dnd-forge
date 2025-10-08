@@ -822,7 +822,7 @@ export default function CharacterList() {
                     </div>
 
                     {/* Skills (право от спасбросков) */}
-                    <div className="flex flex-col justify-between">
+                    <div className="flex flex-col justify-between -ml-[6px]">
                         <div className="flex-1 pt-0 pb-0">
                             <Skills
                                 stats={finalStats}
@@ -855,32 +855,32 @@ export default function CharacterList() {
 
                         {/* Attacks (под инициативой/AC) */}
                         <div>
-                <Attacks 
-                    attacks={[]} 
-                    equipped={char?.equipped}
-                    stats={finalStats}
-                    proficiencyBonus={proficiencyBonus}
-                    classKey={char?.basics?.class}
-                    level={char?.basics?.level}
-                    onRoll={addRoll}
-                    onSwitchWeaponSlot={switchWeaponSlot}
-                    onUpdateEquipped={updateEquipped}
-                    onUpdateEquipment={updateEquipment}
-                    onUpdateCurrency={updateCurrency}
-                    setDraft={(updater) => {
-                        console.log('setDraft called with char:', char);
-                        const updated = updater(char);
-                        console.log('setDraft updated char:', updated);
-                        // Автоматически сохраняем изменения в БД
-                        setTimeout(() => {
-                            saveAllWithData(updated);
-                        }, 50);
-                    }}
-                    char={char}
-                    setChar={setChar}
-                    onSaveAll={saveAll}
-                    characterData={characterData}
-                />
+                            <Attacks 
+                                attacks={[]} 
+                                equipped={char?.equipped}
+                                stats={finalStats}
+                                proficiencyBonus={proficiencyBonus}
+                                classKey={char?.basics?.class}
+                                level={char?.basics?.level}
+                                onRoll={addRoll}
+                                onSwitchWeaponSlot={switchWeaponSlot}
+                                onUpdateEquipped={updateEquipped}
+                                onUpdateEquipment={updateEquipment}
+                                onUpdateCurrency={updateCurrency}
+                                setDraft={(updater) => {
+                                    console.log('setDraft called with char:', char);
+                                    const updated = updater(char);
+                                    console.log('setDraft updated char:', updated);
+                                    // Автоматически сохраняем изменения в БД
+                                    setTimeout(() => {
+                                        saveAllWithData(updated);
+                                    }, 50);
+                                }}
+                                char={char}
+                                setChar={setChar}
+                                onSaveAll={saveAll}
+                                characterData={characterData}
+                            />
                         </div>
                     </div>
                 </div>

@@ -37,9 +37,20 @@ export default function AbilityScoresEditable({ stats, onRoll }: Props) {
               size="medium"
               className="relative flex flex-col items-center text-center"
             >
+              {/* Фон под рамкой */}
+              <div 
+                className="absolute -top-[2px] left-1 right-1 bottom-0 -z-50 opacity-50"
+                style={{
+                  backgroundImage: `url('/frames/abilityFrameBg.svg')`,
+                  backgroundSize: '100% 100%',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat'
+                }}
+              />
+              
               {/* Название характеристики над внутренней рамкой */}
               <div
-                className="absolute top-[16%] left-1/2 -translate-x-1/2 text-center font-bold text-gray-300 leading-tight px-1"
+                className="absolute top-[16%] left-1/2 -translate-x-1/2 text-center font-bold text-gray-300 leading-tight px-1 z-10"
                 style={{
                   width: "90%",
                   fontSize: "9px",
@@ -52,7 +63,7 @@ export default function AbilityScoresEditable({ stats, onRoll }: Props) {
 
               {/* Модификатор в центре с рамкой */}
               <div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center border-2 rounded-md w-[70px] h-[35px] -mt-[3px] flex items-center justify-center z-20 cursor-pointer"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center border-2 rounded-md w-[70px] h-[35px] -mt-[3px] flex items-center justify-center z-10 cursor-pointer"
                 style={{
                   fontSize: "24px",
                   fontWeight: "bold",
@@ -76,7 +87,7 @@ export default function AbilityScoresEditable({ stats, onRoll }: Props) {
 
               {/* Значение характеристики внизу */}
               <div
-                className="absolute bottom-[17%] left-1/2 -translate-x-1/2 text-center font-bold text-gray-400"
+                className="absolute bottom-[17%] left-1/2 -translate-x-1/2 text-center font-bold text-gray-400 z-10"
                 style={{
                   fontSize: "14px",
                   textShadow: "1px 1px 2px rgba(0,0,0,0.8)"

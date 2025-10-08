@@ -5705,6 +5705,19 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         backgroundPosition: "center top",
       }}
     >
+      {/* Фон под рамкой */}
+      <div 
+        className="absolute top-0 left-1 right-1 bottom-0 -z-50 opacity-50"
+        style={{
+          backgroundImage: `url('/frames/actionFrameBg.svg')`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          transform: 'scaleY(1.1)',
+          transformOrigin: 'center'
+        }}
+      />
+      
       {/* Контент внутри рамки */}
       <div className="relative z-10 px-4 pt-6 pb-4 h-full flex flex-col">
         {/* Вкладки в левом верхнем углу */}

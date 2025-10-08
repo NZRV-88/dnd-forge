@@ -694,6 +694,20 @@ export default function DynamicFrame({
                     ...style
                   }}
                 >
+                  {/* Фон под рамкой для health frame */}
+                  {frameType === 'health' && (
+                    <div 
+                      className="absolute inset-0 -z-50 opacity-50 -mt-[13px] ml-[2px]"
+                      style={{
+                        backgroundImage: `url('/frames/healthFrameBg.svg')`,
+                        backgroundSize: '100% 100%',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        transform: 'scaleX(1.01) scaleY(1.35)',
+                        transformOrigin: 'center'
+                      }}
+                    />
+                  )}
                   {children}
                 </div>
               );

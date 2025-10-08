@@ -444,59 +444,59 @@ export default function ClassPick() {
                         </h1>
                         <div className="text-[15px] font-semibold">
                             УРОВЕНЬ ПЕРСОНАЖА: <span className="text-primary">{draft.basics.level}</span>
-                        </div>
                     </div>
+                </div>
                 )}
 
                 {/* Class grid */}
                 <div className={hasSelectedClass ? "flex gap-4" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
                     {/* Карточка класса - фиксированного размера */}
                     <div className={hasSelectedClass ? "w-80" : "contents"}>
-                        {ALL_CLASSES.map((k) => {
-                            const c = CLASS_CATALOG.find((x) => x.key === k)!;
-                            const isSelected = draft.basics.class === k;
+                    {ALL_CLASSES.map((k) => {
+                        const c = CLASS_CATALOG.find((x) => x.key === k)!;
+                        const isSelected = draft.basics.class === k;
                             
                             // Если класс выбран, показываем только его
                             if (hasSelectedClass && !isSelected) return null;
-                           
-                            return (
-                                <button
-                                    key={k}
+                       
+                        return (
+                            <button
+                                key={k}
                                     onClick={() => handleClassClick(k)}
                                     disabled={isSelected}
                                     className={`text-left rounded-xl border bg-card transition hover:shadow-md hover:scale-[1.01] relative min-h-[100px] ${isSelected
-                                            ? "border-2 border-primary shadow-lg scale-[1.02] bg-gradient-to-b from-primary/5 to-transparent"
-                                            : ""
-                                        }`}
-                                >
-                                    <div className="flex items-center">
-                                        <img
-                                            src={`/assets/class-avatars/${c.key}.png`}
-                                            alt={CLASS_LABELS[c.key] || c.key}
-                                            className="ml-2 h-20 w-20 object-cover rounded-md flex-shrink-0 border"
-                                            onError={(e) => {
-                                                e.currentTarget.src = "/assets/class-avatars/default.png";
-                                            }}
-                                        />
-                                        <div className="flex-1 pl-3 pr-2 py-4">
-                                            <div className="flex items-center justify-between">
-                                                <h3
-                                                    className={`font-medium tracking-wide ${isSelected ? "text-primary font-bold" : ""
-                                                        }`}
-                                                >
-                                                    {CLASS_LABELS[c.key] || c.key}
-                                                </h3>
-                                                {isSelected && (
-                                                    <div className="absolute right-2 top-2 text-primary">
-                                                        <Icons.Crown className="w-5 h-5" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <p className="mt-1 text-sm text-muted-foreground">
-                                                {c.desc}
-                                            </p>
+                                        ? "border-2 border-primary shadow-lg scale-[1.02] bg-gradient-to-b from-primary/5 to-transparent"
+                                        : ""
+                                    }`}
+                            >
+                                <div className="flex items-center">
+                                    <img
+                                        src={`/assets/class-avatars/${c.key}.png`}
+                                        alt={CLASS_LABELS[c.key] || c.key}
+                                        className="ml-2 h-20 w-20 object-cover rounded-md flex-shrink-0 border"
+                                        onError={(e) => {
+                                            e.currentTarget.src = "/assets/class-avatars/default.png";
+                                        }}
+                                    />
+                                    <div className="flex-1 pl-3 pr-2 py-4">
+                                        <div className="flex items-center justify-between">
+                                            <h3
+                                                className={`font-medium tracking-wide ${isSelected ? "text-primary font-bold" : ""
+                                                    }`}
+                                            >
+                                                {CLASS_LABELS[c.key] || c.key}
+                                            </h3>
+                                            {isSelected && (
+                                                <div className="absolute right-2 top-2 text-primary">
+                                                    <Icons.Crown className="w-5 h-5" />
+                                                </div>
+                                            )}
                                         </div>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            {c.desc}
+                                        </p>
                                     </div>
+                                </div>
                                     
                                     {/* Красный крестик для удаления */}
                                     {isSelected && (
@@ -516,9 +516,9 @@ export default function ClassPick() {
                                             <Icons.X className="w-4 h-4" />
                                         </div>
                                     )}
-                                </button>
-                            );
-                        })}
+                            </button>
+                        );
+                    })}
                     </div>
 
                     {/* Кнопки уровня справа от карточки класса */}
@@ -596,7 +596,7 @@ export default function ClassPick() {
                         <CardContent className="space-y-6 pt-6">
                             {/* Заголовки вкладок */}
                             <div className="flex items-center gap-6 mb-3">
-                                <button
+                                        <button
                                     onClick={handleFeaturesClick}
                                     className={`flex items-center gap-2 text-base font-bold uppercase tracking-wider border-l-2 pl-2 transition-colors ${
                                         activeTab === 'features'
@@ -610,9 +610,9 @@ export default function ClassPick() {
                                             activeTab === 'features' && !isFeaturesCollapsed ? 'rotate-180' : ''
                                         }`} 
                                     />
-                                </button>
+                                        </button>
                                 
-                                <button
+                                        <button
                                     onClick={handleSpellsClick}
                                     className={`flex items-center gap-2 text-base font-bold uppercase tracking-wider border-l-2 pl-2 transition-colors ${
                                         activeTab === 'spells'
@@ -626,29 +626,29 @@ export default function ClassPick() {
                                             activeTab === 'spells' && !isSpellsCollapsed ? 'rotate-180' : ''
                                         }`} 
                                     />
-                                </button>
+                                        </button>
                             </div>
-                            
+
                             {/* Контент вкладки особенностей */}
                             {activeTab === 'features' && !isFeaturesCollapsed && (
-                                <div className="grid grid-cols-1 gap-4">
-                                    {feats.map((f, idx) => (
-                                        <FeatureBlock
-                                            key={f.uniqueId}
-                                            name={f.name}
-                                            desc={f.desc}
-                                            featureLevel={f.featureLevel}
-                                            source="class"
-                                            idx={idx}
-                                            choices={f.choices}
-                                            originalIndex={f.originalIndex}
-                                            originalLevel={f.originalLevel}
-                                            isSubclass={f.isSubclass}
-                                            uniqueId={f.uniqueId}
+                            <div className="grid grid-cols-1 gap-4">
+                                {feats.map((f, idx) => (
+                                    <FeatureBlock
+                                        key={f.uniqueId}
+                                        name={f.name}
+                                        desc={f.desc}
+                                        featureLevel={f.featureLevel}
+                                        source="class"
+                                        idx={idx}
+                                        choices={f.choices}
+                                        originalIndex={f.originalIndex}
+                                        originalLevel={f.originalLevel}
+                                        isSubclass={f.isSubclass}
+                                        uniqueId={f.uniqueId}
                                             classInfo={info}
-                                        />
-                                    ))}
-                                </div>
+                                    />
+                                ))}
+                            </div>
                             )}
                             
                             {/* Контент вкладки заклинаний */}
@@ -703,8 +703,8 @@ export default function ClassPick() {
                                                                                         <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
                                                                                             Р
                                                                                         </span>
-                                                                                    )}
-                                                                                </div>
+                )}
+            </div>
                                                                             </div>
                                                                             <div className="text-sm text-muted-foreground mt-1">
                                                                                 {spell.isLegacy ? (
@@ -749,8 +749,8 @@ export default function ClassPick() {
                                                                             </div>
                                                                         </div>
                                                                     )}
-                                                                </div>
-                                                            );
+        </div>
+    );
                                                         })}
                                                     </div>
                                                 )}
@@ -825,7 +825,7 @@ export default function ClassPick() {
                                                 <div className="py-4 space-y-2">
                                                     {getFilteredSpells().map((spell, index) => {
                                                         const isExpanded = expandedSpells.has(index);
-                                                        return (
+    return (
                                                             <div key={index} className="border rounded-lg bg-muted/30">
                                                         {/* Шапка карточки */}
                                                         <div className="flex items-center justify-between p-3">
@@ -860,7 +860,7 @@ export default function ClassPick() {
                                                                 </div>
                                                             </button>
                                                             <div className="flex items-center gap-2 ml-3">
-                                                                <button
+                <button
                                                                     onClick={() => {
                                                                         if (draft.basics.class) {
                                                                             if (preparedSpells.includes(spell.key)) {
@@ -889,17 +889,17 @@ export default function ClassPick() {
                                                                     ) : (
                                                                         'ПОДГОТОВИТЬ'
                                                                     )}
-                                                                </button>
-                                                                        <button
+                </button>
+                <button
                                                                             onClick={() => toggleSpellExpansion(index)}
                                                                             className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
                                                                             title={isExpanded ? "Свернуть" : "Развернуть"}
-                                                                        >
+                >
                                                                             <Icons.ChevronDown 
                                                                                 className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
                                                                             />
-                                                                        </button>
-                                                                    </div>
+                </button>
+            </div>
                                                                 </div>
                                                                 
                                                                 {/* Описание заклинания */}

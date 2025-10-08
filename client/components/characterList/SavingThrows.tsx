@@ -88,6 +88,18 @@ export default function SavingThrows({ stats, onRoll }: Props) {
       size="custom"
       className="relative p-4 text-gray-300 w-[300px]"
     >
+      {/* Фон под рамкой */}
+      <div 
+        className="absolute top-1 left-0 right-0 bottom-1 -z-50 opacity-50"
+        style={{
+          backgroundImage: `url('/frames/STFrameBg.svg')`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          transform: 'scaleX(1.14)'
+        }}
+      />
+      
       <div className="grid grid-cols-2 gap-2 mb-4 relative z-10">
         {Object.entries(ABILITIES).map(([key, label]) => {
           const value = stats[key] || 0;
@@ -127,7 +139,7 @@ export default function SavingThrows({ stats, onRoll }: Props) {
         })}
       </div>
 
-      <div className="text-center text-gray-300 uppercase text-sm font-semibold -mt-2">
+      <div className="text-center text-gray-300 uppercase text-sm font-semibold -mt-2 z-10">
         СПАСБРОСКИ
       </div>
     </DynamicFrame>

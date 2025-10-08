@@ -294,6 +294,17 @@ export default function Proficiencies({ data }: ProficienciesProps) {
                 backgroundPosition: "center",
             }}
         >
+            {/* Фон под рамкой */}
+            <div 
+                className="absolute inset-2 -z-50 opacity-50"
+                style={{
+                    backgroundImage: `url('/frames/proficiencyFrameBg.svg')`,
+                    backgroundSize: '100% 100%',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                }}
+            />
+            
             {/* Контент внутри рамки */}
             <div className="relative z-10 px-4 pt-8 pb-6 pl-6">
                 {renderBlock("БРОНЯ", categories.armor, false, getArmorSource)}
@@ -313,7 +324,7 @@ export default function Proficiencies({ data }: ProficienciesProps) {
             </div>
 
             {/* Заголовок + шестерёнка снизу */}
-            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold -mt-2">
+            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold -mt-2 z-10">
                 ВЛАДЕНИЯ
                 <button
                     onClick={() => setIsOpen(true)}

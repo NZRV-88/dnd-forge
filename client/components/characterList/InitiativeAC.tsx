@@ -24,11 +24,22 @@ export default function InitiativeAC({ initiative, dex, ac, onRoll }: Props) {
 		  height: "140px",
 		}}
 	  >
-		<div className="absolute top-7 text-[10px] font-bold text-gray-400 -mt-3">
+		{/* Фон под рамкой */}
+		<div 
+		  className="absolute inset-[3px] -z-50 opacity-50"
+		  style={{
+			backgroundImage: `url('/frames/initiativeFrameBg.svg')`,
+			backgroundSize: '100% 100%',
+			backgroundPosition: 'center',
+			backgroundRepeat: 'no-repeat'
+		  }}
+		/>
+		
+		<div className="absolute top-7 text-[10px] font-bold text-gray-400 -mt-3 z-10">
 		  ИНИЦИАТИВА
 		</div>
 		<div 
-			className="w-16 h-12 inset-0 flex items-center justify-center text-2xl font-bold border-2 rounded-md transition-colors cursor-pointer z-20"
+			className="w-16 h-12 inset-0 flex items-center justify-center text-2xl font-bold border-2 rounded-md transition-colors cursor-pointer z-10"
 			style={{
 				borderColor: `${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`,
 				backgroundColor: 'transparent'
@@ -56,13 +67,24 @@ export default function InitiativeAC({ initiative, dex, ac, onRoll }: Props) {
 		  height: "140px",
 		}}
 	  >
-		<div className="absolute top-10 text-[10px] font-bold text-gray-400">
+		{/* Фон под рамкой */}
+		<div 
+		  className="absolute inset-[10px] -z-50 opacity-50"
+		  style={{
+			backgroundImage: `url('/frames/ACFrameBg.svg')`,
+			backgroundSize: '100% 100%',
+			backgroundPosition: 'center',
+			backgroundRepeat: 'no-repeat'
+		  }}
+		/>
+		
+		<div className="absolute top-10 text-[10px] font-bold text-gray-400 z-10">
 		  КЛАСС
 		</div>
-		<div className="absolute inset-0 flex items-center justify-center text-3xl font-bold">
+		<div className="absolute inset-0 flex items-center justify-center text-3xl font-bold z-10">
 		  {ac ?? "--"}
 		</div>
-		<div className="absolute bottom-9 text-[10px] font-bold text-gray-400">
+		<div className="absolute bottom-9 text-[10px] font-bold text-gray-400 z-10">
 		  БРОНИ
 		</div>
 	  </DynamicFrame>

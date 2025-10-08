@@ -101,11 +101,22 @@ export default function Skills({
     <DynamicFrame
       frameType="skills"
       size="custom"
-      className="relative w-[310px] min-h-[600px]"
+      className="relative w-[310px] h-[810px]"
     >
+      {/* Фон под рамкой */}
+      <div 
+        className="absolute top-0 -left-[5px] -right-[6px] bottom-0 -z-50 opacity-50"
+        style={{
+          backgroundImage: `url('/frames/skillFrameBg.svg')`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
+      
       {/* Контент */}
       <div
-        className="flex flex-col px-12 pt-3 pb-8"
+        className="flex flex-col px-12 pt-3 pb-8 z-10"
       >
         {sortedSkills.map(([key, { ability, ru }], index) => {
           const value = stats[ability] || 0;
@@ -218,7 +229,7 @@ export default function Skills({
       </div>
 
       {/* Заголовок снизу - внутри рамки, но с абсолютным позиционированием */}
-      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center text-gray-400 text-xs font-bold uppercase">
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center text-gray-400 text-xs font-bold uppercase z-10">
         НАВЫКИ
       </div>
     </DynamicFrame>

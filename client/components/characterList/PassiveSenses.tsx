@@ -98,6 +98,17 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
             size="custom"
             className="relative p-4 text-gray-300 w-[300px]"
         >
+            {/* Фон под рамкой */}
+            <div 
+                className="absolute inset-[2px] -z-50 opacity-50"
+                style={{
+                    backgroundImage: `url('/frames/STFrameBg.svg')`,
+                    backgroundSize: '100% 100%',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                }}
+            />
+            
             <div className="relative z-10 space-y-2">
                 {/* Чувства */}
                 <div className="relative w-full h-[35px] flex items-center px-2">
@@ -144,7 +155,7 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
             </div>
 
             {/* Заголовок + шестерёнка */}
-            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold mt-4">
+            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold mt-4 z-10">
                 ЧУВСТВА
                 <button
                     onClick={() => setIsOpen(true)}
