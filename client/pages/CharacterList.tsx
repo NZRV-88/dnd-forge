@@ -278,7 +278,7 @@ export default function CharacterList() {
         const result = getAllCharacterData(char);
         console.log('CharacterList: characterData result:', result);
         return result;
-    }, [char?.basics?.currency, char?.basics?.equipment]);
+    }, [char]);
 
     // skill profs set (normalized)
     const skillProfs: string[] = Array.isArray(char?.skills) ? char.skills : [];
@@ -476,6 +476,32 @@ export default function CharacterList() {
         } else if (type === "Заклинание") {
             // Для заклинаний: название заклинания uppercase: ЗАКЛИНАНИЕ: бросок
             entry = `${desc.toUpperCase()}: ЗАКЛИНАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+        } else if (type === "Лечение") {
+            // Для лечения: используем правильный кубик лечения
+            if (damageString) {
+                // Если есть строка урона, парсим её и добавляем переданный модификатор
+                const { diceRoll: healDiceRoll, individualRolls: healIndividualRolls, dice: healDice } = rollDamageDice(damageString);
+                const baseModifier = rollDamageDice(damageString).modifier;
+                const totalModifier = baseModifier + bonus; // Добавляем переданный модификатор к базовому
+                
+                dice = healDice;
+                diceRoll = healDiceRoll;
+                modifier = totalModifier;
+                result = healDiceRoll + totalModifier;
+                individualRolls = healIndividualRolls;
+                
+                if (totalModifier !== 0) {
+                    const individualRollsStr = healIndividualRolls.join('+');
+                    const modStr = totalModifier >= 0 ? `+${totalModifier}` : `${totalModifier}`;
+                    entry = `${desc.toUpperCase()}: ЛЕЧЕНИЕ: ${dice}${modStr} = ${individualRollsStr}${modStr} = ${result}`;
+                } else {
+                    const individualRollsStr = healIndividualRolls.join('+');
+                    entry = `${desc.toUpperCase()}: ЛЕЧЕНИЕ: ${dice} = ${individualRollsStr} = ${result}`;
+                }
+            } else {
+                // Fallback на d20 если нет строки лечения
+                entry = `${desc.toUpperCase()}: ЛЕЧЕНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
+            }
         } else {
             // Для характеристик
             entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;

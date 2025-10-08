@@ -12,9 +12,11 @@ import { Tools } from "@/data/items/tools";
 import { EQUIPMENT_PACKS } from "@/data/items/equipment-packs";
 import { getWeaponMasteryByKey } from "@/data/items/weapon-mastery";
 import { getWeaponPropertyByName } from "@/data/items/weapons";
+import { ABILITIES } from "@/data/abilities";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X, Zap, Wand, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useCharacter } from "@/store/character";
 
 type Props = {
   attacks: { name: string; bonus: number; damage: string }[];
@@ -46,6 +48,197 @@ type Props = {
 
 type TabType = "actions" | "spells" | "inventory" | "features";
 type ActionType = "attack" | "action" | "bonus" | "reaction";
+
+// Функция для отображения карточки заклинания
+const renderSpellCard = (spell: any, onRemove?: () => void, onAdd?: () => void, isPrepared?: boolean, isLearned?: boolean, frameColor?: string, disabled?: boolean) => {
+  return (
+    <div className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <div className="w-full p-3 bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium">{spell.name}</span>
+                {spell.needConcentration && (
+                  <span 
+                    className="text-gray-400 text-xs px-1 py-0.5 rounded font-medium hover:text-gray-300 transition-colors cursor-help relative group border border-gray-500"
+                  >
+                    К
+                    {/* Tooltip для концентрации */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] whitespace-nowrap">
+                      Концентрация
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800"></div>
+                    </div>
+                  </span>
+                )}
+                {spell.isRitual && (
+                  <span 
+                    className="text-gray-400 text-xs px-1 py-0.5 rounded font-medium hover:text-gray-300 transition-colors cursor-help relative group border border-gray-500"
+                  >
+                    Р
+                    {/* Tooltip для ритуала */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] whitespace-nowrap">
+                      Ритуал
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800"></div>
+                    </div>
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {(onRemove || onAdd) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (disabled) return;
+                      if (onRemove && (isPrepared || isLearned)) {
+                        onRemove();
+                      } else if (onAdd && !isPrepared && !isLearned) {
+                        onAdd();
+                      } else if (onRemove) {
+                        onRemove();
+                      }
+                    }}
+                    disabled={disabled}
+                    className={`w-6 h-6 bg-transparent border rounded flex items-center justify-center transition-colors relative group ${
+                      disabled 
+                        ? 'opacity-50' 
+                        : 'hover:bg-red-500/20'
+                    }`}
+                    style={{
+                      borderColor: disabled 
+                        ? '#6B7280' 
+                        : isPrepared || isLearned 
+                          ? '#ef4444' 
+                          : (frameColor || '#6B7280'),
+                      color: disabled 
+                        ? '#6B7280' 
+                        : isPrepared || isLearned 
+                          ? '#ef4444' 
+                          : (frameColor || '#6B7280')
+                    }}
+                  >
+                    {isPrepared || isLearned ? (
+                      <X className="w-3 h-3" />
+                    ) : (
+                      <Plus className="w-3 h-3" />
+                    )}
+                    {/* Tooltip для кнопки */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] whitespace-nowrap">
+                      {disabled 
+                        ? "Лимит исчерпан" 
+                        : isPrepared || isLearned 
+                          ? "Убрать" 
+                          : "Добавить"
+                      }
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800"></div>
+                    </div>
+                  </button>
+                )}
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </div>
+            </div>
+            <div className="text-xs text-gray-400 flex items-center gap-1">
+              {spell.isLegacy && (
+                <span style={{ color: getFrameColor(frameColor) }}>Legacy</span>
+              )}
+              {spell.isLegacy && <span className="flex items-center">•</span>}
+              <span className="flex items-center">{spell.level === 0 ? 'Заговор' : `${spell.level}-й уровень`}</span>
+              <span className="flex items-center">•</span>
+              <span className="flex items-center">{spell.school}</span>
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-2 text-xs space-y-2">
+            {/* Категория в самом верху */}
+            <div className="text-gray-400 mb-2">
+              {spell.level === 0 ? 'Заговор' : `Заклинание ${spell.level} уровня`}
+            </div>
+
+            {/* Основные характеристики */}
+            <div className="space-y-1">
+              <div className="text-gray-400">
+                <span className="font-medium text-gray-200">Источник:</span> {spell.source || 'PHB'}
+              </div>
+              
+              <div className="text-gray-400">
+                <span className="font-medium text-gray-200">Школа:</span> {spell.school}
+              </div>
+              
+              <div className="text-gray-400">
+                <span className="font-medium text-gray-200">Время сотворения:</span> {Array.isArray(spell.castingTime) ? spell.castingTime.join(', ') : spell.castingTime}
+              </div>
+              
+              <div className="text-gray-400">
+                <span className="font-medium text-gray-200">Дистанция:</span> {spell.range}
+              </div>
+              
+              <div className="text-gray-400">
+                <span className="font-medium text-gray-200">Компоненты:</span> {Array.isArray(spell.components) ? spell.components.join(', ') : spell.components}
+              </div>
+              
+              <div className="text-gray-400">
+                <span className="font-medium text-gray-200">Длительность:</span> {spell.duration}
+              </div>
+
+              {spell.heal && (
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Лечение:</span> {spell.heal}
+                </div>
+              )}
+
+              {spell.damage && (
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Урон:</span> {spell.damage.dice} {spell.damage.type}
+                </div>
+              )}
+
+              {spell.save && (
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Спасбросок:</span> {spell.save}
+                </div>
+              )}
+            </div>
+
+            {/* Разделитель */}
+            <div className="border-t border-gray-600 my-2"></div>
+
+            {/* Описание */}
+            {spell.desc && (
+              <div className="text-gray-300">
+                {spell.desc.split('\n').map((paragraph: string, index: number) => {
+                  // Обрабатываем курсив
+                  const processItalic = (text: string) => {
+                    return text.split(/(\*[^*]+\*)/g).map((part, i) => {
+                      if (part.startsWith('*') && part.endsWith('*')) {
+                        return (
+                          <em key={i} className="italic font-semibold">
+                            {part.slice(1, -1)}
+                          </em>
+                        );
+                      }
+                      return part;
+                    });
+                  };
+
+                  // Определяем отступы по количеству пробелов в начале строки
+                  const indent = paragraph.match(/^(\s*)/)?.[1]?.length || 0;
+                  const indentClass = indent > 0 ? `ml-${Math.min(indent * 2, 16)}` : '';
+
+                  return (
+                    <div key={index} className={`${indentClass} ${index > 0 ? 'mt-1' : ''}`}>
+                      {processItalic(paragraph.trim())}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+};
 
 // Импортируем FRAME_COLORS из DynamicFrame
 const FRAME_COLORS = {
@@ -116,7 +309,13 @@ const getActionFrameSvg = (color: string) => {
 </svg>`;
 };
 
-export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onUpdateCurrency, setDraft, onSaveAll, characterData, char, setChar, draft }: Props) {
+export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onUpdateCurrency, setDraft, onSaveAll, characterData, char, setChar }: Props) {
+  console.log('Attacks component rendered with:', {
+    characterData,
+    char,
+    classKey,
+    level
+  });
   const { frameColor } = useFrameColor();
   const [criticalHits, setCriticalHits] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabType>("actions");
@@ -150,8 +349,19 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loadingItems, setLoadingItems] = useState<Set<string>>(new Set());
   const [loadingPurchase, setLoadingPurchase] = useState<Set<string>>(new Set());
+  
+  // Состояние для поиска инвентаря
+  const [inventorySearchFilter, setInventorySearchFilter] = useState('');
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('all');
   const [isItemDetailsOpen, setIsItemDetailsOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [isSpellDetailsOpen, setIsSpellDetailsOpen] = useState(false);
+  const [selectedSpell, setSelectedSpell] = useState<any>(null);
+  const [isSpellSettingsOpen, setIsSpellSettingsOpen] = useState(false);
+  const [isPreparedSpellsOpen, setIsPreparedSpellsOpen] = useState(false);
+  const [isAddSpellsOpen, setIsAddSpellsOpen] = useState(false);
+  const [isLearnSpellsOpen, setIsLearnSpellsOpen] = useState(false);
+  const [expandedSpells, setExpandedSpells] = useState<Set<number>>(new Set());
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
   
   // Состояние для подсказки мастерства
@@ -170,25 +380,41 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const [spellSearch, setSpellSearch] = useState("");
   const [spellLevelFilter, setSpellLevelFilter] = useState<number | "all">("all");
   
+  // Отдельные переменные для поиска в разных блоках
+  const [addSpellSearch, setAddSpellSearch] = useState("");
+  const [addSpellLevelFilter, setAddSpellLevelFilter] = useState<number | "all">("all");
+  const [learnSpellSearch, setLearnSpellSearch] = useState("");
+  const [learnSpellLevelFilter, setLearnSpellLevelFilter] = useState<number | "all">("all");
+  
+  // Состояние для tooltip'ов кнопок
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
+  const [buttonPosition, setButtonPosition] = useState<{ x: number; y: number } | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  // Получаем функции для работы со слотами заклинаний из контекста
+  const { useSpellSlot: contextUseSpellSlot, freeSpellSlot: contextFreeSpellSlot, draft, setChosenSpells, setLearnedSpells, saveToSupabase } = useCharacter();
+  
   // ===== УТИЛИТАРНЫЕ ФУНКЦИИ =====
   
   // Функция для получения всех заклинаний персонажа
   const getAllCharacterSpells = () => {
     const allSpells: any[] = [];
+    const addedKeys = new Set<string>(); // Для предотвращения дублирования
+    
     
     // Добавляем заговоры (0 уровень) - только те, что действительно заговоры
     if (characterData?.spells?.length > 0) {
       characterData.spells.forEach((spellKey: string) => {
-        const spellData = getSpellData(spellKey);
-        if (spellData) {
-          // Проверяем, является ли заклинание заговором по его уровню
-          const isCantrip = spellData.level === 0;
-          allSpells.push({
-            ...spellData,
-            key: spellKey,
-            level: spellData.level || 0, // Используем уровень из данных заклинания
-            isCantrip: isCantrip
-          });
+        if (!addedKeys.has(spellKey)) {
+          const spellData = getSpellData(spellKey);
+          if (spellData && spellData.level === 0) { // Добавляем только заговоры (0 уровень)
+            allSpells.push({
+              ...spellData,
+              key: spellKey,
+              level: 0,
+              isCantrip: true
+            });
+            addedKeys.add(spellKey);
+          }
         }
       });
     }
@@ -196,14 +422,36 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     // Добавляем подготовленные заклинания (1+ уровень)
     if (draft?.basics?.class && draft?.chosen?.spells?.[draft.basics.class]) {
       draft.chosen.spells[draft.basics.class].forEach((spellKey: string) => {
-        const spellData = getSpellData(spellKey);
-        if (spellData) {
-          allSpells.push({
-            ...spellData,
-            key: spellKey,
-            level: spellData.level || 1, // Используем уровень из данных заклинания
-            isCantrip: false
-          });
+        if (!addedKeys.has(spellKey)) {
+          const spellData = getSpellData(spellKey);
+          if (spellData) {
+            allSpells.push({
+              ...spellData,
+              key: spellKey,
+              level: spellData.level || 1, // Используем уровень из данных заклинания
+              isCantrip: false
+            });
+            addedKeys.add(spellKey);
+          }
+        }
+      });
+    }
+    
+    // Добавляем выученные заклинания
+    if (learnedSpells.length > 0) {
+      learnedSpells.forEach((spellKey: string) => {
+        if (!addedKeys.has(spellKey)) {
+          const spellData = getSpellData(spellKey);
+          if (spellData) {
+            allSpells.push({
+              ...spellData,
+              key: spellKey,
+              level: spellData.level,
+              isCantrip: spellData.level === 0,
+              isLearned: true // Помечаем как выученное
+            });
+            addedKeys.add(spellKey);
+          }
         }
       });
     }
@@ -211,8 +459,30 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return allSpells;
   };
   
-  // Функция для фильтрации заклинаний
-  const getFilteredSpells = () => {
+  // Функция для фильтрации заклинаний (только для блока "Добавить Заклинание")
+  const getFilteredSpells = (search: string = addSpellSearch, levelFilter: number | "all" = addSpellLevelFilter) => {
+    let spells = getAvailableSpells();
+    
+    // Фильтр по поиску
+    if (search.trim()) {
+      spells = spells.filter(spell => 
+        spell.name.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    // Фильтр по уровню
+    if (levelFilter !== "all") {
+      spells = spells.filter(spell => spell.level === levelFilter);
+    }
+    
+    // Сортировка по алфавиту
+    spells.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    
+    return spells;
+  };
+
+  // Функция для фильтрации заклинаний на вкладке "Заклинания"
+  const getFilteredCharacterSpells = () => {
     let spells = getAllCharacterSpells();
     
     // Фильтр по поиску
@@ -227,14 +497,100 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       spells = spells.filter(spell => spell.level === spellLevelFilter);
     }
     
+    // Сортировка по алфавиту
+    spells.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    
     return spells;
   };
   
-  // Функция для получения доступных уровней заклинаний
+  // Функция для получения доступных уровней заклинаний (для блока "Добавить Заклинание")
   const getAvailableSpellLevels = () => {
+    const spells = getAvailableSpells();
+    const levels = new Set(spells.map(spell => spell.level));
+    return Array.from(levels).sort((a, b) => a - b);
+  };
+
+  // Функция для получения доступных уровней заклинаний (для вкладки "Заклинания")
+  const getCharacterSpellLevels = () => {
     const spells = getAllCharacterSpells();
     const levels = new Set(spells.map(spell => spell.level));
     return Array.from(levels).sort((a, b) => a - b);
+  };
+
+  // Функция для проверки доступности слотов заклинаний
+  const hasAvailableSlots = (spellLevel: number) => {
+    // Заговоры (0 уровень) не требуют слотов
+    if (spellLevel === 0) {
+      return true;
+    }
+    
+    const totalSlots = getSpellSlotsForLevel(spellLevel);
+    const usedSlots = draft?.usedSpellSlots?.[spellLevel] || 0;
+    return usedSlots < totalSlots;
+  };
+
+  // Функция для использования слота заклинания
+  const useSpellSlot = (spellLevel: number) => {
+    // Заговоры (0 уровень) не используют слоты
+    if (spellLevel === 0) {
+      return;
+    }
+    
+    if (hasAvailableSlots(spellLevel)) {
+      contextUseSpellSlot(spellLevel);
+    }
+  };
+
+  // Функция для освобождения слота заклинания
+  const freeSpellSlot = (spellLevel: number) => {
+    contextFreeSpellSlot(spellLevel);
+  };
+
+  // Функция для получения слотов заклинаний для уровня
+  const getSpellSlotsForLevel = (spellLevel: number) => {
+    console.log('getSpellSlotsForLevel called with:', { 
+      spellLevel, 
+      characterData: characterData?.class, 
+      level: characterData?.level,
+      draft: draft?.basics?.class,
+      draftLevel: draft?.basics?.level,
+      fullCharacterData: characterData
+    });
+
+    // Используем данные из characterData, если доступен, иначе из draft
+    const currentClass = characterData?.class || draft?.basics?.class;
+    const currentLevel = characterData?.level || draft?.basics?.level;
+
+    console.log('Using class and level:', { currentClass, currentLevel });
+
+    if (!currentClass || !currentLevel) {
+      console.log('No class or level data available');
+      return 0;
+    }
+
+    // Получаем информацию о классе
+    const classData = currentClass;
+    console.log('classData:', classData);
+
+    if (!classData.spellcasting?.progression) {
+      console.log('No spellcasting progression');
+      return 0;
+    }
+
+    const levelSlots = classData.spellcasting.progression[currentLevel];
+    console.log('levelSlots for level', currentLevel, ':', levelSlots);
+
+    if (!levelSlots?.slots) {
+      console.log('No slots for level', currentLevel);
+      return 0;
+    }
+
+    // Возвращаем количество слотов для нужного уровня заклинаний
+    // Для паладина: progression[1] = { slots: [2] } означает 2 ячейки 1-го уровня
+    // slots[0] = количество ячеек 1-го уровня, slots[1] = количество ячеек 2-го уровня и т.д.
+    const slots = levelSlots.slots[spellLevel - 1] || 0;
+    console.log('Final slots for spell level', spellLevel, ':', slots);
+    return slots;
   };
   
   // Универсальная функция для обновления equipment
@@ -614,6 +970,181 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     setIsItemDetailsOpen(false);
     setSelectedItem(null);
   };
+
+  // Функция для открытия сайдбара с описанием заклинания
+  const openSpellDetails = (spell: any) => {
+    setSelectedSpell(spell);
+    setIsSpellDetailsOpen(true);
+  };
+
+  // Функция для закрытия сайдбара с описанием заклинания
+  const closeSpellDetails = () => {
+    setIsSpellDetailsOpen(false);
+    setSelectedSpell(null);
+  };
+
+  // Функции для управления сайдбаром настроек заклинаний
+  const openSpellSettings = () => {
+    setIsSpellSettingsOpen(true);
+  };
+
+  const closeSpellSettings = () => {
+    setIsSpellSettingsOpen(false);
+  };
+
+  // Функция для переключения состояния карточки заклинания
+  const toggleSpellExpansion = (index: number) => {
+    setExpandedSpells(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  // Функция для расчета максимального количества подготовленных заклинаний
+  const getMaxPreparedSpells = () => {
+    if (!characterData?.class?.spellcasting) return 0;
+    
+    const level = characterData.level || 1;
+    const levelSlots = characterData.class.spellcasting.progression[level as keyof typeof characterData.class.spellcasting.progression];
+    const formula = levelSlots?.prepared || characterData.class.spellcasting.preparedFormula || "Math.max(1, level + chaMod)";
+    
+    // Получаем модификатор характеристики заклинания
+    const spellcastingAbility = characterData.class.spellcasting.ability;
+    const abilityScore = stats?.[spellcastingAbility] || 10;
+    const abilityModifier = Math.floor((abilityScore - 10) / 2);
+    
+    // Заменяем переменные в формуле
+    const formulaWithValues = formula
+      .replace(/level/g, level.toString())
+      .replace(/chaMod/g, abilityModifier.toString())
+      .replace(/wisMod/g, abilityModifier.toString())
+      .replace(/intMod/g, abilityModifier.toString());
+    
+    try {
+      return Math.max(1, eval(formulaWithValues));
+    } catch (error) {
+      console.error('Error calculating max prepared spells:', error);
+      return Math.max(1, level + abilityModifier);
+    }
+  };
+
+  // Функция для получения доступных заклинаний класса
+  const getAvailableSpells = () => {
+    if (!characterData?.class?.key) return [];
+    
+    const classKey = characterData.class.key;
+    const availableSpells: any[] = [];
+    
+    // Проверяем, может ли класс выбирать заговоры
+    const canChooseCantrips = characterData?.class?.spellcasting?.cantrips > 0;
+    
+    // Получаем заговоры (0 уровень) только если класс может их выбирать
+    if (canChooseCantrips && characterData.spells && characterData.spells.length > 0) {
+      characterData.spells.forEach((spellKey: string) => {
+        const spellData = getSpellData(spellKey);
+        if (spellData && spellData.level === 0) { // Добавляем только заговоры (0 уровень)
+          availableSpells.push({
+            ...spellData,
+            key: spellKey,
+            level: 0,
+            isCantrip: true
+          });
+        }
+      });
+    }
+    
+    // Получаем заклинания 1+ уровня из всех доступных заклинаний
+    const allSpells = [...Cantrips, ...SpellsLevel1];
+    
+    allSpells.forEach((spell: any) => {
+      // Проверяем, доступно ли заклинание для этого класса
+      if (spell.classes && spell.classes.includes(classKey)) {
+        // Для заговоров проверяем, может ли класс их выбирать
+        if (spell.level === 0 && !canChooseCantrips) {
+          return; // Пропускаем заговоры для классов, которые их не выбирают
+        }
+        
+        availableSpells.push({
+          ...spell,
+          key: spell.key || spell.name.toLowerCase().replace(/\s+/g, '-'),
+          level: spell.level, // Используем уровень из данных заклинания
+          isCantrip: spell.level === 0
+        });
+      }
+    });
+    
+    return availableSpells;
+  };
+
+  // Функция для получения всех заклинаний без фильтрации по классу
+  const getAllSpells = () => {
+    const allSpells: any[] = [];
+    
+    // Получаем все заклинания из всех источников
+    allSpells.push(...Cantrips);
+    allSpells.push(...SpellsLevel1);
+    
+    // Преобразуем все заклинания в единый формат
+    return allSpells.map((spell: any) => ({
+      ...spell,
+      key: spell.key || spell.name.toLowerCase().replace(/\s+/g, '-'),
+      level: spell.level,
+      isCantrip: spell.level === 0
+    }));
+  };
+
+  // Функция для фильтрации всех заклинаний
+  const getFilteredAllSpells = (search: string = learnSpellSearch, levelFilter: number | "all" = learnSpellLevelFilter) => {
+    let spells = getAllSpells();
+    
+    // Фильтр по поиску
+    if (search.trim()) {
+      spells = spells.filter(spell => 
+        spell.name.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    // Фильтр по уровню
+    if (levelFilter !== "all") {
+      spells = spells.filter(spell => spell.level === levelFilter);
+    }
+    
+    // Сортировка по алфавиту
+    spells.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    
+    return spells;
+  };
+
+  // Функция для получения уровней всех заклинаний
+  const getAllSpellLevels = () => {
+    const spells = getAllSpells();
+    const levels = new Set(spells.map(spell => spell.level));
+    return Array.from(levels).sort((a, b) => a - b);
+  };
+
+  // Функция для перевода английских ключей спасбросков в русские названия
+  const translateSave = (saveKey: string) => {
+    switch (saveKey.toLowerCase()) {
+      case 'str': return 'Сила';
+      case 'dex': return 'Ловкость';
+      case 'con': return 'Телосложение';
+      case 'int': return 'Интеллект';
+      case 'wis': return 'Мудрость';
+      case 'cha': return 'Харизма';
+      default: return saveKey;
+    }
+  };
+
+  // Получаем подготовленные заклинания из драфта
+  const preparedSpells = characterData?.class ? (draft?.chosen?.spells?.[characterData.class.key] || []) : [];
+  
+  // Получаем выученные заклинания из драфта
+  const learnedSpells = characterData?.class ? (draft?.chosen?.learnedSpells?.[characterData.class.key] || []) : [];
 
   // Функции для работы с количеством предметов
   const getQuantityForItem = (itemKey: string) => {
@@ -1492,6 +2023,25 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     });
   };
 
+  // Получение отфильтрованных предметов инвентаря
+  const getFilteredInventoryItems = (items: any[]) => {
+    return items.filter(item => {
+      const itemName = typeof item === 'string' ? item : (item.name || String(item));
+      const matchesSearch = itemName.toLowerCase().includes(inventorySearchFilter.toLowerCase());
+      
+      // Определяем категорию предмета
+      let itemCategory = 'other';
+      if (typeof item === 'object' && item.type) {
+        if (item.type === 'weapon') itemCategory = 'weapon';
+        else if (item.type === 'armor') itemCategory = 'armor';
+        else if (item.type === 'tool') itemCategory = 'tool';
+      }
+      
+      const matchesCategory = inventoryCategoryFilter === 'all' || itemCategory === inventoryCategoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  };
+
   // Debug: выводим characterData для понимания структуры
   console.log('CharacterData debug:', {
     characterData,
@@ -1853,7 +2403,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   };
 
   // Функция для обработки урона с сбросом критического попадания
-  const handleDamage = async (weapon: any, ability: string, modifier: number, damage: string, isSpell: boolean = false) => {
+  const handleDamage = async (weapon: any, ability: string, modifier: number, damage: string, isSpell: boolean = false, isHealing: boolean = false) => {
+    const damageType = isHealing ? "Лечение" : "Урон";
+    
     const key = isSpell ? `spell-${weapon}` : `${weapon.name}-${weapon.slot}`;
     
     // Устанавливаем состояние загрузки для урона
@@ -1870,8 +2422,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       });
     }
     
-    // Вызываем оригинальную функцию onRoll
-    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, "Урон", damage);
+    // Вызываем оригинальную функцию onRoll с правильным типом
+    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, damageType, damage);
     
     // Задержка 1 секунда перед сбросом состояния загрузки
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -2251,7 +2803,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         }, 0) || 0 : 0;
       
       if (weaponCount === 0) {
-        return (
+  return (
           <div className={`text-xs text-red-400 ${noMargin ? '' : 'mt-1'}`}>
             Закончились снаряды
           </div>
@@ -3609,31 +4161,61 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           </div>
         );
       case "spells":
-        const filteredSpells = getFilteredSpells();
-        const availableLevels = getAvailableSpellLevels();
+        console.log('Rendering spells tab');
+        const filteredSpells = getFilteredCharacterSpells();
+        const availableLevels = getCharacterSpellLevels();
+        console.log('filteredSpells:', filteredSpells);
+        console.log('availableLevels:', availableLevels);
         
         return (
           <div className="space-y-4">
-            {/* Поисковая строка */}
-            <div>
-              <input
-                type="text"
-                placeholder="Поиск заклинаний..."
-                value={spellSearch}
-                onChange={(e) => setSpellSearch(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+            {/* Поисковая строка и кнопка настроек */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Поиск заклинаний..." 
+                  value={spellSearch} 
+                  onChange={(e) => setSpellSearch(e.target.value)} 
+                  className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
+                  style={{
+                    borderColor: getFrameColor(frameColor)
+                  }}
+                />
+              </div>
+              <button
+                onClick={openSpellSettings}
+                className="p-2 bg-transparent border rounded-md text-gray-400 hover:text-gray-200 transition-colors"
+                style={{
+                  borderColor: getFrameColor(frameColor)
+                }}
+                title="Настройки заклинаний"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
             </div>
             
             {/* Фильтры по уровню */}
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setSpellLevelFilter("all")}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  spellLevelFilter === "all"
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+                className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                style={{
+                  backgroundColor: spellLevelFilter === "all" ? getFrameColor(frameColor) : 'transparent',
+                  borderColor: getFrameColor(frameColor),
+                  color: spellLevelFilter === "all" ? '#FFFFFF' : getFrameColor(frameColor)
+                }}
+                onMouseEnter={(e) => {
+                  if (spellLevelFilter !== "all") {
+                    e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (spellLevelFilter !== "all") {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
                 ВСЕ
               </button>
@@ -3641,16 +4223,27 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 <button
                   key={level}
                   onClick={() => setSpellLevelFilter(level)}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                    spellLevelFilter === level
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
+                  className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                  style={{
+                    backgroundColor: spellLevelFilter === level ? getFrameColor(frameColor) : 'transparent',
+                    borderColor: getFrameColor(frameColor),
+                    color: spellLevelFilter === level ? '#FFFFFF' : getFrameColor(frameColor)
+                  }}
+                  onMouseEnter={(e) => {
+                    if (spellLevelFilter !== level) {
+                      e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (spellLevelFilter !== level) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
                 >
-                  {level === 0 ? 'ЗАГОВОРЫ' : `- ${level} -`}
+                  {`- ${level} -`}
                 </button>
-              ))}
-            </div>
+        ))}
+      </div>
             
             
             {/* Таблицы заклинаний по уровням */}
@@ -3683,13 +4276,57 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     return (
                       <div key={level} className="space-y-2">
                         {/* Заголовок уровня */}
-                        <div 
-                          className="text-xs font-semibold uppercase mb-2 text-gray-400"
+                        <div
+                          className="text-xs font-semibold uppercase mb-2 text-gray-400 flex items-center justify-between pb-2"
                           style={{
                             borderBottom: `1px solid ${getFrameColor(frameColor)}20`
                           }}
                         >
-                          {levelName}
+                          <span>{levelName}</span>
+              {level > 0 && (() => {
+                console.log(`Getting slots for level ${level}`);
+                const slots = getSpellSlotsForLevel(level);
+                console.log(`Level ${level} slots:`, slots);
+                console.log(`Rendering checkboxes for level ${level}, slots: ${slots}`);
+                return (
+                  <div className="flex items-center gap-2 mr-4">
+                    <div className="flex gap-1">
+                      {Array.from({ length: Math.max(slots, 1) }, (_, i) => {
+                        const isUsed = i < (draft?.usedSpellSlots?.[level] || 0);
+                        const isAvailable = i < slots;
+                        return (
+                          <div
+                            key={i}
+                            className="w-5 h-5 border-2 flex items-center justify-center relative cursor-pointer hover:opacity-80"
+                            style={{
+                              borderColor: isAvailable ? getFrameColor(frameColor) : '#6B7280',
+                              backgroundColor: 'transparent'
+                            }}
+                            onClick={() => {
+                              if (isUsed) {
+                                freeSpellSlot(level);
+                              } else if (isAvailable) {
+                                useSpellSlot(level);
+                              }
+                            }}
+                          >
+                            {/* Внутренний квадрат для эффекта "квадрат в квадрате" */}
+                            {isUsed && (
+                              <div
+                                className="w-3 h-3"
+                                style={{
+                                  backgroundColor: getFrameColor(frameColor)
+                                }}
+                              />
+                            )}
+    </div>
+  );
+                      })}
+                    </div>
+                    <span className="text-xs text-gray-400">ЯЧЕЙКИ</span>
+                  </div>
+                );
+              })()}
                         </div>
                         
                 {/* Заголовки таблицы */}
@@ -3698,7 +4335,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                        gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr 1fr',
                        borderBottom: `1px solid ${getFrameColor(frameColor)}20` 
                      }}>
-                  <div className="flex items-center justify-start"></div>
+                  <div className="flex items-center justify-start w-8"></div>
                   <div className="flex items-center justify-start">НАЗВАНИЕ</div>
                   <div className="text-center">ВРМ</div>
                   <div className="text-center">ДЛН</div>
@@ -3711,6 +4348,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           const spellAbility = 'cha';
                           const spellModifier = Math.floor(((stats?.[spellAbility] || 10) - 10) / 2);
                           const spellAttackBonus = spellModifier + (proficiencyBonus || 0);
+                          const spellCastingModifier = spellAttackBonus; // Заклинательный модификатор = модификатор характеристики + бонус мастерства
                           
                           // Получаем дальность
                           let spellRange = spell.range || "60 фт.";
@@ -3741,54 +4379,172 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div className="grid gap-2 text-sm py-1 items-center"
                                    style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr 1fr' }}>
                                 {/* Кнопка использования */}
-                                <div className="flex items-center justify-start">
-                                {showAttackBonus ? (
+                                <div className="flex items-center justify-start w-8">
                                   <button
-                                    onClick={() => handleAttack(spell.name, spellAbility, spellAttackBonus, true)}
-                                    disabled={loadingAttacks[`spell-${spell.name}`]}
-                                    className="w-8 h-8 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-md flex items-center justify-center transition-colors"
+                                    onClick={() => {
+                                      if (hasAvailableSlots(spell.level)) {
+                                        useSpellSlot(spell.level);
+                                        // Не бросаем кубик, только используем слот
+                                      }
+                                    }}
+                                    disabled={loadingAttacks[`spell-${spell.name}`] || (!hasAvailableSlots(spell.level) && spell.level > 0)}
+                                    className={`w-6 h-6 bg-transparent rounded flex items-center justify-center transition-colors border ${
+                                      !hasAvailableSlots(spell.level) && spell.level > 0 ? 'opacity-50 cursor-pointer' : 'hover:opacity-80'
+                                    }`}
+                                    style={{
+                                      borderColor: getFrameColor(frameColor),
+                                      color: getFrameColor(frameColor)
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (!loadingAttacks[`spell-${spell.name}`] && (hasAvailableSlots(spell.level) || spell.level === 0)) {
+                                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (!loadingAttacks[`spell-${spell.name}`] && (hasAvailableSlots(spell.level) || spell.level === 0)) {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                      }
+                                    }}
                                   >
                                     {loadingAttacks[`spell-${spell.name}`] ? (
-                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : !hasAvailableSlots(spell.level) && spell.level > 0 ? (
+                                      <X className="w-3 h-3" />
                                     ) : (
-                                      <span className="text-xs font-bold">★</span>
+                                      <Wand className="w-3 h-3" />
                                     )}
                                   </button>
-                                ) : (
-                                  <div className="w-8 h-8 bg-gray-600 rounded-md flex items-center justify-center">
-                                    <span className="text-xs text-gray-400">—</span>
-                                  </div>
-                                )}
-                              </div>
+                                </div>
                               
                                 {/* Название */}
-                                <div className="text-gray-200 flex items-center justify-start">
-                                  <span className="text-sm text-gray-500 mr-1 w-3 inline-block text-center">★</span>
-                                  <span className="break-words">{spell.name}</span>
+                                <div className="text-gray-200 flex items-center justify-start cursor-pointer hover:text-gray-100" onClick={() => openSpellDetails(spell)}>
+                                  <div className="break-words">
+                                    <div className="font-medium">{spell.name}</div>
+                                    {spell.isLegacy && (
+                                      <div className="text-xs" style={{ color: getFrameColor(frameColor) }}>
+                                        Legacy
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                                 
                                 {/* Время */}
-                                <div className="text-gray-300 text-center">
+                                <div className="text-gray-300 flex items-center justify-center">
                                   {shortCastingTime}
                                 </div>
                                 
                                 {/* Дальность */}
-                                <div className="text-gray-300 text-center">
+                                <div className="text-gray-300 flex items-center justify-center">
                                   {spellRange || '—'}
                                 </div>
                                 
-                                {/* Попадание */}
-                                <div className="text-gray-300 text-center">
-                                  {showAttackBonus ? (
-                                    spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus
+                                {/* Попадание/Спасбросок */}
+                                <div className="text-gray-300 flex flex-col items-center justify-center">
+                                  {spell.save ? (
+                                    (() => {
+                                      // Сл спасброска одинаковая для всех заклинаний заклинателя
+                                      const spellcastingAbility = characterData?.class?.spellcasting?.ability || 'cha';
+                                      const spellcastingModifier = Math.floor(((stats?.[spellcastingAbility] || 10) - 10) / 2);
+                                      const saveDC = 8 + (proficiencyBonus || 0) + spellcastingModifier;
+                                      const abilityInfo = ABILITIES.find(a => a.key === spellcastingAbility);
+                                      const abilityShort = abilityInfo?.keyRu || spellcastingAbility.toUpperCase();
+                                      return (
+                                        <>
+                                          <div className="text-xs">{abilityShort}</div>
+                                          <div className="text-sm font-semibold">{saveDC}</div>
+                                        </>
+                                      );
+                                    })()
+                                  ) : spell.isCombat && showAttackBonus ? (
+                                    <button
+                                      onClick={() => handleAttack(spell.name, spellAbility, spellAttackBonus, true)}
+                                      disabled={loadingAttacks[`spell-${spell.name}`] || (!hasAvailableSlots(spell.level) && spell.level > 0)}
+                                      className="w-12 h-8 bg-transparent disabled:bg-gray-600 rounded text-sm font-semibold transition-colors border flex items-center justify-center"
+                                      style={{
+                                        borderColor: getFrameColor(frameColor),
+                                        color: getFrameColor(frameColor)
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (!loadingAttacks[`spell-${spell.name}`] && (hasAvailableSlots(spell.level) || spell.level === 0)) {
+                                          e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (!loadingAttacks[`spell-${spell.name}`] && (hasAvailableSlots(spell.level) || spell.level === 0)) {
+                                          e.currentTarget.style.backgroundColor = 'transparent';
+                                        }
+                                      }}
+                                    >
+                                      {loadingAttacks[`spell-${spell.name}`] ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        spellAttackBonus > 0 ? `+${spellAttackBonus}` : spellAttackBonus === 0 ? '0' : spellAttackBonus
+                                      )}
+                                    </button>
                                   ) : (
                                     '—'
                                   )}
                                 </div>
                                 
                                 {/* Эффект */}
-                                <div className="text-gray-300 text-center">
-                                  {effect}
+                                <div className="text-gray-300 flex items-center justify-center">
+                                  {spell.damage?.dice ? (
+                                    <button
+                                      onClick={() => handleDamage(spell.name, spellAbility, spellCastingModifier, spell.damage.dice, true)}
+                                      disabled={loadingDamage[`spell-${spell.name}`]}
+                                      className="w-16 h-8 bg-transparent disabled:bg-gray-600 rounded text-sm font-semibold transition-colors border flex items-center justify-center"
+                                      style={{
+                                        borderColor: getFrameColor(frameColor),
+                                        color: getFrameColor(frameColor)
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (!loadingDamage[`spell-${spell.name}`]) {
+                                          e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (!loadingDamage[`spell-${spell.name}`]) {
+                                          e.currentTarget.style.backgroundColor = 'transparent';
+                                        }
+                                      }}
+                                    >
+                                      {loadingDamage[`spell-${spell.name}`] ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        spell.damage.dice
+                                      )}
+                                    </button>
+                                  ) : spell.heal ? (
+                                    <button
+                                      onClick={() => {
+                                        handleDamage(spell.name, spellAbility, spellModifier, spell.heal, true, true);
+                                      }}
+                                      disabled={loadingDamage[`spell-${spell.name}`]}
+                                      className="w-20 h-8 bg-transparent disabled:bg-gray-600 rounded text-sm font-semibold transition-colors border flex items-center justify-center"
+                                      style={{
+                                        borderColor: getFrameColor(frameColor),
+                                        color: getFrameColor(frameColor)
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (!loadingDamage[`spell-${spell.name}`]) {
+                                          e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (!loadingDamage[`spell-${spell.name}`]) {
+                                          e.currentTarget.style.backgroundColor = 'transparent';
+                                        }
+                                      }}
+                                    >
+                                      {loadingDamage[`spell-${spell.name}`] ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        `${spell.heal}+${spellModifier}`
+                                      )}
+                                    </button>
+                                  ) : (
+                                    effect
+                                  )}
                                 </div>
                               </div>
                               
@@ -3905,6 +4661,126 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               </div>
             </div>
             
+            {/* Поиск и фильтры */}
+            <div className="space-y-4 mb-6">
+              {/* Поиск по названию */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Поиск предметов..."
+                    value={inventorySearchFilter}
+                    onChange={(e) => setInventorySearchFilter(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
+                    style={{
+                      borderColor: getFrameColor(frameColor)
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={() => setIsInventorySidebarOpen(true)}
+                  className="p-2 bg-transparent border rounded-md text-gray-400 hover:text-gray-200 transition-colors"
+                  style={{
+                    borderColor: getFrameColor(frameColor)
+                  }}
+                  title="Управление инвентарём"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {/* Фильтр по категории */}
+              <div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setInventoryCategoryFilter('all')}
+                    className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                    style={{
+                      backgroundColor: inventoryCategoryFilter === 'all' ? getFrameColor(frameColor) : 'transparent',
+                      borderColor: getFrameColor(frameColor),
+                      color: inventoryCategoryFilter === 'all' ? '#FFFFFF' : getFrameColor(frameColor)
+                    }}
+                    onMouseEnter={(e) => {
+                      if (inventoryCategoryFilter !== 'all') {
+                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (inventoryCategoryFilter !== 'all') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    ВСЕ
+                  </button>
+                  <button
+                    onClick={() => setInventoryCategoryFilter('weapon')}
+                    className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                    style={{
+                      backgroundColor: inventoryCategoryFilter === 'weapon' ? getFrameColor(frameColor) : 'transparent',
+                      borderColor: getFrameColor(frameColor),
+                      color: inventoryCategoryFilter === 'weapon' ? '#FFFFFF' : getFrameColor(frameColor)
+                    }}
+                    onMouseEnter={(e) => {
+                      if (inventoryCategoryFilter !== 'weapon') {
+                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (inventoryCategoryFilter !== 'weapon') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    ОРУЖИЕ
+                  </button>
+                  <button
+                    onClick={() => setInventoryCategoryFilter('armor')}
+                    className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                    style={{
+                      backgroundColor: inventoryCategoryFilter === 'armor' ? getFrameColor(frameColor) : 'transparent',
+                      borderColor: getFrameColor(frameColor),
+                      color: inventoryCategoryFilter === 'armor' ? '#FFFFFF' : getFrameColor(frameColor)
+                    }}
+                    onMouseEnter={(e) => {
+                      if (inventoryCategoryFilter !== 'armor') {
+                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (inventoryCategoryFilter !== 'armor') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    ДОСПЕХИ
+                  </button>
+                  <button
+                    onClick={() => setInventoryCategoryFilter('tool')}
+                    className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                    style={{
+                      backgroundColor: inventoryCategoryFilter === 'tool' ? getFrameColor(frameColor) : 'transparent',
+                      borderColor: getFrameColor(frameColor),
+                      color: inventoryCategoryFilter === 'tool' ? '#FFFFFF' : getFrameColor(frameColor)
+                    }}
+                    onMouseEnter={(e) => {
+                      if (inventoryCategoryFilter !== 'tool') {
+                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (inventoryCategoryFilter !== 'tool') {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    ИНСТРУМЕНТЫ
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             {/* Скроллируемый блок инвентаря */}
             <div className="overflow-y-auto space-y-6">
               {/* Блок ЭКИПИРОВКА */}
@@ -3939,20 +4815,29 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       />
                     </div>
                   </div>
-                  {equippedItems.filter(item => item.set === 'armor' && item.type === 'armor').length > 0 ? (
-                    equippedItems.filter(item => item.set === 'armor' && item.type === 'armor').map((item, index) => (
+                  {getFilteredInventoryItems(equippedItems.filter(item => item.set === 'armor' && item.type === 'armor')).length > 0 ? (
+                    getFilteredInventoryItems(equippedItems.filter(item => item.set === 'armor' && item.type === 'armor')).map((item, index) => (
                       <div key={`armor-${index}`}>
                         <div className="grid gap-2 text-sm py-1 items-center"
                              style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr' }}>
                           <div className="flex justify-start items-center">
                             <div 
-                              className="w-4 h-4 rounded-none border-2 cursor-pointer hover:opacity-80 p-1"
+                              className="w-5 h-5 border-2 flex items-center justify-center relative cursor-pointer hover:opacity-80"
                               style={{
-                                borderColor: getFrameColor(frameColor),
-                                backgroundColor: item.equipped ? getFrameColor(frameColor) : '#171717'
+                                borderColor: item.equipped ? getFrameColor(frameColor) : '#6B7280',
+                                backgroundColor: 'transparent'
                               }}
                               onClick={() => toggleItemEquipped(item.name)}
-                            />
+                            >
+                              {item.equipped && (
+                                <div
+                                  className="w-3 h-3"
+                                  style={{
+                                    backgroundColor: getFrameColor(frameColor)
+                                  }}
+                                />
+                              )}
+                            </div>
                           </div>
                            <div className="text-gray-200 break-words cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
                              <div>{getCleanItemName(item.name)}</div>
@@ -3994,20 +4879,29 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         ))}
       </div>
                   </div>
-                  {equippedItems.filter(item => item.set === 'main').length > 0 ? (
-                    equippedItems.filter(item => item.set === 'main').map((item, index) => (
+                  {getFilteredInventoryItems(equippedItems.filter(item => item.set === 'main')).length > 0 ? (
+                    getFilteredInventoryItems(equippedItems.filter(item => item.set === 'main')).map((item, index) => (
                       <div key={`main-${index}`}>
                         <div className="grid gap-2 text-sm py-1 items-center"
                              style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr' }}>
                           <div className="flex justify-start items-center">
                             <div 
-                              className="w-4 h-4 rounded-none border-2 cursor-pointer hover:opacity-80 p-1"
+                              className="w-5 h-5 border-2 flex items-center justify-center relative cursor-pointer hover:opacity-80"
                               style={{
-                                borderColor: getFrameColor(frameColor),
-                                backgroundColor: item.equipped ? getFrameColor(frameColor) : '#171717'
+                                borderColor: item.equipped ? getFrameColor(frameColor) : '#6B7280',
+                                backgroundColor: 'transparent'
                               }}
                               onClick={() => toggleItemEquipped(item.name)}
-                            />
+                            >
+                              {item.equipped && (
+                                <div
+                                  className="w-3 h-3"
+                                  style={{
+                                    backgroundColor: getFrameColor(frameColor)
+                                  }}
+                                />
+                              )}
+                            </div>
                           </div>
                           <div className="text-gray-200 break-words flex items-center gap-2">
                             <div className="flex-1 cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
@@ -4038,7 +4932,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
                           <div className="text-gray-400 text-center">{item.cost}</div>
                         </div>
-                        {index < equippedItems.filter(item => item.set === 'main').length - 1 && (
+                        {index < getFilteredInventoryItems(equippedItems.filter(item => item.set === 'main')).length - 1 && (
                           <div 
                             className="my-1 h-px"
                             style={{
@@ -4079,20 +4973,29 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           ))}
                         </div>
                   </div>
-                  {equippedItems.filter(item => item.set === 'additional').length > 0 ? (
-                    equippedItems.filter(item => item.set === 'additional').map((item, index) => (
+                  {getFilteredInventoryItems(equippedItems.filter(item => item.set === 'additional')).length > 0 ? (
+                    getFilteredInventoryItems(equippedItems.filter(item => item.set === 'additional')).map((item, index) => (
                       <div key={`additional-${index}`}>
                         <div className="grid gap-2 text-sm py-1 items-center"
                              style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr' }}>
                           <div className="flex justify-start items-center">
                             <div 
-                              className="w-4 h-4 rounded-none border-2 cursor-pointer hover:opacity-80 p-1"
+                              className="w-5 h-5 border-2 flex items-center justify-center relative cursor-pointer hover:opacity-80"
                               style={{
-                                borderColor: getFrameColor(frameColor),
-                                backgroundColor: item.equipped ? getFrameColor(frameColor) : '#171717'
+                                borderColor: item.equipped ? getFrameColor(frameColor) : '#6B7280',
+                                backgroundColor: 'transparent'
                               }}
                               onClick={() => toggleItemEquipped(item.name)}
-                            />
+                            >
+                              {item.equipped && (
+                                <div
+                                  className="w-3 h-3"
+                                  style={{
+                                    backgroundColor: getFrameColor(frameColor)
+                                  }}
+                                />
+                              )}
+                            </div>
                           </div>
                           <div className="text-gray-200 break-words flex items-center gap-2">
                             <div className="flex-1 cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
@@ -4123,7 +5026,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
                           <div className="text-gray-400 text-center">{item.cost}</div>
                         </div>
-                        {index < equippedItems.filter(item => item.set === 'additional').length - 1 && (
+                        {index < getFilteredInventoryItems(equippedItems.filter(item => item.set === 'additional')).length - 1 && (
                           <div 
                             className="my-1 h-px"
                             style={{
@@ -4144,17 +5047,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               
               {/* Таблица РЮКЗАК */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="text-sm font-semibold text-gray-300">РЮКЗАК</div>
-                  <button
-                    onClick={() => setIsInventorySidebarOpen(true)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-                    style={{ color: getFrameColor(frameColor) }}
-                  >
-                    <Settings className="w-3 h-3" />
-                    УПРАВЛЕНИЕ ИНВЕНТАРЁМ
-                  </button>
-                </div>
+                <div className="text-sm font-semibold text-gray-300 mb-2">РЮКЗАК</div>
                 
                 {/* Заголовки таблицы */}
                 <div className="grid gap-2 text-sm font-semibold uppercase text-gray-400 mb-2 pb-1 items-center" 
@@ -4171,8 +5064,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 
                 {/* Строки таблицы */}
                 <div className="space-y-1">
-                  {backpackItems.length > 0 ? (
-                    backpackItems.map((item, index) => {
+                  {getFilteredInventoryItems(backpackItems).length > 0 ? (
+                    getFilteredInventoryItems(backpackItems).map((item, index) => {
                       // item уже является объектом с нужными полями
                       const cleanName = getCleanItemName(item.name);
                       const category = item.category || getItemCategory(item.name);
@@ -4188,14 +5081,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div className="flex justify-start items-center">
                             {(itemType === 'weapon' || itemType === 'armor' || itemType === 'shield') ? (
                               <div 
-                                className={`w-4 h-4 rounded-none border-2 p-1 ${
+                                className={`w-5 h-5 border-2 flex items-center justify-center relative ${
                                   canEquipItem(cleanName) 
                                     ? 'cursor-pointer hover:opacity-80' 
                                     : 'cursor-not-allowed opacity-50'
                                 }`}
                                 style={{
-                                  borderColor: getFrameColor(frameColor),
-                                  backgroundColor: '#171717'
+                                  borderColor: canEquipItem(cleanName) ? getFrameColor(frameColor) : '#6B7280',
+                                  backgroundColor: 'transparent'
                                 }}
                                 onClick={() => canEquipItem(cleanName) && toggleItemEquipped(cleanName)}
                                 title={!canEquipItem(cleanName) ? 'Недостаточно слотов для экипировки' : undefined}
@@ -4290,28 +5183,27 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
       {/* Сайдбар управления инвентарем */}
       {isInventorySidebarOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          {/* Затемнение фона */}
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
+          onClick={() => setIsInventorySidebarOpen(false)}
+        >
           <div 
-            className="flex-1 bg-black/50" 
-            onClick={() => setIsInventorySidebarOpen(false)}
-          />
-          
-                    {/* Сайдбар */}
-                    <div className="w-[500px] bg-neutral-900 border-l border-gray-700 flex flex-col">
-            {/* Заголовок сайдбара */}
-            <div className="p-4 border-b border-gray-700 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-200">Управление инвентарем</h2>
+            className="w-full max-w-md bg-neutral-900 h-full overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-100">
+                Управление инвентарем
+              </h2>
               <button
                 onClick={() => setIsInventorySidebarOpen(false)}
-                className="text-gray-400 hover:text-gray-200 transition-colors"
+                className="text-gray-400 hover:text-gray-200 text-2xl"
               >
-                ✕
+                ×
               </button>
             </div>
             
-            {/* Контент сайдбара */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="space-y-4">
               {/* ДОБАВИТЬ ПРЕДМЕТЫ */}
               <Collapsible open={openSections.addItems} onOpenChange={() => toggleSection('addItems')}>
                 <div className="bg-neutral-900 shadow-inner shadow-sm">
@@ -4339,63 +5231,69 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       {/* Фильтры */}
                       <div className="space-y-4 mb-6">
                         {/* Поиск по названию */}
-                        <div>
-                          <label className="text-sm font-medium text-gray-200 mb-2 block">
-                            Поиск по названию
-                          </label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                           <input
                             type="text"
-                            placeholder="Введите название предмета..."
+                            placeholder="Поиск предметов..."
                             value={searchFilter}
                             onChange={(e) => {
                               setSearchFilter(e.target.value);
                               setItemsPerPage(10);
                             }}
-                            className="w-full px-3 py-2 border border-gray-600 rounded-md bg-neutral-800 text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            style={{ 
-                              borderColor: getFrameColor(frameColor) + '40',
-                              '--tw-ring-color': getFrameColor(frameColor) + '40'
-                            } as any}
+                            className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
+                            style={{
+                              borderColor: getFrameColor(frameColor)
+                            }}
                           />
                         </div>
                         
                         {/* Фильтр по категории */}
                         <div>
-                          <label className="text-sm font-medium text-gray-200 mb-2 block">
-                            Категория
-                          </label>
                           <div className="flex flex-wrap gap-2">
                             <button
                               onClick={() => setCategoryFilter('all')}
-                              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                                categoryFilter === 'all' 
-                                  ? 'text-white' 
-                                  : 'text-gray-400 hover:text-gray-200'
-                              }`}
+                              className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
                               style={{
                                 backgroundColor: categoryFilter === 'all' ? getFrameColor(frameColor) : 'transparent',
-                                borderColor: getFrameColor(frameColor) + '40',
-                                border: '1px solid'
+                                borderColor: getFrameColor(frameColor),
+                                color: categoryFilter === 'all' ? '#FFFFFF' : getFrameColor(frameColor)
+                              }}
+                              onMouseEnter={(e) => {
+                                if (categoryFilter !== 'all') {
+                                  e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (categoryFilter !== 'all') {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }
                               }}
                             >
-                              Все
+                              ВСЕ
                             </button>
                             {['Оружие', 'Доспехи', 'Щиты', 'Снаряжение', 'Боеприпасы', 'Инструменты', 'Наборы снаряжения'].map(category => (
                               <button
                                 key={category}
                                 onClick={() => setCategoryFilter(category)}
-                                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                                  categoryFilter === category 
-                                    ? 'text-white' 
-                                    : 'text-gray-400 hover:text-gray-200'
-                                }`}
+                                className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
                                 style={{
                                   backgroundColor: categoryFilter === category ? getFrameColor(frameColor) : 'transparent',
-                                  borderColor: getFrameColor(frameColor) + '40',
-                                  border: '1px solid'
+                                  borderColor: getFrameColor(frameColor),
+                                  color: categoryFilter === category ? '#FFFFFF' : getFrameColor(frameColor)
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (categoryFilter !== category) {
+                                    e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (categoryFilter !== category) {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                  }
                                 }}
                               >
-                                {category}
+                                {category.toUpperCase()}
                               </button>
                             ))}
                           </div>
@@ -4430,6 +5328,20 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                           e.stopPropagation();
                                           handlePurchaseItem(item, 1);
                                         }}
+                                        onMouseEnter={(e) => {
+                                          const rect = e.currentTarget.getBoundingClientRect();
+                                          setButtonPosition({
+                                            x: rect.left + rect.width / 2,
+                                            y: rect.top - 10
+                                          });
+                                          setHoveredButton(`purchase-${item.type}-${item.key}`);
+                                          setTimeout(() => setShowTooltip(true), 100);
+                                        }}
+                                        onMouseLeave={() => {
+                                          setHoveredButton(null);
+                                          setButtonPosition(null);
+                                          setShowTooltip(false);
+                                        }}
                                         disabled={loadingPurchase.has(`${item.type}-${item.key}`)}
                                         className="p-1 text-white rounded transition-colors hover:opacity-80 relative group disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{
@@ -4441,17 +5353,25 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                         ) : (
                                           <Coins className="w-4 h-4" />
                                         )}
-                                        {/* Красивый tooltip */}
-                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
-                                          <div className="text-white font-semibold">Купить</div>
-                                          {/* Стрелочка */}
-                                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
-                                        </div>
                                       </button>
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleAddItem(item);
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          const rect = e.currentTarget.getBoundingClientRect();
+                                          setButtonPosition({
+                                            x: rect.left + rect.width / 2,
+                                            y: rect.top - 10
+                                          });
+                                          setHoveredButton(`add-${item.type}-${item.key}`);
+                                          setTimeout(() => setShowTooltip(true), 100);
+                                        }}
+                                        onMouseLeave={() => {
+                                          setHoveredButton(null);
+                                          setButtonPosition(null);
+                                          setShowTooltip(false);
                                         }}
                                         disabled={loadingItems.has(`${item.type}-${item.key}`)}
                                         className="p-1 text-white rounded transition-colors hover:opacity-80 relative group disabled:opacity-50 disabled:cursor-not-allowed"
@@ -4464,12 +5384,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                         ) : (
                                           <Plus className="w-4 h-4" />
                                         )}
-                                        {/* Красивый tooltip */}
-                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
-                                          <div className="text-white font-semibold">Добавить</div>
-                                          {/* Стрелочка */}
-                                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
-                                        </div>
                                       </button>
                                     </div>
                                     <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -5061,7 +5975,33 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   {(itemDetails as any).description && (
                     <div className="text-gray-400 mt-3 pt-3 border-t border-gray-700">
                       <div className="font-medium text-gray-200 mb-1">Описание:</div>
-                      <div>{(itemDetails as any).description}</div>
+                      <div className="whitespace-pre-line">
+                        {(itemDetails as any).description.split('\n').map((paragraph: string, index: number) => {
+                          // Обрабатываем курсив (текст между * *)
+                          const processItalic = (text: string) => {
+                            return text.split(/(\*[^*]+\*)/g).map((part, i) => {
+                              if (part.startsWith('*') && part.endsWith('*')) {
+                                return (
+                                  <em key={i} className="italic font-semibold">
+                                    {part.slice(1, -1)}
+                                  </em>
+                                );
+                              }
+                              return part;
+                            });
+                          };
+
+                          // Определяем отступы по количеству пробелов в начале строки
+                          const indent = paragraph.match(/^(\s*)/)?.[1]?.length || 0;
+                          const indentClass = indent > 0 ? `ml-${Math.min(indent * 2, 16)}` : '';
+
+                          return (
+                            <div key={index} className={`${indentClass} ${index > 0 ? 'mt-1' : ''}`}>
+                              {processItalic(paragraph.trim())}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -5085,8 +6025,32 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <div className="font-medium text-gray-300 mb-1">
                                 {propertyInfo.name}
                               </div>
-                              <div className="text-gray-400">
-                                {propertyInfo.desc}
+                              <div className="text-gray-400 whitespace-pre-line">
+                                {propertyInfo.desc.split('\n').map((paragraph: string, index: number) => {
+                                  // Обрабатываем курсив (текст между * *)
+                                  const processItalic = (text: string) => {
+                                    return text.split(/(\*[^*]+\*)/g).map((part, i) => {
+                                      if (part.startsWith('*') && part.endsWith('*')) {
+                                        return (
+                                          <em key={i} className="italic font-semibold">
+                                            {part.slice(1, -1)}
+                                          </em>
+                                        );
+                                      }
+                                      return part;
+                                    });
+                                  };
+
+                                  // Определяем отступы по количеству пробелов в начале строки
+                                  const indent = paragraph.match(/^(\s*)/)?.[1]?.length || 0;
+                                  const indentClass = indent > 0 ? `ml-${Math.min(indent * 2, 16)}` : '';
+
+                                  return (
+                                    <div key={index} className={`${indentClass} ${index > 0 ? 'mt-1' : ''}`}>
+                                      {processItalic(paragraph.trim())}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           );
@@ -5221,7 +6185,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       
                       {/* Подсказка */}
                       {hoveredDeleteItem === selectedItem.name && (
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap pointer-events-none z-50">
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap pointer-events-none z-[9999]">
                           <div className="text-white font-semibold">Удалить предмет</div>
                           {/* Стрелочка вниз */}
                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
@@ -5271,6 +6235,527 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             {hoveredCurrency === 'electrum' && 'Электрум'}
             {hoveredCurrency === 'silver' && 'Серебро'}
             {hoveredCurrency === 'copper' && 'Медь'}
+          </div>
+          {/* Стрелочка вниз */}
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+        </div>,
+        document.body
+      )}
+
+      {/* Сайдбар с описанием заклинания */}
+      {isSpellDetailsOpen && selectedSpell && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
+          onClick={closeSpellDetails}
+        >
+          <div 
+            className="w-full max-w-md bg-neutral-900 h-full overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-100">
+                {selectedSpell.name}
+              </h2>
+              <button
+                onClick={closeSpellDetails}
+                className="text-gray-400 hover:text-gray-200 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              {/* Категория в самом верху */}
+              <div className="text-gray-400 mb-2">
+                {selectedSpell.level === 0 ? 'Заговор' : `Заклинание ${selectedSpell.level} уровня`}
+              </div>
+
+              {/* Источник вверху */}
+              <div className="text-gray-400 mb-2">
+                <span className="font-medium text-gray-200">Источник:</span> {selectedSpell.source}
+              </div>
+              
+              <div className="space-y-2">
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Школа:</span> {selectedSpell.school}
+                </div>
+                
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Время сотворения:</span> {Array.isArray(selectedSpell.castingTime) ? selectedSpell.castingTime.join(', ') : selectedSpell.castingTime}
+                </div>
+                
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Дистанция:</span> {selectedSpell.range}
+                </div>
+                
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Компоненты:</span> {Array.isArray(selectedSpell.components) ? selectedSpell.components.join(', ') : selectedSpell.components}
+                </div>
+                
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Длительность:</span> {selectedSpell.duration}
+                </div>
+
+                {selectedSpell.needConcentration && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Концентрация:</span> Да
+                  </div>
+                )}
+
+                {selectedSpell.isRitual && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Ритуал:</span> Да
+                  </div>
+                )}
+
+                {selectedSpell.damage && (
+                  <>
+                    <div className="text-gray-400">
+                      <span className="font-medium text-gray-200">Урон:</span> {selectedSpell.damage.dice}
+                    </div>
+                    
+                    {selectedSpell.damage.type && (
+                      <div className="text-gray-400">
+                        <span className="font-medium text-gray-200">Тип урона:</span> {selectedSpell.damage.type}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {selectedSpell.save && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Спасбросок:</span> {(() => {
+                      const abilityInfo = ABILITIES.find(a => a.key === selectedSpell.save);
+                      return abilityInfo?.label || selectedSpell.save.toUpperCase();
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              {/* Описание */}
+              {selectedSpell.desc && (
+                <div className="text-gray-400 mt-3 pt-3 border-t border-gray-700">
+                  <div className="font-medium text-gray-200 mb-1">Описание:</div>
+                  <div className="whitespace-pre-line">
+                    {selectedSpell.desc.split('\n').map((paragraph, index) => {
+                      // Обрабатываем курсив (текст между * *)
+                      const processItalic = (text: string) => {
+                        return text.split(/(\*[^*]+\*)/g).map((part, i) => {
+                          if (part.startsWith('*') && part.endsWith('*')) {
+                            return (
+                              <em key={i} className="italic font-semibold">
+                                {part.slice(1, -1)}
+                              </em>
+                            );
+                          }
+                          return part;
+                        });
+                      };
+
+                      // Определяем отступы по количеству пробелов в начале строки
+                      const indent = paragraph.match(/^(\s*)/)?.[1]?.length || 0;
+                      const indentClass = indent > 0 ? `ml-${Math.min(indent * 2, 16)}` : '';
+
+                      return (
+                        <div key={index} className={`${indentClass} ${index > 0 ? 'mt-1' : ''}`}>
+                          {processItalic(paragraph.trim())}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Сайдбар настроек заклинаний */}
+      {isSpellSettingsOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
+          onClick={closeSpellSettings}
+        >
+          <div 
+            className="w-full max-w-md bg-neutral-900 h-full overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-100">
+                Настройки заклинаний
+              </h2>
+              <button
+                onClick={closeSpellSettings}
+                className="text-gray-400 hover:text-gray-200 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Блок "Добавить Заклинание" */}
+              <Collapsible open={isAddSpellsOpen} onOpenChange={() => setIsAddSpellsOpen(!isAddSpellsOpen)}>
+                <div className="bg-neutral-900 shadow-inner shadow-sm">
+                  <CollapsibleTrigger asChild>
+                    <div 
+                      className="flex justify-between items-center p-2 cursor-pointer transition-colors duration-200"
+                      style={{
+                        backgroundColor: '#394b59',
+                        borderBottom: isAddSpellsOpen ? `1px solid ${getFrameColor(frameColor)}30` : 'none',
+                        borderLeft: !isAddSpellsOpen ? `3px solid ${getFrameColor(frameColor)}` : 'none'
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-white">ДОБАВИТЬ ЗАКЛИНАНИЕ</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {isAddSpellsOpen ? <ChevronUp className="w-6 h-6 text-white" /> : <ChevronDown className="w-6 h-6 text-white" />}
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="p-4">
+                      {/* Информация о подготовленных заклинаниях */}
+                      <div className="text-sm text-gray-400 text-center py-3 border-b border-gray-700">
+                        Подготовленные заклинания: {preparedSpells.length}/{getMaxPreparedSpells()}
+                      </div>
+
+                      {/* Поиск и фильтры */}
+                      <div className="space-y-4 mb-6">
+                        {/* Поиск по названию */}
+                        <div>
+                          <label className="text-sm font-medium text-gray-200 mb-2 block">
+                            Поиск по названию
+                          </label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                              type="text"
+                              placeholder="Введите название заклинания..."
+                              value={addSpellSearch}
+                              onChange={(e) => setAddSpellSearch(e.target.value)}
+                              className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
+                              style={{
+                                borderColor: getFrameColor(frameColor)
+                              }}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Фильтр по уровню */}
+                        <div>
+                          <label className="text-sm font-medium text-gray-200 mb-2 block">
+                            Уровень заклинания
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => setAddSpellLevelFilter("all")}
+                              className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                              style={{
+                                backgroundColor: addSpellLevelFilter === "all" ? getFrameColor(frameColor) : 'transparent',
+                                borderColor: getFrameColor(frameColor),
+                                color: addSpellLevelFilter === "all" ? '#FFFFFF' : getFrameColor(frameColor)
+                              }}
+                            >
+                              ВСЕ
+                            </button>
+                            {getAvailableSpellLevels().map(level => (
+                              <button
+                                key={level}
+                                onClick={() => setAddSpellLevelFilter(level)}
+                                className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                                style={{
+                                  backgroundColor: addSpellLevelFilter === level ? getFrameColor(frameColor) : 'transparent',
+                                  borderColor: getFrameColor(frameColor),
+                                  color: addSpellLevelFilter === level ? '#FFFFFF' : getFrameColor(frameColor)
+                                }}
+                              >
+                                {`- ${level} -`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {getFilteredSpells().map((spell, index) => {
+                          const isPrepared = preparedSpells.includes(spell.key);
+                          const isDisabled = !isPrepared && preparedSpells.length >= getMaxPreparedSpells();
+                          return (
+                            <div key={index}>
+                              {renderSpellCard(
+                                spell,
+                                async () => {
+                                  if (characterData?.class?.key) {
+                                    if (isPrepared) {
+                                      // Убираем заклинание из подготовленных
+                                      const newSpells = preparedSpells.filter(key => key !== spell.key);
+                                      setChosenSpells(characterData.class.key, newSpells);
+                                      await saveToSupabase();
+                                    } else if (preparedSpells.length < getMaxPreparedSpells()) {
+                                      // Добавляем заклинание в подготовленные
+                                      const newSpells = [...preparedSpells, spell.key];
+                                      setChosenSpells(characterData.class.key, newSpells);
+                                      await saveToSupabase();
+                                    }
+                                  }
+                                },
+                                undefined,
+                                isPrepared,
+                                false,
+                                getFrameColor(frameColor),
+                                isDisabled
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+              
+              {/* Блок "Подготовленные Заклинания" */}
+              <Collapsible open={isPreparedSpellsOpen} onOpenChange={() => setIsPreparedSpellsOpen(!isPreparedSpellsOpen)}>
+                <div className="bg-neutral-900 shadow-inner shadow-sm">
+                  <CollapsibleTrigger asChild>
+                    <div 
+                      className="flex justify-between items-center p-2 cursor-pointer transition-colors duration-200"
+                      style={{
+                        backgroundColor: '#394b59',
+                        borderBottom: isPreparedSpellsOpen ? `1px solid ${getFrameColor(frameColor)}30` : 'none',
+                        borderLeft: !isPreparedSpellsOpen ? `3px solid ${getFrameColor(frameColor)}` : 'none'
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-white">ПОДГОТОВЛЕННЫЕ ЗАКЛИНАНИЯ</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {isPreparedSpellsOpen ? <ChevronUp className="w-6 h-6 text-white" /> : <ChevronDown className="w-6 h-6 text-white" />}
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="p-4">
+                      {preparedSpells.length === 0 && learnedSpells.length === 0 ? (
+                        <p className="text-gray-400 py-4">
+                          Подготовленные заклинания отсутствуют
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {/* Показываем подготовленные заклинания */}
+                          {preparedSpells.map((spellKey, index) => {
+                            // Находим полную информацию о заклинании
+                            const spell = getAvailableSpells().find(s => s.key === spellKey);
+                            if (!spell) return null;
+                            
+                            return (
+                              <div key={index}>
+                                {renderSpellCard(
+                                  spell,
+                                  async () => {
+                                    if (characterData?.class?.key && draft?.chosen?.spells) {
+                                      const newSpells = preparedSpells.filter((_, i) => i !== index);
+                                      setChosenSpells(characterData.class.key, newSpells);
+                                      await saveToSupabase();
+                                    }
+                                  },
+                                  undefined,
+                                  true,
+                                  false,
+                                  getFrameColor(frameColor)
+                                )}
+                              </div>
+                            );
+                          })}
+                          
+                          {/* Показываем выученные заклинания */}
+                          {learnedSpells.length > 0 && (
+                            <>
+                              <div className="text-sm text-gray-300 font-medium py-2 border-t border-gray-600 mt-4">
+                                Выученные заклинания:
+                              </div>
+                              {learnedSpells.map((spellKey, index) => {
+                                // Находим полную информацию о заклинании
+                                const spell = getAllSpells().find(s => s.key === spellKey);
+                                if (!spell) return null;
+                                
+                                return (
+                                  <div key={`learned-${index}`}>
+                                    {renderSpellCard(
+                                      { ...spell, name: `${spell.name} (Выучено)` },
+                                      async () => {
+                                        if (characterData?.class?.key) {
+                                          const newSpells = learnedSpells.filter((_, i) => i !== index);
+                                          setLearnedSpells(characterData.class.key, newSpells);
+                                          await saveToSupabase();
+                                        }
+                                      },
+                                      undefined,
+                                      false,
+                                      true,
+                                      getFrameColor(frameColor)
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+              
+              {/* Блок "Выучить Заклинание" */}
+              <Collapsible open={isLearnSpellsOpen} onOpenChange={() => setIsLearnSpellsOpen(!isLearnSpellsOpen)}>
+                <div className="bg-neutral-900 shadow-inner shadow-sm">
+                  <CollapsibleTrigger asChild>
+                    <div 
+                      className="flex justify-between items-center p-2 cursor-pointer transition-colors duration-200"
+                      style={{
+                        backgroundColor: '#394b59',
+                        borderBottom: isLearnSpellsOpen ? `1px solid ${getFrameColor(frameColor)}30` : 'none',
+                        borderLeft: !isLearnSpellsOpen ? `3px solid ${getFrameColor(frameColor)}` : 'none'
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-white">ВЫУЧИТЬ ЗАКЛИНАНИЕ</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {isLearnSpellsOpen ? <ChevronUp className="w-6 h-6 text-white" /> : <ChevronDown className="w-6 h-6 text-white" />}
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="p-4">
+                      {/* Предупреждение */}
+                      <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-shrink-0 mt-0.5">
+                          </div>
+                          <div className="text-sm text-yellow-200">
+                            <span className="font-medium">Внимание!</span> Добавление данных заклинаний не затрагивает лимит подготовленных заклинаний. Спросите разрешения Мастера перед добавлением!
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Поиск и фильтры */}
+                      <div className="space-y-4 mb-6">
+                        {/* Поиск по названию */}
+                        <div>
+                          <label className="text-sm font-medium text-gray-200 mb-2 block">
+                            Поиск по названию
+                          </label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                              type="text"
+                              placeholder="Введите название заклинания..."
+                              value={learnSpellSearch}
+                              onChange={(e) => setLearnSpellSearch(e.target.value)}
+                              className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
+                              style={{
+                                borderColor: getFrameColor(frameColor)
+                              }}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Фильтр по уровню */}
+                        <div>
+                          <label className="text-sm font-medium text-gray-200 mb-2 block">
+                            Уровень заклинания
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => setLearnSpellLevelFilter("all")}
+                              className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                              style={{
+                                backgroundColor: learnSpellLevelFilter === "all" ? getFrameColor(frameColor) : 'transparent',
+                                borderColor: getFrameColor(frameColor),
+                                color: learnSpellLevelFilter === "all" ? '#FFFFFF' : getFrameColor(frameColor)
+                              }}
+                            >
+                              ВСЕ
+                            </button>
+                            {getAllSpellLevels().map(level => (
+                              <button
+                                key={level}
+                                onClick={() => setLearnSpellLevelFilter(level)}
+                                className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                                style={{
+                                  backgroundColor: learnSpellLevelFilter === level ? getFrameColor(frameColor) : 'transparent',
+                                  borderColor: getFrameColor(frameColor),
+                                  color: learnSpellLevelFilter === level ? '#FFFFFF' : getFrameColor(frameColor)
+                                }}
+                              >
+                                {`- ${level} -`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {getFilteredAllSpells().map((spell, index) => {
+                          const isLearned = learnedSpells.includes(spell.key);
+                          return (
+                            <div key={index}>
+                              {renderSpellCard(
+                                spell,
+                                async () => {
+                                  if (characterData?.class?.key) {
+                                    if (isLearned) {
+                                      // Убираем заклинание из выученных
+                                      const newSpells = learnedSpells.filter(key => key !== spell.key);
+                                      setLearnedSpells(characterData.class.key, newSpells);
+                                      await saveToSupabase();
+                                    } else {
+                                      // Добавляем заклинание в выученные
+                                      const newSpells = [...learnedSpells, spell.key];
+                                      setLearnedSpells(characterData.class.key, newSpells);
+                                      await saveToSupabase();
+                                    }
+                                  }
+                                },
+                                undefined,
+                                false,
+                                isLearned,
+                                getFrameColor(frameColor)
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Портал для tooltip'ов кнопок */}
+      {hoveredButton && buttonPosition && showTooltip && createPortal(
+        <div
+          className="fixed px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg pointer-events-none z-[9999] whitespace-nowrap transition-opacity duration-200"
+          style={{
+            left: buttonPosition.x,
+            top: buttonPosition.y,
+            transform: 'translateX(-50%)'
+          }}
+        >
+          <div className="text-white font-semibold">
+            {hoveredButton.startsWith('purchase-') ? 'Купить' : 'Добавить'}
           </div>
           {/* Стрелочка вниз */}
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>

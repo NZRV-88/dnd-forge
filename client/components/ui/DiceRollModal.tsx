@@ -43,6 +43,7 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
   const getActionType = () => {
     if (type === "Спасбросок") return { text: "СПАСБРОСОК", color: "text-green-400" };
     if (type === "Урон") return { text: "УРОН", color: "text-red-300" };
+    if (type === "Лечение") return { text: "ЛЕЧЕНИЕ", color: "text-green-300" };
     if (type === "Атака") return { text: "ПОПАДАНИЕ", color: "text-blue-300" };
     if (type === "Заклинание") return { text: "ЗАКЛИНАНИЕ", color: "text-purple-400" };
     if (type === "Навык") return { text: "ПРОВЕРКА", color: "text-purple-400" };

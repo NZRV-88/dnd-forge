@@ -86,6 +86,7 @@ export type CharacterDraft = {
         languages: Record<string, string[]>;
         feats: string[];                                // выбранные фиты (ключи)
         spells: Record<string, string[]>;
+        learnedSpells: Record<string, string[]>;        // источник -> выученные заклинания (не учитываются в лимите)
         features: Record<string, string[]>;
         fightingStyle?: Record<string, string[]>;
         weaponMastery?: Record<string, string[]>;       // источник -> выбранное оружейное мастерство
@@ -94,6 +95,8 @@ export type CharacterDraft = {
     rolls?: RollResult[];
     // Броски кости хитов за уровни, начиная со 2-го уровня: hpRolls[0] -> уровень 2
     hpRolls?: number[];
+    // Использованные слоты заклинаний по уровням: usedSpellSlots[1] = количество использованных слотов 1-го уровня
+    usedSpellSlots?: Record<number, number>;
 };
 
 // Тип контекста (API для использования в приложении)
@@ -132,6 +135,9 @@ export type CharacterContextType = {
 
     setChosenSpells: (source: string, spells: string[]) => void;
     removeChosenSpell: (source: string, spell: string) => void;
+    
+    setLearnedSpells: (source: string, spells: string[]) => void;
+    removeLearnedSpell: (source: string, spell: string) => void;
 
     setChosenWeaponMastery: (source: string, weapons: string[]) => void;
     removeChosenWeaponMastery: (source: string, weapon: string) => void;
@@ -177,6 +183,11 @@ export type CharacterContextType = {
     
     // Очистка выборов класса
     clearClassChoices: () => void;
+    
+    // Работа со слотами заклинаний
+    useSpellSlot: (level: number) => void;
+    freeSpellSlot: (level: number) => void;
+    resetSpellSlots: () => void;
 };
 
 /* ------------------------------------------------------
@@ -217,6 +228,7 @@ const makeDefaultDraft = (id?: string): CharacterDraft => ({
         languages: {},
         feats: [],
         spells: {},
+        learnedSpells: {},
         features: {},
         fightingStyle: {},
     },
@@ -655,6 +667,24 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             },
         }));
 
+    const setLearnedSpells = (source: string, spells: string[]) =>
+        setDraft(d => ({
+            ...d,
+            chosen: { ...d.chosen, learnedSpells: { ...d.chosen.learnedSpells, [source]: spells } },
+        }));
+
+    const removeLearnedSpell = (source: string, spell: string) =>
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                learnedSpells: {
+                    ...d.chosen.learnedSpells,
+                    [source]: (d.chosen.learnedSpells[source] || []).filter(s => s !== spell),
+                },
+            },
+        }));
+
     const setChosenWeaponMastery = (source: string, weapons: string[]) => {
         console.log('setChosenWeaponMastery called:', {
             source,
@@ -1079,6 +1109,49 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
+    // Функции для работы со слотами заклинаний
+    const useSpellSlot = (level: number) => {
+        setDraft(d => ({
+            ...d,
+            usedSpellSlots: {
+                ...d.usedSpellSlots,
+                [level]: (d.usedSpellSlots?.[level] || 0) + 1
+            }
+        }));
+        
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
+
+    const freeSpellSlot = (level: number) => {
+        setDraft(d => ({
+            ...d,
+            usedSpellSlots: {
+                ...d.usedSpellSlots,
+                [level]: Math.max(0, (d.usedSpellSlots?.[level] || 0) - 1)
+            }
+        }));
+        
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
+
+    const resetSpellSlots = () => {
+        setDraft(d => ({
+            ...d,
+            usedSpellSlots: {}
+        }));
+        
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
+
     /* -----------------------------
        Вычисляемые данные
        (пока просто выбранные; позже
@@ -1231,6 +1304,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenLanguage,
         setChosenSpells,
         removeChosenSpell,
+        setLearnedSpells,
+        removeLearnedSpell,
         setChosenWeaponMastery,
         removeChosenWeaponMastery,
         setChosenFeats,
@@ -1257,7 +1332,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setBasics,
         setLevel,
         setSubclass,
-        setHpCurrent,
         setBackground,
 
         setAbilitiesMode,
@@ -1267,6 +1341,10 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setHpRollAtLevel,
         resetHpRolls,
         clearClassChoices,
+        
+        useSpellSlot,
+        freeSpellSlot,
+        resetSpellSlots,
     };
 
     // Создаем fallback API для случая, когда провайдер еще не инициализирован
@@ -1294,6 +1372,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenLanguage: () => {},
         setChosenSpells: () => {},
         removeChosenSpell: () => {},
+        setLearnedSpells: () => {},
+        removeLearnedSpell: () => {},
         setChosenWeaponMastery: () => {},
         removeChosenWeaponMastery: () => {},
         setChosenFeats: () => {},
@@ -1307,7 +1387,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         equipCapacityItem: () => {},
         unequipCapacityItem: () => {},
         setBasics: () => {},
-        setHpCurrent: () => {},
         saveToSupabase: async () => {},
         loadFromSupabase: async () => {},
         createNewCharacter: async () => {},
@@ -1316,7 +1395,21 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setLevel: () => {},
         setHpRollAtLevel: () => {},
         resetHpRolls: () => {},
-        clearClassChoices: () => {}
+        clearClassChoices: () => {},
+        
+        useSpellSlot: () => {},
+        freeSpellSlot: () => {},
+        resetSpellSlots: () => {},
+        
+        isOverloaded: () => false,
+        setChosenFeatures: () => {},
+        removeChosenFeature: () => {},
+        setChosenFightingStyle: () => {},
+        
+        isLoading: false,
+        setSubclass: () => {},
+        setBackground: () => {},
+        setAbilitiesMode: () => {}
     };
 
     console.log('CharacterProvider render:', { isInitialized, hasApi: !!api, hasFallback: !!fallbackApi });

@@ -487,6 +487,8 @@ export function getAllCharacterData(draft: CharacterDraft) {
         proficiencySources,
         equipment: draft.basics?.equipment || [],
         currency: draft.basics?.currency || null,
+        class: getClassByKey(draft.basics.class),
+        level: draft.basics?.level || 1,
     };
 }
 
