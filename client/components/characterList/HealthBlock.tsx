@@ -52,13 +52,15 @@ export default function HealthBlock({
       size="custom"
       className="relative p-3 text-gray-300"
       style={{
-        width: "94%",    // можно поставить фикс, напр. 360px
-        height: "139px",  // подогнать под viewBox healthFrame.svg
+        width: "94%",    // процентная ширина как у других блоков
+        height: "139px",  // фиксированная высота
+        maxWidth: "400px",  // максимальная ширина для предотвращения растягивания
         display: "grid",
         gridTemplateColumns: `${LEFT_W}px 1fr`,
         gridTemplateRows: `${ROW_PX}px ${ROW_PX}px ${ROW_PX}px`,
         columnGap: 12,
         alignItems: "center",
+        boxSizing: "border-box",  // учитываем padding в размерах
       }}
     >
       {/* Левая колонка */}
@@ -90,7 +92,7 @@ export default function HealthBlock({
 
       {/* Правая колонка */}
       <div
-        className="relative z-10"
+        className="relative z-10 text-[11px] font-bold uppercase text-gray-400 mt-5 ml-3"
         style={{
           gridColumn: 2,
           gridRow: 1,
@@ -99,8 +101,9 @@ export default function HealthBlock({
           alignItems: "center",
           justifyItems: "center",
           height: ROW_PX,
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
         }}
-        className="text-[11px] font-bold uppercase text-gray-400 mt-5 ml-3"
       >
         <div>ТЕКУЩЕЕ</div>
         <div/>
@@ -110,6 +113,7 @@ export default function HealthBlock({
       </div>
 
       <div
+        className="font-bold text-white-400 mt-3 ml-4"
         style={{
           gridColumn: 2,
           gridRow: 2,
@@ -118,8 +122,10 @@ export default function HealthBlock({
           alignItems: "center",
           justifyItems: "center",
           height: ROW_PX,
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          fontSize: "clamp(1rem, 2.5vw, 1.5rem)"  // адаптивный размер шрифта
         }}
-        className="text-2xl font-bold text-white-400 mt-3 ml-4"
       >
         {/* Текущее HP */}
         <div
@@ -178,6 +184,8 @@ export default function HealthBlock({
           alignItems: "center",
           justifyItems: "center",
           height: ROW_PX,
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
         }}
       >
 

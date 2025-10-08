@@ -7,6 +7,7 @@ import AvatarFrameWithImage from "@/components/ui/AvatarFrameWithImage";
 import { useFrameColor } from "@/contexts/FrameColorContext";
 import ProficiencySpeed from "@/components/characterList/ProficiencySpeed";
 import HealthBlock from "@/components/characterList/HealthBlock";
+import ConditionBlock from "@/components/characterList/ConditionBlock";
 import SavingThrows from "@/components/characterList/SavingThrows";
 import Skills from "@/components/characterList/Skills";
 import PassiveSenses from "@/components/characterList/PassiveSenses";
@@ -841,19 +842,20 @@ export default function CharacterList() {
                         </div>
                     </div>
 
-                    {/* Правая колонка: Initiative/AC + Attacks */}
+                    {/* Правая колонка: Initiative/AC + Condition + Attacks */}
                     <div className="flex flex-col gap-4">
-                        {/* Initiative + AC */}
-                        <div className="-mt-4">
+                        {/* Initiative + AC + Condition */}
+                        <div className="grid grid-cols-2 gap-4 -mt-4" style={{ overflow: 'visible' }}>
                             <InitiativeAC
                                 initiative={initiative}
                                 ac={calculateAC()}
                                 dex={(finalStats as any).dex ?? 0}
                                 onRoll={addRoll}
                             />
+                            <ConditionBlock />
                         </div>
 
-                        {/* Attacks (под инициативой/AC) */}
+                        {/* Attacks (под инициативой/AC/condition) */}
                         <div>
                             <Attacks 
                                 attacks={[]} 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useFrameColor } from '@/contexts/FrameColorContext';
 
 interface DynamicFrameProps {
-  frameType: 'ability' | 'health' | 'ac' | 'initiative' | 'prof' | 'st' | 'st-mode' | 'ps-mode' | 'senses' | 'skills' | 'action';
+  frameType: 'ability' | 'health' | 'ac' | 'initiative' | 'prof' | 'st' | 'st-mode' | 'ps-mode' | 'senses' | 'skills' | 'action' | 'condition';
   color?: string;
   size?: 'small' | 'medium' | 'large' | 'custom';
   className?: string;
@@ -506,6 +506,27 @@ const ACTION_FRAME_SVG = (color: string) => `<?xml version="1.0" encoding="utf-8
 </g>
 </svg>`;
 
+const CONDITION_FRAME_SVG = (color: string) => `<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Слой_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 191.79 44.86" style="enable-background:new 0 0 191.79 44.86;" xml:space="preserve">
+<style type="text/css">
+	.st0{clip-path:url(#SVGID_00000171696861770939944030000010469763359886749355_);fill:${color};}
+</style>
+<g>
+	<defs>
+		<rect id="SVGID_1_" width="191.79" height="44.86"/>
+	</defs>
+	<clipPath id="SVGID_00000169529749726618591060000004765894090106221752_">
+		<use xlink:href="#SVGID_1_"  style="overflow:visible;"/>
+	</clipPath>
+	<path style="clip-path:url(#SVGID_00000169529749726618591060000004765894090106221752_);fill:${color};" d="M189.93,38.91h-1V5.95
+	h1V38.91z M2.96,38.68h-1V5.72h1V38.68z M191.78,3.02V2.11h-2.89V0h-1.26c0,0-0.5,0.73-1.84,0.73H5.99C4.65,0.73,4.15,0,4.15,0
+	H2.89v2.11H0.01v0.91c1.19,0,1.26,1.96,1.26,1.96v33.71c0,0-0.07,1.93-1.26,1.93v0.94h2.89v3.31h1.26V1.56h183.48V43.3H4.15v1.56
+	c0,0,0.5-0.73,1.84-0.73H185.8c1.33,0,1.83,0.72,1.84,0.73h1.26v-3.31h2.89v-0.94c-1.19,0-1.26-1.95-1.26-1.95V4.97
+	C190.53,4.97,190.59,3.02,191.78,3.02z"/>
+</g>
+</svg>`;
+
 export default function DynamicFrame({
   frameType, 
   color, 
@@ -553,6 +574,9 @@ export default function DynamicFrame({
         break;
       case 'action':
         baseSvg = ACTION_FRAME_SVG(frameColor);
+        break;
+      case 'condition':
+        baseSvg = CONDITION_FRAME_SVG(frameColor);
         break;
       default:
         baseSvg = ABILITY_FRAME_SVG(frameColor);
