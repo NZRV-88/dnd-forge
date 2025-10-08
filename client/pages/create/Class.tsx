@@ -8,11 +8,12 @@ import ExitButton from "@/components/ui/ExitButton";
 import StepArrows from "@/components/ui/StepArrows";
 import CharacterHeader from "@/components/ui/CharacterHeader";
 import * as Icons from "@/components/refs/icons";
+import { Search } from "lucide-react";
 import FeatureBlock from "@/components/ui/FeatureBlock";
 import ClassPreviewModal from "@/components/ui/ClassPreviewModal";
 import ClassRemoveModal from "@/components/ui/ClassRemoveModal";
 import HealthSettingsModal from "@/components/ui/HealthSettingsModal";
-import { SpellsLevel1 } from "@/data/spells/spellLevel1";
+import { Spells } from "@/data/spells";
 
 const ALL_CLASSES = [
     "fighter",
@@ -87,6 +88,10 @@ export default function ClassPick() {
     const [isPreparedSpellsOpen, setIsPreparedSpellsOpen] = useState(false);
     const [isAddSpellsOpen, setIsAddSpellsOpen] = useState(false);
     const [expandedSpells, setExpandedSpells] = useState<Set<number>>(new Set());
+    
+    // Состояние для поиска и фильтров заклинаний
+    const [spellSearch, setSpellSearch] = useState('');
+    const [spellLevelFilter, setSpellLevelFilter] = useState<number | 'all'>('all');
     
     // Получаем подготовленные заклинания из драфта
     const preparedSpells = draft.basics.class ? (draft.chosen.spells[draft.basics.class] || []) : [];
@@ -377,11 +382,37 @@ export default function ClassPick() {
         const maxSpellLevel = levelSlots.slots.length;
         
         // Фильтруем заклинания по классу и уровню
-        return SpellsLevel1.filter((spell) => 
+        return Spells.filter((spell) => 
             spell.classes && 
             spell.classes.includes(info.key) &&
             spell.level <= maxSpellLevel
         );
+    };
+
+    // Функция для фильтрации заклинаний по поиску и уровню
+    const getFilteredSpells = () => {
+        let spells = getAvailableSpells();
+        
+        // Фильтр по поиску
+        if (spellSearch.trim()) {
+            spells = spells.filter(spell => 
+                spell.name.toLowerCase().includes(spellSearch.toLowerCase())
+            );
+        }
+        
+        // Фильтр по уровню
+        if (spellLevelFilter !== 'all') {
+            spells = spells.filter(spell => spell.level === spellLevelFilter);
+        }
+        
+        return spells;
+    };
+
+    // Функция для получения доступных уровней заклинаний
+    const getAvailableSpellLevels = () => {
+        const spells = getAvailableSpells();
+        const levels = [...new Set(spells.map(spell => spell.level))].sort((a, b) => a - b);
+        return levels;
     };
 
     return (
@@ -676,6 +707,12 @@ export default function ClassPick() {
                                                                                 </div>
                                                                             </div>
                                                                             <div className="text-sm text-muted-foreground mt-1">
+                                                                                {spell.isLegacy ? (
+                                                                                    <>
+                                                                                        <span style={{ color: '#b59e54' }}>Legacy</span>
+                                                                                        <span> • </span>
+                                                                                    </>
+                                                                                ) : null}
                                                                                 {spell.level}-й уровень • {spell.school}
                                                                             </div>
                                                                         </button>
@@ -740,8 +777,53 @@ export default function ClassPick() {
                                                     Подготовленные заклинания: {preparedSpells.length}/{getMaxPreparedSpells()}
                                                 </div>
                                                 
+                                                {/* Поиск и фильтры */}
+                                                <div className="space-y-4 py-4">
+                                                    {/* Поисковая строка */}
+                                                    <div className="relative">
+                                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Поиск заклинаний..."
+                                                            value={spellSearch}
+                                                            onChange={(e) => setSpellSearch(e.target.value)}
+                                                            className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0"
+                                                            style={{
+                                                                borderColor: 'hsl(var(--border))'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    
+                                                    {/* Фильтры по уровню */}
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <button
+                                                            onClick={() => setSpellLevelFilter('all')}
+                                                            className={`px-2 py-1 rounded text-xs font-medium transition-colors border ${
+                                                                spellLevelFilter === 'all'
+                                                                    ? 'bg-primary text-primary-foreground border-primary'
+                                                                    : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
+                                                            }`}
+                                                        >
+                                                            ВСЕ
+                                                        </button>
+                                                        {getAvailableSpellLevels().map(level => (
+                                                            <button
+                                                                key={level}
+                                                                onClick={() => setSpellLevelFilter(level)}
+                                                                className={`px-2 py-1 rounded text-xs font-medium transition-colors border ${
+                                                                    spellLevelFilter === level
+                                                                        ? 'bg-primary text-primary-foreground border-primary'
+                                                                        : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
+                                                                }`}
+                                                            >
+                                                                {level === 0 ? 'ЗАГОВОРЫ' : `${level} УРОВЕНЬ`}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                
                                                 <div className="py-4 space-y-2">
-                                                    {getAvailableSpells().map((spell, index) => {
+                                                    {getFilteredSpells().map((spell, index) => {
                                                         const isExpanded = expandedSpells.has(index);
                                                         return (
                                                             <div key={index} className="border rounded-lg bg-muted/30">
@@ -768,6 +850,12 @@ export default function ClassPick() {
                                                                     </div>
                                                                 </div>
                                                                 <div className="text-sm text-muted-foreground mt-1">
+                                                                    {spell.isLegacy ? (
+                                                                        <>
+                                                                            <span style={{ color: '#b59e54' }}>Legacy</span>
+                                                                            <span> • </span>
+                                                                        </>
+                                                                    ) : null}
                                                                     {spell.level}-й уровень • {spell.school}
                                                                 </div>
                                                             </button>

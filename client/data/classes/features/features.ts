@@ -33,7 +33,7 @@ export const FEATURES: Feature[] = [
             {
                 type: "spell",
                 count: 2,
-                spellClass: "cleric",
+                spellClass: ["cleric"],
                 spellLevel: 0,
             }
         ]

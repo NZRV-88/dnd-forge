@@ -4,8 +4,7 @@ import { useFrameColor } from "@/contexts/FrameColorContext";
 import DynamicFrame from "@/components/ui/DynamicFrame";
 import { Weapons } from "@/data/items/weapons";
 import { getClassByKey } from "@/data/classes";
-import { Cantrips } from "@/data/spells/cantrips";
-import { SpellsLevel1 } from "@/data/spells/spellLevel1";
+import { Spells } from "@/data/spells";
 import { Gears, Ammunitions } from "@/data/items/gear";
 import { Armors } from "@/data/items/armors";
 import { Tools } from "@/data/items/tools";
@@ -17,6 +16,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X, Zap, Wand, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useCharacter } from "@/store/character";
+import { ALL_FEATS } from "@/data/feats/feats";
+import { FIGHTING_STYLES } from "@/data/classes/features/fightingStyles";
 
 type Props = {
   attacks: { name: string; bonus: number; damage: string }[];
@@ -364,6 +365,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const [expandedSpells, setExpandedSpells] = useState<Set<number>>(new Set());
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
   
+  // Состояние для вкладки особенностей
+  const [featuresSearchFilter, setFeaturesSearchFilter] = useState('');
+  const [featuresCategoryFilter, setFeaturesCategoryFilter] = useState('all');
+  
   // Состояние для подсказки мастерства
   const [hoveredWeapon, setHoveredWeapon] = useState<string | null>(null);
   const [starPosition, setStarPosition] = useState<{ x: number; y: number } | null>(null);
@@ -419,9 +424,32 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       });
     }
     
+    // Добавляем заклинания, которые дает класс автоматически
+    if (characterData?.class?.features) {
+      Object.values(characterData.class.features).flat().forEach((feature: any) => {
+        if (feature.spells && Array.isArray(feature.spells)) {
+          feature.spells.forEach((spellKey: string) => {
+            if (!addedKeys.has(spellKey)) {
+              const spellData = getSpellData(spellKey);
+              if (spellData) {
+                allSpells.push({
+                  ...spellData,
+                  key: spellKey,
+                  level: spellData.level || 1,
+                  isCantrip: spellData.level === 0,
+                  isClassFeature: true // Помечаем как заклинание от особенности класса
+                });
+                addedKeys.add(spellKey);
+              }
+            }
+          });
+        }
+      });
+    }
+    
     // Добавляем подготовленные заклинания (1+ уровень)
-    if (draft?.basics?.class && draft?.chosen?.spells?.[draft.basics.class]) {
-      draft.chosen.spells[draft.basics.class].forEach((spellKey: string) => {
+    if (characterData?.class?.key && draft?.chosen?.spells?.[characterData.class.key]) {
+      draft.chosen.spells[characterData.class.key].forEach((spellKey: string) => {
         if (!addedKeys.has(spellKey)) {
           const spellData = getSpellData(spellKey);
           if (spellData) {
@@ -438,8 +466,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
     
     // Добавляем выученные заклинания
-    if (learnedSpells.length > 0) {
-      learnedSpells.forEach((spellKey: string) => {
+    if (characterData?.class?.key && draft?.chosen?.learnedSpells?.[characterData.class.key]) {
+      draft.chosen.learnedSpells[characterData.class.key].forEach((spellKey: string) => {
         if (!addedKeys.has(spellKey)) {
           const spellData = getSpellData(spellKey);
           if (spellData) {
@@ -456,12 +484,27 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       });
     }
     
+    console.log('getAllCharacterSpells debug:', {
+      characterDataClass: characterData?.class?.key,
+      level: characterData?.level,
+      features: characterData?.class?.features,
+      allSpells: allSpells.map(s => ({ name: s.name, level: s.level, isClassFeature: s.isClassFeature }))
+    });
+    
     return allSpells;
   };
   
   // Функция для фильтрации заклинаний (только для блока "Добавить Заклинание")
   const getFilteredSpells = (search: string = addSpellSearch, levelFilter: number | "all" = addSpellLevelFilter) => {
     let spells = getAvailableSpells();
+    
+    console.log('getFilteredSpells debug:', {
+      search,
+      levelFilter,
+      totalAvailable: spells.length,
+      level2Spells: spells.filter(s => s.level === 2),
+      paladinLevel2: spells.filter(s => s.level === 2 && s.classes && s.classes.includes('paladin'))
+    });
     
     // Фильтр по поиску
     if (search.trim()) {
@@ -477,6 +520,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     
     // Сортировка по алфавиту
     spells.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    
+    console.log('getFilteredSpells result:', {
+      filteredCount: spells.length,
+      spells: spells.map(s => ({ name: s.name, level: s.level }))
+    });
     
     return spells;
   };
@@ -515,6 +563,78 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     const spells = getAllCharacterSpells();
     const levels = new Set(spells.map(spell => spell.level));
     return Array.from(levels).sort((a, b) => a - b);
+  };
+
+  // Функция для получения выученных черт персонажа
+  const getCharacterFeats = () => {
+    if (!draft?.chosen?.feats) return [];
+    
+    console.log('getCharacterFeats debug:', {
+      feats: draft.chosen.feats,
+      allFeats: ALL_FEATS.length
+    });
+    
+    return draft.chosen.feats.map(featString => {
+      // featString имеет формат "source-idx:featKey"
+      const featKey = featString.split(':')[1];
+      const feat = ALL_FEATS.find(f => f.key === featKey);
+      console.log('getCharacterFeats mapping:', { featString, featKey, feat: feat?.name });
+      return feat;
+    }).filter(Boolean);
+  };
+
+  // Функция для получения боевых стилей персонажа
+  const getCharacterFightingStyles = () => {
+    if (!draft?.chosen?.fightingStyle) return [];
+    
+    console.log('getCharacterFightingStyles debug:', {
+      fightingStyle: draft.chosen.fightingStyle,
+      allFightingStyles: FIGHTING_STYLES.length
+    });
+    
+    // Собираем все боевые стили из всех источников
+    const allFightingStyles: string[] = [];
+    Object.values(draft.chosen.fightingStyle).forEach(styles => {
+      if (Array.isArray(styles)) {
+        allFightingStyles.push(...styles);
+      }
+    });
+    
+    console.log('getCharacterFightingStyles allFightingStyles:', allFightingStyles);
+    
+    return allFightingStyles.map(styleKey => {
+      const style = FIGHTING_STYLES.find(s => s.key === styleKey);
+      console.log('getCharacterFightingStyles mapping:', { styleKey, style: style?.name });
+      return style;
+    }).filter(Boolean);
+  };
+
+  // Функция для фильтрации черт
+  const getFilteredFeats = () => {
+    let feats = getCharacterFeats();
+    
+    // Фильтр по поиску
+    if (featuresSearchFilter.trim()) {
+      feats = feats.filter(feat => 
+        feat.name.toLowerCase().includes(featuresSearchFilter.toLowerCase())
+      );
+    }
+    
+    return feats;
+  };
+
+  // Функция для фильтрации боевых стилей
+  const getFilteredFightingStyles = () => {
+    let styles = getCharacterFightingStyles();
+    
+    // Фильтр по поиску
+    if (featuresSearchFilter.trim()) {
+      styles = styles.filter(style => 
+        style.name.toLowerCase().includes(featuresSearchFilter.toLowerCase())
+      );
+    }
+    
+    return styles;
   };
 
   // Функция для проверки доступности слотов заклинаний
@@ -1059,7 +1179,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
     
     // Получаем заклинания 1+ уровня из всех доступных заклинаний
-    const allSpells = [...Cantrips, ...SpellsLevel1];
+    const allSpells = Spells;
     
     allSpells.forEach((spell: any) => {
       // Проверяем, доступно ли заклинание для этого класса
@@ -1078,19 +1198,21 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       }
     });
     
+    console.log('getAvailableSpells debug:', {
+      classKey,
+      totalSpells: allSpells.length,
+      paladinSpells: allSpells.filter(s => s.classes && s.classes.includes('paladin')),
+      level2Spells: allSpells.filter(s => s.classes && s.classes.includes('paladin') && s.level === 2),
+      availableSpells: availableSpells.map(s => ({ name: s.name, level: s.level }))
+    });
+    
     return availableSpells;
   };
 
   // Функция для получения всех заклинаний без фильтрации по классу
   const getAllSpells = () => {
-    const allSpells: any[] = [];
-    
-    // Получаем все заклинания из всех источников
-    allSpells.push(...Cantrips);
-    allSpells.push(...SpellsLevel1);
-    
     // Преобразуем все заклинания в единый формат
-    return allSpells.map((spell: any) => ({
+    return Spells.map((spell: any) => ({
       ...spell,
       key: spell.key || spell.name.toLowerCase().replace(/\s+/g, '-'),
       level: spell.level,
@@ -2432,12 +2554,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для получения русского названия заклинания
   const getSpellName = (spellKey: string) => {
-    // Сначала ищем в заговорах
-    let spell = Cantrips.find(s => s.key === spellKey);
-    if (spell) return spell.name;
-    
-    // Затем ищем в заклинаниях 1-го уровня
-    spell = SpellsLevel1.find(s => s.key === spellKey);
+    // Ищем заклинание в общем списке
+    const spell = Spells.find(s => s.key === spellKey);
     if (spell) return spell.name;
     
     // Если не найдено, возвращаем ключ
@@ -2502,12 +2620,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для получения данных заклинания
   const getSpellData = (spellKey: string) => {
-    // Сначала ищем в заговорах
-    let spell = Cantrips.find(s => s.key === spellKey);
-    if (spell) return spell;
-    
-    // Затем ищем в заклинаниях 1-го уровня
-    spell = SpellsLevel1.find(s => s.key === spellKey);
+    // Ищем заклинание в общем списке
+    const spell = Spells.find(s => s.key === spellKey);
     if (spell) return spell;
     
     // Если не найдено, возвращаем undefined
@@ -5130,8 +5244,219 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   );
       case "features":
         return (
-          <div className="text-center text-gray-500 text-sm py-4">
-            Особенности будут здесь
+          <div className="h-full flex flex-col">
+            {/* Поиск и фильтры */}
+            <div className="space-y-4 mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Поиск особенностей..."
+                  value={featuresSearchFilter}
+                  onChange={(e) => setFeaturesSearchFilter(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
+                  style={{
+                    borderColor: getFrameColor(frameColor)
+                  }}
+                />
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFeaturesCategoryFilter('all')}
+                  className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                  style={{
+                    backgroundColor: featuresCategoryFilter === 'all' ? getFrameColor(frameColor) : 'transparent',
+                    borderColor: getFrameColor(frameColor),
+                    color: featuresCategoryFilter === 'all' ? '#FFFFFF' : getFrameColor(frameColor)
+                  }}
+                  onMouseEnter={(e) => {
+                    if (featuresCategoryFilter !== 'all') {
+                      e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (featuresCategoryFilter !== 'all') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  ВСЕ
+                </button>
+                <button
+                  onClick={() => setFeaturesCategoryFilter('feats')}
+                  className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                  style={{
+                    backgroundColor: featuresCategoryFilter === 'feats' ? getFrameColor(frameColor) : 'transparent',
+                    borderColor: getFrameColor(frameColor),
+                    color: featuresCategoryFilter === 'feats' ? '#FFFFFF' : getFrameColor(frameColor)
+                  }}
+                  onMouseEnter={(e) => {
+                    if (featuresCategoryFilter !== 'feats') {
+                      e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (featuresCategoryFilter !== 'feats') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  ЧЕРТЫ
+                </button>
+                <button
+                  onClick={() => setFeaturesCategoryFilter('fighting-styles')}
+                  className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                  style={{
+                    backgroundColor: featuresCategoryFilter === 'fighting-styles' ? getFrameColor(frameColor) : 'transparent',
+                    borderColor: getFrameColor(frameColor),
+                    color: featuresCategoryFilter === 'fighting-styles' ? '#FFFFFF' : getFrameColor(frameColor)
+                  }}
+                  onMouseEnter={(e) => {
+                    if (featuresCategoryFilter !== 'fighting-styles') {
+                      e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (featuresCategoryFilter !== 'fighting-styles') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  БОЕВЫЕ СТИЛИ
+                </button>
+              </div>
+            </div>
+
+            {/* Контент */}
+            <div className="flex-1 overflow-y-auto space-y-6">
+              {/* Выученные черты */}
+              {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'feats') && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
+                    ВЫУЧЕННЫЕ ЧЕРТЫ
+                  </h3>
+                  {getFilteredFeats().length === 0 ? (
+                    <p className="text-gray-400 text-sm py-4">
+                      Выученные черты отсутствуют
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {getFilteredFeats().map((feat, index) => (
+                        <div key={index} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
+                          <Collapsible>
+                            <CollapsibleTrigger asChild>
+                              <div className="w-full p-3 bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white font-medium">{feat.name}</span>
+                                    {feat.isLegacy && (
+                                      <span 
+                                        className="text-xs px-1 py-0.5 rounded font-medium border border-gray-500"
+                                        style={{ color: getFrameColor(frameColor) }}
+                                      >
+                                        Legacy
+                                      </span>
+                                    )}
+                                  </div>
+                                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                                </div>
+                              </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="p-4 bg-neutral-900">
+                                <div className="space-y-3">
+                                  <p className="text-gray-300 text-sm leading-relaxed">{feat.desc}</p>
+                                  
+                                  {feat.effect && feat.effect.length > 0 && (
+                                    <div className="space-y-2">
+                                      <h4 className="text-sm font-semibold text-gray-200">Эффекты:</h4>
+                                      {feat.effect.map((effect, effectIndex) => (
+                                        <div key={effectIndex} className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
+                                          {effect.name && (
+                                            <h5 className="text-sm font-medium text-gray-200 mb-1">{effect.name}</h5>
+                                          )}
+                                          {effect.desc && (
+                                            <p className="text-xs text-gray-300 leading-relaxed">{effect.desc}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  
+                                  {feat.prerequisites && (
+                                    <div className="space-y-1">
+                                      <h4 className="text-sm font-semibold text-gray-200">Требования:</h4>
+                                      <div className="text-xs text-gray-300 space-y-1">
+                                        {feat.prerequisites.level && (
+                                          <p>• Уровень: {feat.prerequisites.level}</p>
+                                        )}
+                                        {feat.prerequisites.oneOfAbilities && (
+                                          <p>• Характеристики: {Object.entries(feat.prerequisites.oneOfAbilities).map(([key, value]) => `${key} ${value}+`).join(' или ')}</p>
+                                        )}
+                                        {feat.prerequisites.races && (
+                                          <p>• Расы: {feat.prerequisites.races.join(', ')}</p>
+                                        )}
+                                        {feat.prerequisites.spellcasting && (
+                                          <p>• Заклинательство</p>
+                                        )}
+                                        {feat.prerequisites.armor && (
+                                          <p>• Доспехи: {feat.prerequisites.armor}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Боевые стили */}
+              {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'fighting-styles') && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
+                    БОЕВЫЕ СТИЛИ
+                  </h3>
+                  {getFilteredFightingStyles().length === 0 ? (
+                    <p className="text-gray-400 text-sm py-4">
+                      Боевые стили отсутствуют
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {getFilteredFightingStyles().map((style, index) => (
+                        <div key={index} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
+                          <Collapsible>
+                            <CollapsibleTrigger asChild>
+                              <div className="w-full p-3 bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white font-medium">{style.name}</span>
+                                  </div>
+                                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                                </div>
+                              </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="p-4 bg-neutral-900">
+                                <p className="text-gray-300 text-sm leading-relaxed">{style.desc}</p>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         );
       default:

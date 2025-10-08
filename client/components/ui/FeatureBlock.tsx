@@ -182,7 +182,7 @@ export default function FeatureBlock({
         for (const chosenKey of arr) {
           const nestedFeature = FEATURES.find(f => f.key === chosenKey);
           if (nestedFeature?.choices && nestedFeature.choices.length > 0) {
-            const nested = countChoicesRecursive(nestedFeature.choices, `${sourceKey}-feature-${chosenKey}`);
+            const nested = countChoicesRecursive(nestedFeature.choices, `feature-${chosenKey}`);
             // вложенные выборы увеличивают общий total и selected
             total += nested.total;
             selected += nested.selected;

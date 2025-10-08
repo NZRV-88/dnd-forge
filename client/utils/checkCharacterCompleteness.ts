@@ -100,12 +100,12 @@ function isChoiceComplete(choice: ChoiceOption, source: string, draft: Character
         case "spell":
             return (draft.chosen.spells?.[source]?.filter(s => s).length || 0) >= count;
         case "feat": {
-            const selectedFeats = draft.chosen.feats?.filter(f => f.startsWith(`${source}:`)) || [];
+            const selectedFeats = draft.chosen.feats?.filter(f => f.startsWith(`${source}-`)) || [];
             const result = selectedFeats.length >= count;
             console.log('=== isChoiceComplete: feat ===');
             console.log('source:', source);
             console.log('count:', count);
-            console.log('searchPrefix:', `${source}:`);
+            console.log('searchPrefix:', `${source}-`);
             console.log('allFeats:', JSON.stringify(draft.chosen.feats || []));
             console.log('selectedFeats:', JSON.stringify(selectedFeats));
             console.log('result:', result);

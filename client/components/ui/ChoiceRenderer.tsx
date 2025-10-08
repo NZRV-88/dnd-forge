@@ -824,7 +824,10 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                     // ВЫБОР ОСОБЕННОСТЕЙ (FEATURES)
                     // ========================================================================
                     case "feature": {
-                        const availableFeatures = FEATURES;
+                        // Фильтруем доступные особенности по options, если они указаны
+                        const availableFeatures = choice.options 
+                            ? FEATURES.filter(f => choice.options?.includes(f.key))
+                            : FEATURES;
                         const selected = draft.chosen.features?.[source] || [];
                         const selectedFeature = selected[0] 
                             ? availableFeatures.find(f => f.key === selected[0]) 
@@ -832,38 +835,83 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                         
                         console.log('ChoiceRenderer: feature case:', {
                             source,
+                            choice,
+                            choiceOptions: choice.options,
                             selected,
                             selectedFeature,
-                            availableFeatures: availableFeatures.length
+                            availableFeatures: availableFeatures.length,
+                            filteredFeatures: availableFeatures.map(f => f.key),
+                            chosenFeatures: draft.chosen.features,
+                            chosenFightingStyle: draft.chosen.fightingStyle
                         });
 
                         // Проверяем завершенность всех подвыборов корректно по соответствующим сторам
                         const isChoiceComplete = selectedFeature?.choices?.every((subChoice) => {
                             const subSource = `feature-${selectedFeature.key}`;
                             const cnt = subChoice.count ?? 1;
+                            
+                            let isComplete = false;
                             switch (subChoice.type) {
                                 case "ability":
-                                    return (draft.chosen.abilities?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.abilities?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 case "skill":
-                                    return (draft.chosen.skills?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.skills?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 case "tool":
-                                    return (draft.chosen.tools?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.tools?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 case "tool-proficiency":
-                                    return (draft.chosen.toolProficiencies?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.toolProficiencies?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 case "language":
-                                    return (draft.chosen.languages?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.languages?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 case "spell":
-                                    return (draft.chosen.spells?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.spells?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 case "weapon-mastery":
-                                    return (draft.chosen.weaponMastery?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.weaponMastery?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 case "feature":
-                                    return (draft.chosen.features?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.features?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 case "fighting-style":
-                                    return (draft.chosen.fightingStyle?.[subSource]?.length || 0) >= cnt;
+                                    isComplete = (draft.chosen.fightingStyle?.[subSource]?.length || 0) >= cnt;
+                                    break;
                                 default:
-                                    return true;
+                                    isComplete = true;
                             }
+                            
+                            console.log('ChoiceRenderer: checking subchoice completion:', {
+                                subChoice,
+                                subSource,
+                                cnt,
+                                isComplete,
+                                actualLength: {
+                                    abilities: draft.chosen.abilities?.[subSource]?.length || 0,
+                                    skills: draft.chosen.skills?.[subSource]?.length || 0,
+                                    tools: draft.chosen.tools?.[subSource]?.length || 0,
+                                    toolProficiencies: draft.chosen.toolProficiencies?.[subSource]?.length || 0,
+                                    languages: draft.chosen.languages?.[subSource]?.length || 0,
+                                    spells: draft.chosen.spells?.[subSource]?.length || 0,
+                                    weaponMastery: draft.chosen.weaponMastery?.[subSource]?.length || 0,
+                                    features: draft.chosen.features?.[subSource]?.length || 0,
+                                    fightingStyle: draft.chosen.fightingStyle?.[subSource]?.length || 0,
+                                }
+                            });
+                            
+                            return isComplete;
                         }) ?? true;
+
+                        console.log('ChoiceRenderer: final feature render:', {
+                            source,
+                            selected: selected[0],
+                            hasValue: !!selected[0],
+                            isChoiceComplete,
+                            isUnfinished: !isChoiceComplete,
+                            finalClassName: getSelectStyles(!!selected[0], !isChoiceComplete)
+                        });
 
                         return (
                             <div key={`${source}:feature:${ci}`} className="space-y-2">
