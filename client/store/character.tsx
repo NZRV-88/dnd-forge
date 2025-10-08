@@ -97,6 +97,12 @@ export type CharacterDraft = {
     hpRolls?: number[];
     // Использованные слоты заклинаний по уровням: usedSpellSlots[1] = количество использованных слотов 1-го уровня
     usedSpellSlots?: Record<number, number>;
+    // Возложение рук (только для Паладина)
+    layOnHands?: {
+        maxPoints: number;        // Максимум очков (уровень * 5)
+        currentPoints: number;    // Текущие очки
+        usedPoints: number;       // Потраченные очки за день
+    };
 };
 
 // Тип контекста (API для использования в приложении)
@@ -188,6 +194,11 @@ export type CharacterContextType = {
     useSpellSlot: (level: number) => void;
     freeSpellSlot: (level: number) => void;
     resetSpellSlots: () => void;
+    
+    // Работа с Возложением рук (только для Паладина)
+    initializeLayOnHands: (level: number) => void;
+    useLayOnHands: (points: number) => void;
+    restoreLayOnHands: () => void;
 };
 
 /* ------------------------------------------------------
@@ -375,7 +386,20 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     };
 
     const setBasics = (updates: Partial<CharacterDraft["basics"]>) => {
-        setDraft(d => ({ ...d, basics: { ...d.basics, ...updates } }));
+        setDraft(d => {
+            const newDraft = { ...d, basics: { ...d.basics, ...updates } };
+            
+            // Автоматически инициализируем Возложение рук для Паладина
+            if (updates.class === 'paladin' && !newDraft.layOnHands) {
+                newDraft.layOnHands = {
+                    maxPoints: (newDraft.basics.level || 1) * 5,
+                    currentPoints: (newDraft.basics.level || 1) * 5,
+                    usedPoints: 0
+                };
+            }
+            
+            return newDraft;
+        });
         
         // Автоматически сохраняем в БД при изменении basics
         if (draft.id) {
@@ -383,8 +407,21 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const setLevel = (level: number) =>
+    const setLevel = (level: number) => {
         setBasics({ level });
+        
+        // Обновляем максимум очков Возложения рук при изменении уровня
+        if (draft.basics.class === 'paladin' && draft.layOnHands) {
+            setDraft(d => ({
+                ...d,
+                layOnHands: {
+                    ...d.layOnHands!,
+                    maxPoints: level * 5,
+                    currentPoints: Math.min(d.layOnHands!.currentPoints, level * 5)
+                }
+            }));
+        }
+    };
 
     const setSubclass = (subclass: string) =>
         setBasics({ subclass });
@@ -1152,6 +1189,66 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    // Функции для работы с Возложением рук (только для Паладина)
+    const initializeLayOnHands = (level: number) => {
+        setDraft(d => ({
+            ...d,
+            layOnHands: {
+                maxPoints: level * 5,
+                currentPoints: level * 5,
+                usedPoints: 0
+            }
+        }));
+        
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
+
+    const useLayOnHands = (points: number) => {
+        setDraft(d => {
+            if (!d.layOnHands) return d;
+            
+            const newCurrentPoints = Math.max(0, d.layOnHands.currentPoints - points);
+            const newUsedPoints = d.layOnHands.usedPoints + points;
+            
+            return {
+                ...d,
+                layOnHands: {
+                    ...d.layOnHands,
+                    currentPoints: newCurrentPoints,
+                    usedPoints: newUsedPoints
+                }
+            };
+        });
+        
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
+
+    const restoreLayOnHands = () => {
+        setDraft(d => {
+            if (!d.layOnHands) return d;
+            
+            return {
+                ...d,
+                layOnHands: {
+                    ...d.layOnHands,
+                    currentPoints: d.layOnHands.maxPoints,
+                    usedPoints: 0
+                }
+            };
+        });
+        
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
+
     /* -----------------------------
        Вычисляемые данные
        (пока просто выбранные; позже
@@ -1345,6 +1442,10 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         useSpellSlot,
         freeSpellSlot,
         resetSpellSlots,
+        
+        initializeLayOnHands,
+        useLayOnHands,
+        restoreLayOnHands,
     };
 
     // Создаем fallback API для случая, когда провайдер еще не инициализирован
@@ -1405,6 +1506,10 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setChosenFeatures: () => {},
         removeChosenFeature: () => {},
         setChosenFightingStyle: () => {},
+        
+        initializeLayOnHands: () => {},
+        useLayOnHands: () => {},
+        restoreLayOnHands: () => {},
         
         isLoading: false,
         setSubclass: () => {},

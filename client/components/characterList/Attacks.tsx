@@ -15,6 +15,7 @@ import { ABILITIES } from "@/data/abilities";
 import { SKILLS } from "@/data/skills";
 import { LANGUAGES } from "@/data/languages/languages";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import LayOnHandsManager from "@/components/ui/LayOnHandsManager";
 import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X, Zap, Wand, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useCharacter } from "@/store/character";
@@ -5510,6 +5511,17 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
             {/* Контент */}
             <div className="flex-1 overflow-y-auto space-y-6">
+              {/* Особенности класса */}
+              {characterData?.class?.key === 'paladin' && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
+                    ОСОБЕННОСТИ КЛАССА
+                  </h3>
+                  <LayOnHandsManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                </div>
+              )}
+
               {/* Выученные черты */}
               {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'feats') && (
                 <div>
