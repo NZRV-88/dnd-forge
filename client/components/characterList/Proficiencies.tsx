@@ -313,7 +313,7 @@ export default function Proficiencies({ data }: ProficienciesProps) {
             </div>
 
             {/* Заголовок + шестерёнка снизу */}
-            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold -mt-1">
+            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold -mt-2">
                 ВЛАДЕНИЯ
                 <button
                     onClick={() => setIsOpen(true)}

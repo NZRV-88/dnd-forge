@@ -731,8 +731,18 @@ export default function CharacterList() {
     );
 
     return (
-        <div className="bg-neutral-900 text-gray-200 min-h-screen p-4 sm:p-6 font-sans flex justify-center">
-            <div className="w-full max-w-[1200px] px-1 sm:px-0">
+        <div 
+            className="text-gray-200 min-h-screen p-4 sm:p-6 font-sans flex justify-center relative"
+            style={{
+                backgroundImage: `url('/assets/class-bgs/paladin-bg.png')`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+            }}
+        >
+            {/* Overlay для затемнения фона */}
+            <div className="absolute inset-0 bg-neutral-900 bg-opacity-80"></div>
+            <div className="w-full max-w-[1200px] px-1 sm:px-0 relative z-10">
 
                 {/* HEADER */}
                 <div className="flex flex-col sm:flex-row sm:items-center border-b border-yellow-600 pb-4 mb-6 gap-4">

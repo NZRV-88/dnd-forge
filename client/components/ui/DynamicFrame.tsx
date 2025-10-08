@@ -49,6 +49,7 @@ const FRAME_SIZES = {
   large: 'w-32 h-48',
 };
 
+
 // SVG для prof frame с возможностью изменения цвета
 const PROF_FRAME_SVG = (color: string) => `<?xml version="1.0" encoding="utf-8"?>
 <!-- Generator: Adobe Illustrator 28.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
@@ -519,32 +520,46 @@ export default function DynamicFrame({
   const frameColor = FRAME_COLORS[actualColor as keyof typeof FRAME_COLORS] || FRAME_COLORS.gold;
   const frameSize = size === 'custom' ? '' : FRAME_SIZES[size];
 
-  // Генерируем SVG с нужным цветом
+  // Генерируем SVG с нужным цветом и затемнением
   const getFrameSvg = () => {
+    let baseSvg: string;
     switch (frameType) {
       case 'ability':
-        return ABILITY_FRAME_SVG(frameColor);
+        baseSvg = ABILITY_FRAME_SVG(frameColor);
+        break;
       case 'prof':
-        return PROF_FRAME_SVG(frameColor);
+        baseSvg = PROF_FRAME_SVG(frameColor);
+        break;
       case 'health':
-        return HEALTH_FRAME_SVG(frameColor);
+        baseSvg = HEALTH_FRAME_SVG(frameColor);
+        break;
       case 'initiative':
-        return INITIATIVE_FRAME_SVG(frameColor);
+        baseSvg = INITIATIVE_FRAME_SVG(frameColor);
+        break;
       case 'ac':
-        return AC_FRAME_SVG(frameColor);
+        baseSvg = AC_FRAME_SVG(frameColor);
+        break;
       case 'st':
-        return ST_FRAME_SVG(frameColor);
+        baseSvg = ST_FRAME_SVG(frameColor);
+        break;
       case 'st-mode':
-        return ST_MODE_FRAME_SVG(frameColor);
+        baseSvg = ST_MODE_FRAME_SVG(frameColor);
+        break;
       case 'senses':
-        return SENSES_FRAME_SVG(frameColor);
+        baseSvg = SENSES_FRAME_SVG(frameColor);
+        break;
       case 'skills':
-        return SKILLS_FRAME_SVG(frameColor);
+        baseSvg = SKILLS_FRAME_SVG(frameColor);
+        break;
       case 'action':
-        return ACTION_FRAME_SVG(frameColor);
+        baseSvg = ACTION_FRAME_SVG(frameColor);
+        break;
       default:
-        return ABILITY_FRAME_SVG(frameColor);
+        baseSvg = ABILITY_FRAME_SVG(frameColor);
     }
+    
+    // Возвращаем оригинальный SVG без затемнения
+    return baseSvg;
   };
 
   // Правильное кодирование UTF-8 для SVG с кириллицей
@@ -627,8 +642,11 @@ export default function DynamicFrame({
 </g>
 </svg>`;
 
-    const leftEncodedSvg = encodeURIComponent(leftOnlySvg);
-    const circleEncodedSvg = encodeURIComponent(circleSvg);
+    const leftWithDarkening = addDarkeningToSvg(leftOnlySvg, frameColor);
+    const circleWithDarkening = addDarkeningToSvg(circleSvg, frameColor);
+    
+    const leftEncodedSvg = encodeURIComponent(leftWithDarkening);
+    const circleEncodedSvg = encodeURIComponent(circleWithDarkening);
     const leftDataUrl = `data:image/svg+xml;charset=utf-8,${leftEncodedSvg}`;
     const circleDataUrl = `data:image/svg+xml;charset=utf-8,${circleEncodedSvg}`;
 
@@ -667,18 +685,18 @@ export default function DynamicFrame({
 
   const stretchSettings = getStretchSettings();
 
-  return (
-    <div 
-      className={`${frameSize} ${className}`}
-      style={{
-        backgroundImage: `url('${svgDataUrl}')`,
-        ...stretchSettings,
-        ...style
-      }}
-    >
-      {children}
-    </div>
-  );
+              return (
+                <div 
+                  className={`${frameSize} ${className}`}
+                  style={{
+                    backgroundImage: `url('${svgDataUrl}')`,
+                    ...stretchSettings,
+                    ...style
+                  }}
+                >
+                  {children}
+                </div>
+              );
 }
 
 // Экспортируем константы для использования в других компонентах
