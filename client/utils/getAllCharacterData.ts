@@ -453,6 +453,16 @@ export function getAllCharacterData(draft: CharacterDraft) {
     for (const [k, v] of Object.entries(backgroundFixed.abilityBonuses)) {
         abilityBonuses[k as keyof Abilities] = (abilityBonuses[k as keyof Abilities] || 0) + v;
     }
+    
+    // Обрабатываем черты из предыстории
+    if (backgroundFixed.features) {
+        backgroundFixed.features.forEach((feature: any) => {
+            if (feature.feat) {
+                feats.add(feature.feat);
+                console.log('getAllCharacterData: adding background feat:', feature.feat);
+            }
+        });
+    }
 
     /* -----------------------------
        ASI
@@ -489,6 +499,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
         currency: draft.basics?.currency || null,
         class: getClassByKey(draft.basics.class),
         level: draft.basics?.level || 1,
+        background: backgroundFixed,
     };
 }
 

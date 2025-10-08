@@ -12,6 +12,7 @@ export type FixedBackgroundData = {
         savingThrows: string[];
     };
     abilityBonuses: Partial<Record<keyof Abilities, number>>;
+    features: any[];
 };
 
 export function getFixedBackgroundData(backgroundKey?: string): FixedBackgroundData {
@@ -25,6 +26,7 @@ export function getFixedBackgroundData(backgroundKey?: string): FixedBackgroundD
             savingThrows: [],
         },
         abilityBonuses: {},
+        features: [],
     };
 
     if (!backgroundKey) return base;
@@ -54,6 +56,12 @@ export function getFixedBackgroundData(backgroundKey?: string): FixedBackgroundD
     // языки (если они отдельным полем, а не Proficiency[])
     if (background.languages) {
         base.proficiencies.languages.push(...background.languages);
+    }
+    
+    // особенности предыстории
+    if (background.feature) {
+        base.features.push(...background.feature);
+        console.log('getFixedBackgroundData: adding background features:', background.feature);
     }
 
     return base;

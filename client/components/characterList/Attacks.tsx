@@ -12,6 +12,8 @@ import { EQUIPMENT_PACKS } from "@/data/items/equipment-packs";
 import { getWeaponMasteryByKey } from "@/data/items/weapon-mastery";
 import { getWeaponPropertyByName } from "@/data/items/weapons";
 import { ABILITIES } from "@/data/abilities";
+import { SKILLS } from "@/data/skills";
+import { LANGUAGES } from "@/data/languages/languages";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X, Zap, Wand, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -565,22 +567,199 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return Array.from(levels).sort((a, b) => a - b);
   };
 
-  // Функция для получения выученных черт персонажа
-  const getCharacterFeats = () => {
-    if (!draft?.chosen?.feats) return [];
+  // Функция для получения выбранных опций черты
+  const getFeatChoices = (featKey: string) => {
+    if (!draft?.chosen) return [];
     
-    console.log('getCharacterFeats debug:', {
-      feats: draft.chosen.feats,
-      allFeats: ALL_FEATS.length
+    console.log('getFeatChoices debug:', {
+      featKey,
+      allFeats: draft.chosen.feats,
+      chosen: draft.chosen
     });
     
-    return draft.chosen.feats.map(featString => {
-      // featString имеет формат "source-idx:featKey"
-      const featKey = featString.split(':')[1];
-      const feat = ALL_FEATS.find(f => f.key === featKey);
-      console.log('getCharacterFeats mapping:', { featString, featKey, feat: feat?.name });
-      return feat;
-    }).filter(Boolean);
+    const choices: string[] = [];
+    
+    // Для черты "skilled" от предыстории ищем выборы в skills
+    if (featKey === 'skilled') {
+      // Ищем выборы навыков, связанные с чертой "skilled" от предыстории
+      // Черта "skilled" должна иметь выборы в формате "background-skilled-*"
+      Object.entries(draft.chosen.skills || {}).forEach(([source, skills]) => {
+        if (source.includes('skilled') || source.includes('background-skilled')) {
+          skills.forEach(skill => {
+            choices.push(`skill:${skill}`);
+            console.log('getFeatChoices found skilled skill choice:', { source, skill });
+          });
+        }
+      });
+      
+      // Ищем выборы инструментов, связанные с чертой "skilled" от предыстории
+      Object.entries(draft.chosen.tools || {}).forEach(([source, tools]) => {
+        if (source.includes('skilled') || source.includes('background-skilled')) {
+          tools.forEach(tool => {
+            choices.push(`tool:${tool}`);
+            console.log('getFeatChoices found skilled tool choice:', { source, tool });
+          });
+        }
+      });
+    } else {
+      // Для других черт ищем по старому алгоритму
+      const featEntries = (draft.chosen.feats || []).filter(f => f.includes(`:${featKey}`));
+      
+      featEntries.forEach(entry => {
+        const parts = entry.split(':');
+        if (parts.length >= 2) {
+          const sourceKey = parts[0];
+          const feat = parts[1];
+          
+          console.log('getFeatChoices processing entry:', { entry, sourceKey, feat });
+          
+          // Ищем все выборы для этого источника
+          Object.entries(draft.chosen).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach(v => {
+                if (typeof v === 'string' && v.startsWith(`${sourceKey}:`)) {
+                  const choiceParts = v.split(':');
+                  if (choiceParts.length >= 3) {
+                    const choiceType = choiceParts[1];
+                    const choiceValue = choiceParts[2];
+                    choices.push(`${choiceType}:${choiceValue}`);
+                    console.log('getFeatChoices found choice in array:', { key, v, choiceType, choiceValue });
+                  }
+                }
+              });
+            } else if (typeof value === 'object' && value !== null) {
+              Object.entries(value).forEach(([source, values]) => {
+                if (Array.isArray(values)) {
+                  values.forEach(v => {
+                    if (typeof v === 'string' && v.startsWith(`${sourceKey}:`)) {
+                      const choiceParts = v.split(':');
+                      if (choiceParts.length >= 3) {
+                        const choiceType = choiceParts[1];
+                        const choiceValue = choiceParts[2];
+                        choices.push(`${choiceType}:${choiceValue}`);
+                        console.log('getFeatChoices found choice in object:', { key, source, v, choiceType, choiceValue });
+                      }
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+    
+    console.log('getFeatChoices final choices:', choices);
+    return choices;
+  };
+
+  // Функция для получения всех черт персонажа
+  const getCharacterFeats = () => {
+    const allFeats: any[] = [];
+    const addedKeys = new Set<string>(); // Для предотвращения дублирования
+    
+    // Добавляем черты из выбранных фитов
+    if (draft?.chosen?.feats) {
+      draft.chosen.feats.forEach(featString => {
+        const featKey = featString.split(':')[1];
+        if (!addedKeys.has(featKey)) {
+          const feat = ALL_FEATS.find(f => f.key === featKey);
+          if (feat) {
+            allFeats.push(feat);
+            addedKeys.add(featKey);
+          }
+        }
+      });
+    }
+    
+    // Добавляем черты из особенностей класса
+    if (characterData?.class?.features) {
+      Object.values(characterData.class.features).flat().forEach((feature: any) => {
+        // Проверяем поле feat (единственная черта)
+        if (feature.feat && !addedKeys.has(feature.feat)) {
+          const feat = ALL_FEATS.find(f => f.key === feature.feat);
+          if (feat) {
+            allFeats.push(feat);
+            addedKeys.add(feature.feat);
+          }
+        }
+        // Проверяем поле feats (массив черт)
+        if (feature.feats && Array.isArray(feature.feats)) {
+          feature.feats.forEach((featKey: string) => {
+            if (!addedKeys.has(featKey)) {
+              const feat = ALL_FEATS.find(f => f.key === featKey);
+              if (feat) {
+                allFeats.push(feat);
+                addedKeys.add(featKey);
+              }
+            }
+          });
+        }
+      });
+    }
+    
+    // Добавляем черты из особенностей подкласса
+    if (characterData?.subclass?.features) {
+      Object.values(characterData.subclass.features).flat().forEach((feature: any) => {
+        // Проверяем поле feat (единственная черта)
+        if (feature.feat && !addedKeys.has(feature.feat)) {
+          const feat = ALL_FEATS.find(f => f.key === feature.feat);
+          if (feat) {
+            allFeats.push(feat);
+            addedKeys.add(feature.feat);
+          }
+        }
+        // Проверяем поле feats (массив черт)
+        if (feature.feats && Array.isArray(feature.feats)) {
+          feature.feats.forEach((featKey: string) => {
+            if (!addedKeys.has(featKey)) {
+              const feat = ALL_FEATS.find(f => f.key === featKey);
+              if (feat) {
+                allFeats.push(feat);
+                addedKeys.add(featKey);
+              }
+            }
+          });
+        }
+      });
+    }
+    
+    // Добавляем черты из предыстории
+    if (characterData?.background?.features) {
+      characterData.background.features.forEach((feature: any) => {
+        // Проверяем поле feat (единственная черта)
+        if (feature.feat && !addedKeys.has(feature.feat)) {
+          const feat = ALL_FEATS.find(f => f.key === feature.feat);
+          if (feat) {
+            allFeats.push(feat);
+            addedKeys.add(feature.feat);
+          }
+        }
+        // Проверяем поле feats (массив черт)
+        if (feature.feats && Array.isArray(feature.feats)) {
+          feature.feats.forEach((featKey: string) => {
+            if (!addedKeys.has(featKey)) {
+              const feat = ALL_FEATS.find(f => f.key === featKey);
+              if (feat) {
+                allFeats.push(feat);
+                addedKeys.add(featKey);
+              }
+            }
+          });
+        }
+      });
+    }
+    
+    console.log('getCharacterFeats debug:', {
+      allFeats: allFeats.length,
+      featNames: allFeats.map(f => f.name),
+      addedKeys: Array.from(addedKeys),
+      characterDataBackground: characterData?.background,
+      backgroundFeatures: characterData?.background?.features,
+      characterDataFeats: characterData?.feats
+    });
+    
+    return allFeats;
   };
 
   // Функция для получения боевых стилей персонажа
@@ -3553,7 +3732,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     
   return (
       <div 
-        className="flex items-center gap-3"
+        className="flex items-center gap-3 mr-4"
         onMouseLeave={() => {
           // Очищаем таймаут и сразу скрываем подсказку
           if (currencyTimeout) {
@@ -4535,7 +4714,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   <div className="break-words">
                                     <div className="font-medium">{spell.name}</div>
                                     {spell.isLegacy && (
-                                      <div className="text-xs" style={{ color: getFrameColor(frameColor) }}>
+                                      <div className="text-xs mt-1" style={{ color: getFrameColor(frameColor) }}>
                                         Legacy
                                       </div>
                                     )}
@@ -4775,125 +4954,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               </div>
             </div>
             
-            {/* Поиск и фильтры */}
-            <div className="space-y-4 mb-6">
-              {/* Поиск по названию */}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Поиск предметов..."
-                    value={inventorySearchFilter}
-                    onChange={(e) => setInventorySearchFilter(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
-                    style={{
-                      borderColor: getFrameColor(frameColor)
-                    }}
-                  />
-                </div>
-                <button
-                  onClick={() => setIsInventorySidebarOpen(true)}
-                  className="p-2 bg-transparent border rounded-md text-gray-400 hover:text-gray-200 transition-colors"
-                  style={{
-                    borderColor: getFrameColor(frameColor)
-                  }}
-                  title="Управление инвентарём"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-              </div>
-              
-              {/* Фильтр по категории */}
-              <div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setInventoryCategoryFilter('all')}
-                    className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
-                    style={{
-                      backgroundColor: inventoryCategoryFilter === 'all' ? getFrameColor(frameColor) : 'transparent',
-                      borderColor: getFrameColor(frameColor),
-                      color: inventoryCategoryFilter === 'all' ? '#FFFFFF' : getFrameColor(frameColor)
-                    }}
-                    onMouseEnter={(e) => {
-                      if (inventoryCategoryFilter !== 'all') {
-                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (inventoryCategoryFilter !== 'all') {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
-                    }}
-                  >
-                    ВСЕ
-                  </button>
-                  <button
-                    onClick={() => setInventoryCategoryFilter('weapon')}
-                    className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
-                    style={{
-                      backgroundColor: inventoryCategoryFilter === 'weapon' ? getFrameColor(frameColor) : 'transparent',
-                      borderColor: getFrameColor(frameColor),
-                      color: inventoryCategoryFilter === 'weapon' ? '#FFFFFF' : getFrameColor(frameColor)
-                    }}
-                    onMouseEnter={(e) => {
-                      if (inventoryCategoryFilter !== 'weapon') {
-                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (inventoryCategoryFilter !== 'weapon') {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
-                    }}
-                  >
-                    ОРУЖИЕ
-                  </button>
-                  <button
-                    onClick={() => setInventoryCategoryFilter('armor')}
-                    className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
-                    style={{
-                      backgroundColor: inventoryCategoryFilter === 'armor' ? getFrameColor(frameColor) : 'transparent',
-                      borderColor: getFrameColor(frameColor),
-                      color: inventoryCategoryFilter === 'armor' ? '#FFFFFF' : getFrameColor(frameColor)
-                    }}
-                    onMouseEnter={(e) => {
-                      if (inventoryCategoryFilter !== 'armor') {
-                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (inventoryCategoryFilter !== 'armor') {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
-                    }}
-                  >
-                    ДОСПЕХИ
-                  </button>
-                  <button
-                    onClick={() => setInventoryCategoryFilter('tool')}
-                    className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
-                    style={{
-                      backgroundColor: inventoryCategoryFilter === 'tool' ? getFrameColor(frameColor) : 'transparent',
-                      borderColor: getFrameColor(frameColor),
-                      color: inventoryCategoryFilter === 'tool' ? '#FFFFFF' : getFrameColor(frameColor)
-                    }}
-                    onMouseEnter={(e) => {
-                      if (inventoryCategoryFilter !== 'tool') {
-                        e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (inventoryCategoryFilter !== 'tool') {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
-                    }}
-                  >
-                    ИНСТРУМЕНТЫ
-                  </button>
-                </div>
-              </div>
-            </div>
             
             {/* Скроллируемый блок инвентаря */}
             <div className="overflow-y-auto space-y-6">
@@ -4929,8 +4989,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       />
                     </div>
                   </div>
-                  {getFilteredInventoryItems(equippedItems.filter(item => item.set === 'armor' && item.type === 'armor')).length > 0 ? (
-                    getFilteredInventoryItems(equippedItems.filter(item => item.set === 'armor' && item.type === 'armor')).map((item, index) => (
+                  {equippedItems.filter(item => item.set === 'armor' && item.type === 'armor').length > 0 ? (
+                    equippedItems.filter(item => item.set === 'armor' && item.type === 'armor').map((item, index) => (
                       <div key={`armor-${index}`}>
                         <div className="grid gap-2 text-sm py-1 items-center"
                              style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr' }}>
@@ -4993,8 +5053,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         ))}
       </div>
                   </div>
-                  {getFilteredInventoryItems(equippedItems.filter(item => item.set === 'main')).length > 0 ? (
-                    getFilteredInventoryItems(equippedItems.filter(item => item.set === 'main')).map((item, index) => (
+                  {equippedItems.filter(item => item.set === 'main').length > 0 ? (
+                    equippedItems.filter(item => item.set === 'main').map((item, index) => (
                       <div key={`main-${index}`}>
                         <div className="grid gap-2 text-sm py-1 items-center"
                              style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr' }}>
@@ -5046,7 +5106,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
                           <div className="text-gray-400 text-center">{item.cost}</div>
                         </div>
-                        {index < getFilteredInventoryItems(equippedItems.filter(item => item.set === 'main')).length - 1 && (
+                        {index < equippedItems.filter(item => item.set === 'main').length - 1 && (
                           <div 
                             className="my-1 h-px"
                             style={{
@@ -5087,8 +5147,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           ))}
                         </div>
                   </div>
-                  {getFilteredInventoryItems(equippedItems.filter(item => item.set === 'additional')).length > 0 ? (
-                    getFilteredInventoryItems(equippedItems.filter(item => item.set === 'additional')).map((item, index) => (
+                  {equippedItems.filter(item => item.set === 'additional').length > 0 ? (
+                    equippedItems.filter(item => item.set === 'additional').map((item, index) => (
                       <div key={`additional-${index}`}>
                         <div className="grid gap-2 text-sm py-1 items-center"
                              style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr' }}>
@@ -5140,7 +5200,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           <div className="text-gray-400 text-center">{item.weight} фнт.</div>
                           <div className="text-gray-400 text-center">{item.cost}</div>
                         </div>
-                        {index < getFilteredInventoryItems(equippedItems.filter(item => item.set === 'additional')).length - 1 && (
+                        {index < equippedItems.filter(item => item.set === 'additional').length - 1 && (
                           <div 
                             className="my-1 h-px"
                             style={{
@@ -5156,6 +5216,126 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     </div>
                   )}
                   
+                </div>
+              </div>
+              
+              {/* Поиск и фильтры для РЮКЗАКА */}
+              <div className="space-y-4 mb-6">
+                {/* Поиск по названию */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Поиск предметов в рюкзаке..."
+                      value={inventorySearchFilter}
+                      onChange={(e) => setInventorySearchFilter(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
+                      style={{
+                        borderColor: getFrameColor(frameColor)
+                      }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => setIsInventorySidebarOpen(true)}
+                    className="p-2 bg-transparent border rounded-md text-gray-400 hover:text-gray-200 transition-colors"
+                    style={{
+                      borderColor: getFrameColor(frameColor)
+                    }}
+                    title="Управление инвентарём"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {/* Фильтр по категории */}
+                <div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setInventoryCategoryFilter('all')}
+                      className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                      style={{
+                        backgroundColor: inventoryCategoryFilter === 'all' ? getFrameColor(frameColor) : 'transparent',
+                        borderColor: getFrameColor(frameColor),
+                        color: inventoryCategoryFilter === 'all' ? '#FFFFFF' : getFrameColor(frameColor)
+                      }}
+                      onMouseEnter={(e) => {
+                        if (inventoryCategoryFilter !== 'all') {
+                          e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (inventoryCategoryFilter !== 'all') {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      ВСЕ
+                    </button>
+                    <button
+                      onClick={() => setInventoryCategoryFilter('weapon')}
+                      className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                      style={{
+                        backgroundColor: inventoryCategoryFilter === 'weapon' ? getFrameColor(frameColor) : 'transparent',
+                        borderColor: getFrameColor(frameColor),
+                        color: inventoryCategoryFilter === 'weapon' ? '#FFFFFF' : getFrameColor(frameColor)
+                      }}
+                      onMouseEnter={(e) => {
+                        if (inventoryCategoryFilter !== 'weapon') {
+                          e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (inventoryCategoryFilter !== 'weapon') {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      ОРУЖИЕ
+                    </button>
+                    <button
+                      onClick={() => setInventoryCategoryFilter('armor')}
+                      className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                      style={{
+                        backgroundColor: inventoryCategoryFilter === 'armor' ? getFrameColor(frameColor) : 'transparent',
+                        borderColor: getFrameColor(frameColor),
+                        color: inventoryCategoryFilter === 'armor' ? '#FFFFFF' : getFrameColor(frameColor)
+                      }}
+                      onMouseEnter={(e) => {
+                        if (inventoryCategoryFilter !== 'armor') {
+                          e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (inventoryCategoryFilter !== 'armor') {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      ДОСПЕХИ
+                    </button>
+                    <button
+                      onClick={() => setInventoryCategoryFilter('tool')}
+                      className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
+                      style={{
+                        backgroundColor: inventoryCategoryFilter === 'tool' ? getFrameColor(frameColor) : 'transparent',
+                        borderColor: getFrameColor(frameColor),
+                        color: inventoryCategoryFilter === 'tool' ? '#FFFFFF' : getFrameColor(frameColor)
+                      }}
+                      onMouseEnter={(e) => {
+                        if (inventoryCategoryFilter !== 'tool') {
+                          e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (inventoryCategoryFilter !== 'tool') {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      ИНСТРУМЕНТЫ
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -5335,11 +5515,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 <div>
                   <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
-                    ВЫУЧЕННЫЕ ЧЕРТЫ
+                    ЧЕРТЫ
                   </h3>
                   {getFilteredFeats().length === 0 ? (
                     <p className="text-gray-400 text-sm py-4">
-                      Выученные черты отсутствуют
+                      Черты отсутствуют
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -5349,11 +5529,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             <CollapsibleTrigger asChild>
                               <div className="w-full p-3 bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer">
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-col items-start">
                                     <span className="text-white font-medium">{feat.name}</span>
                                     {feat.isLegacy && (
                                       <span 
-                                        className="text-xs px-1 py-0.5 rounded font-medium border border-gray-500"
+                                        className="text-xs font-medium mt-1"
                                         style={{ color: getFrameColor(frameColor) }}
                                       >
                                         Legacy
@@ -5372,16 +5552,55 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   {feat.effect && feat.effect.length > 0 && (
                                     <div className="space-y-2">
                                       <h4 className="text-sm font-semibold text-gray-200">Эффекты:</h4>
-                                      {feat.effect.map((effect, effectIndex) => (
-                                        <div key={effectIndex} className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
-                                          {effect.name && (
-                                            <h5 className="text-sm font-medium text-gray-200 mb-1">{effect.name}</h5>
-                                          )}
-                                          {effect.desc && (
-                                            <p className="text-xs text-gray-300 leading-relaxed">{effect.desc}</p>
-                                          )}
-                                        </div>
-                                      ))}
+                                      {feat.effect.map((effect, effectIndex) => {
+                                        const choices = getFeatChoices(feat.key);
+                                        console.log('Displaying feat choices for:', feat.key, 'choices:', choices);
+                                        
+                                        return (
+                                          <div key={effectIndex} className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
+                                            {effect.name && (
+                                              <h5 className="text-sm font-medium text-gray-200 mb-1">{effect.name}</h5>
+                                            )}
+                                            {effect.desc && (
+                                              <p className="text-xs text-gray-300 leading-relaxed">{effect.desc}</p>
+                                            )}
+                                            
+                                            {/* Отображение выбранных опций внутри эффекта */}
+                                            {choices.length > 0 && (
+                                              <div>
+                                                <h6 className="text-sm font-semibold text-gray-200 mb-2">Выбранные опции:</h6>
+                                                <div className="space-y-1">
+                                                  {choices.map((choice, choiceIndex) => {
+                                                    const [choiceType, choiceValue] = choice.split(':');
+                                                    let displayName = choiceValue;
+                                                    
+                                                    // Переводим ключи в читаемые названия
+                                                    if (choiceType === 'skill') {
+                                                      const skill = SKILLS.find(s => s.key === choiceValue);
+                                                      displayName = skill?.name || choiceValue;
+                                                    } else if (choiceType === 'tool') {
+                                                      const tool = Tools.find(t => t.key === choiceValue);
+                                                      displayName = tool?.name || choiceValue;
+                                                    } else if (choiceType === 'language') {
+                                                      const language = LANGUAGES.find(l => l.key === choiceValue);
+                                                      displayName = language?.name || choiceValue;
+                                                    } else if (choiceType === 'ability') {
+                                                      const ability = ABILITIES.find(a => a.key === choiceValue);
+                                                      displayName = ability?.label || choiceValue;
+                                                    }
+                                                    
+                                                    return (
+                                                      <div key={choiceIndex} className="text-xs text-gray-300">
+                                                        • {displayName}
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   )}
                                   
