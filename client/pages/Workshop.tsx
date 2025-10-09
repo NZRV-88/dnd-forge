@@ -54,7 +54,7 @@ export default function Workshop() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Icons.Wand className="w-5 h-5 text-primary" />
+                <Icons.Settings className="w-5 h-5 text-primary" />
                 Генераторы
               </CardTitle>
             </CardHeader>
@@ -64,15 +64,15 @@ export default function Workshop() {
               </p>
               <div className="space-y-2">
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.User className="w-4 h-4 mr-2" />
+                  <Icons.Book className="w-4 h-4 mr-2" />
                   Генератор имён
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Swords className="w-4 h-4 mr-2" />
+                  <Icons.Sword className="w-4 h-4 mr-2" />
                   Генератор столкновений
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Coins className="w-4 h-4 mr-2" />
+                  <Icons.Star className="w-4 h-4 mr-2" />
                   Генератор добычи
                 </Button>
               </div>
@@ -83,7 +83,7 @@ export default function Workshop() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Icons.Calculator className="w-5 h-5 text-primary" />
+                <Icons.Settings className="w-5 h-5 text-primary" />
                 Калькуляторы
               </CardTitle>
             </CardHeader>
@@ -93,11 +93,11 @@ export default function Workshop() {
               </p>
               <div className="space-y-2">
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Scale className="w-4 h-4 mr-2" />
+                  <Icons.Sword className="w-4 h-4 mr-2" />
                   Калькулятор столкновений
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Star className="w-4 h-4 mr-2" />
+                  <Icons.Award className="w-4 h-4 mr-2" />
                   Калькулятор опыта
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
@@ -122,11 +122,11 @@ export default function Workshop() {
               </p>
               <div className="space-y-2">
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.AlertTriangle className="w-4 h-4 mr-2" />
+                  <Icons.Skull className="w-4 h-4 mr-2" />
                   Состояния
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Sparkles className="w-4 h-4 mr-2" />
+                  <Icons.Zap className="w-4 h-4 mr-2" />
                   Заклинания
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
@@ -141,7 +141,7 @@ export default function Workshop() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Icons.Tool className="w-5 h-5 text-primary" />
+                <Icons.Settings className="w-5 h-5 text-primary" />
                 Инструменты
               </CardTitle>
             </CardHeader>
@@ -151,15 +151,15 @@ export default function Workshop() {
               </p>
               <div className="space-y-2">
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Dice className="w-4 h-4 mr-2" />
+                  <Icons.Star className="w-4 h-4 mr-2" />
                   Бросок костей
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.List className="w-4 h-4 mr-2" />
+                  <Icons.Clock className="w-4 h-4 mr-2" />
                   Трекер инициативы
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.FileText className="w-4 h-4 mr-2" />
+                  <Icons.Book className="w-4 h-4 mr-2" />
                   Заметки мастера
                 </Button>
               </div>
@@ -170,7 +170,7 @@ export default function Workshop() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Icons.Folder className="w-5 h-5 text-primary" />
+                <Icons.Book className="w-5 h-5 text-primary" />
                 Ресурсы
               </CardTitle>
             </CardHeader>
@@ -180,15 +180,15 @@ export default function Workshop() {
               </p>
               <div className="space-y-2">
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Map className="w-4 h-4 mr-2" />
+                  <Icons.Eye className="w-4 h-4 mr-2" />
                   Карты
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Circle className="w-4 h-4 mr-2" />
+                  <Icons.Star className="w-4 h-4 mr-2" />
                   Токены
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Volume2 className="w-4 h-4 mr-2" />
+                  <Icons.Settings className="w-4 h-4 mr-2" />
                   Звуковая панель
                 </Button>
               </div>
@@ -199,7 +199,7 @@ export default function Workshop() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Icons.BarChart className="w-5 h-5 text-primary" />
+                <Icons.Award className="w-5 h-5 text-primary" />
                 Статистика
               </CardTitle>
             </CardHeader>
@@ -209,15 +209,15 @@ export default function Workshop() {
               </p>
               <div className="space-y-2">
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Calendar className="w-4 h-4 mr-2" />
+                  <Icons.Clock className="w-4 h-4 mr-2" />
                   Статистика сессий
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.Users className="w-4 h-4 mr-2" />
+                  <Icons.Crown className="w-4 h-4 mr-2" />
                   Статистика персонажей
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
-                  <Icons.TrendingUp className="w-4 h-4 mr-2" />
+                  <Icons.ArrowUp className="w-4 h-4 mr-2" />
                   Аналитика кампаний
                 </Button>
               </div>
@@ -231,19 +231,19 @@ export default function Workshop() {
         <h2 className="text-2xl font-bold mb-6">Быстрые действия</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Button size="lg" className="h-20 flex-col gap-2">
-            <Icons.Dice className="w-6 h-6" />
+            <Icons.Star className="w-6 h-6" />
             <span>Быстрый бросок</span>
           </Button>
           <Button size="lg" variant="outline" className="h-20 flex-col gap-2">
-            <Icons.User className="w-6 h-6" />
+            <Icons.Book className="w-6 h-6" />
             <span>Случайное имя</span>
           </Button>
           <Button size="lg" variant="outline" className="h-20 flex-col gap-2">
-            <Icons.Swords className="w-6 h-6" />
+            <Icons.Sword className="w-6 h-6" />
             <span>Создать столкновение</span>
           </Button>
           <Button size="lg" variant="outline" className="h-20 flex-col gap-2">
-            <Icons.FileText className="w-6 h-6" />
+            <Icons.Book className="w-6 h-6" />
             <span>Заметки</span>
           </Button>
         </div>
