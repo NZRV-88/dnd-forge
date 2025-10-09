@@ -60,11 +60,11 @@ const getConditionFrameSvg = (color: string) => {
 	<clipPath id="SVGID_00000169529749726618591060000004765894090106221752_">
 		<use xlink:href="#SVGID_1_"  style="overflow:visible;"/>
 	</clipPath>
-	<path style="fill:${hexColor};" d="M189.93,70.91h-1V5.95
-	h1V70.91z M2.96,70.68h-1V5.72h1V70.68z M191.78,3.02V2.11h-2.89V0h-1.26c0,0-0.5,0.73-1.84,0.73H5.99C4.65,0.73,4.15,0,4.15,0
-	H2.89v2.11H0.01v0.91c1.19,0,1.26,1.96,1.26,1.96v65.71c0,0-0.07,1.93-1.26,1.93v0.94h2.89v3.31h1.26V1.56h183.48V75.3H4.15v1.56
-	c0,0,0.5-0.73,1.84-0.73H185.8c1.33,0,1.83,0.72,1.84,0.73h1.26v-3.31h2.89v-0.94c-1.19,0-1.26-1.95-1.26-1.95V4.97
-	C190.53,4.97,190.59,3.02,191.78,3.02z"/>
+	<path style="fill:${hexColor};" d="M189.93,80.91h-1V15.95
+	h1V80.91z M2.96,80.68h-1V15.72h1V80.68z M191.78,13.02V12.11h-2.89V10h-1.26c0,0-0.5,0.73-1.84,0.73H5.99C4.65,10.73,4.15,10,4.15,10
+	H2.89v2.11H0.01v0.91c1.19,0,1.26,1.96,1.26,1.96v65.71c0,0-0.07,1.93-1.26,1.93v0.94h2.89v3.31h1.26V11.56h183.48V85.3H4.15v1.56
+	c0,0,0.5-0.73,1.84-0.73H185.8c1.33,0,1.83,0.72,1.84,0.73h1.26v-3.31h2.89v-0.94c-1.19,0-1.26-1.95-1.26-1.95V14.97
+	C190.53,14.97,190.59,13.02,191.78,13.02z"/>
 </g>
 </svg>`;
 };
@@ -74,23 +74,20 @@ export default function ConditionBlock({}: ConditionBlockProps) {
   
   return (
     <div
-      className="relative p-3 text-gray-300 -ml-[39px] mt-[15px]"
+      className="relative flex flex-col items-center justify-center text-center"
       style={{
-        width: "100%",
-        height: "120px",
+        width: "335px",
+        height: "150px",
         backgroundImage: `url('data:image/svg+xml;charset=utf-8,${encodeURIComponent(getConditionFrameSvg(frameColor))}')`,
-        backgroundSize: "100% auto",
+        backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
-        backgroundPosition: "center top",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        backgroundPosition: "center",
         boxSizing: "border-box",
       }}
     >
       {/* Контент блока состояний */}
-      <div className="text-center">
-        <div className="text-xs font-bold uppercase text-gray-400 mb-1">
+      <div className="text-center z-10">
+        <div className="text-xs font-bold uppercase text-gray-400 mb-2">
           СОСТОЯНИЯ
         </div>
         <div className="text-sm text-gray-300">

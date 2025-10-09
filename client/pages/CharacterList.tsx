@@ -7,7 +7,6 @@ import AvatarFrameWithImage from "@/components/ui/AvatarFrameWithImage";
 import { useFrameColor } from "@/contexts/FrameColorContext";
 import ProficiencySpeed from "@/components/characterList/ProficiencySpeed";
 import HealthBlock from "@/components/characterList/HealthBlock";
-import ConditionBlock from "@/components/characterList/ConditionBlock";
 import SavingThrows from "@/components/characterList/SavingThrows";
 import Skills from "@/components/characterList/Skills";
 import PassiveSenses from "@/components/characterList/PassiveSenses";
@@ -852,7 +851,6 @@ export default function CharacterList() {
                                 dex={(finalStats as any).dex ?? 0}
                                 onRoll={addRoll}
                             />
-                            <ConditionBlock />
                         </div>
 
                         {/* Attacks (под инициативой/AC/condition) */}
