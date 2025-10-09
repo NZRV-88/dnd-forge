@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function MagicItem() {
+  const [name, setName] = useState<string>('');
+  const [version, setVersion] = useState<string>('');
+  const [rarity, setRarity] = useState<string>('');
   const [itemType, setItemType] = useState<string>('');
   const navigate = useNavigate();
 
@@ -12,68 +16,88 @@ export default function MagicItem() {
     navigate('/workshop');
   };
 
-  const handleNext = () => {
-    if (!itemType) return;
-    // Здесь будет логика перехода к следующему шагу
-    console.log('Выбранный тип предмета:', itemType);
-  };
-
   return (
     <div className="container mx-auto py-10">
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-4xl">
         {/* Заголовок */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Создание магического предмета</h1>
           <p className="text-muted-foreground">
-            Выберите тип магического предмета для начала создания
+            Заполните информацию о магическом предмете
           </p>
         </div>
 
         {/* Основная карточка */}
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-xl">Тип магического предмета</CardTitle>
+            <CardTitle className="text-xl">Основная информация</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Выберите тип предмета:</label>
-              <Select value={itemType} onValueChange={setItemType}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Выберите тип магического предмета" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weapon">Оружие</SelectItem>
-                  <SelectItem value="armor">Доспех</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Первый ряд полей */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Название */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Название <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Введите название предмета"
+                />
+              </div>
+
+              {/* Версия */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Версия</label>
+                <Input
+                  value={version}
+                  onChange={(e) => setVersion(e.target.value)}
+                  placeholder="Версия"
+                />
+              </div>
+
+              {/* Редкость */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Редкость <span className="text-red-500">*</span>
+                </label>
+                <Select value={rarity} onValueChange={setRarity}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите редкость" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="common">Обычный</SelectItem>
+                    <SelectItem value="uncommon">Необычный</SelectItem>
+                    <SelectItem value="rare">Редкий</SelectItem>
+                    <SelectItem value="very-rare">Очень редкий</SelectItem>
+                    <SelectItem value="legendary">Легендарный</SelectItem>
+                    <SelectItem value="artifact">Артефакт</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Тип предмета */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Тип предмета <span className="text-red-500">*</span>
+                </label>
+                <Select value={itemType} onValueChange={setItemType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите тип" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weapon">Оружие</SelectItem>
+                    <SelectItem value="armor">Доспех</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Описание выбранного типа */}
-            {itemType && (
-              <div className="p-4 bg-muted rounded-lg">
-                <h3 className="font-semibold mb-2">
-                  {itemType === 'weapon' ? 'Оружие' : 'Доспех'}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {itemType === 'weapon' 
-                    ? 'Магическое оружие может увеличивать урон, давать бонусы к атаке или иметь особые свойства.'
-                    : 'Магический доспех может увеличивать класс брони, давать сопротивление урону или другие защитные свойства.'
-                  }
-                </p>
-              </div>
-            )}
-
-            {/* Кнопки навигации */}
-            <div className="flex justify-between pt-4">
+            {/* Кнопка назад */}
+            <div className="flex justify-start pt-4">
               <Button variant="outline" onClick={handleBack}>
-                Назад
-              </Button>
-              <Button 
-                onClick={handleNext} 
-                disabled={!itemType}
-                className="min-w-[120px]"
-              >
-                Далее
+                Назад к мастерской
               </Button>
             </div>
           </CardContent>
