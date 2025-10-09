@@ -1678,12 +1678,15 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             damage: magicItem.weapon.damageSources?.map(source => 
               `${source.diceCount}${source.diceType} ${translateDamageType(source.damageType)}`
             ).join(' + ') || '1d4',
+            damageTypeTranslated: magicItem.weapon.damageSources?.map(source => 
+              translateDamageType(source.damageType)
+            ).join(', ') || '-',
             properties: translateWeaponProperties(magicItem.weapon.weaponProperties || []),
             mastery: magicItem.weapon.weaponMastery,
             weaponKind: magicItem.weapon.weaponKind,
             weaponCategory: magicItem.weapon.weaponCategory,
-            attackBonus: magicItem.weapon.attackBonus,
-            damageBonus: magicItem.weapon.damageBonus
+            bonusAttack: magicItem.weapon.attackBonus,
+            bonusDamage: magicItem.weapon.damageBonus
           })
         };
         console.log('getItemDetails: returning magic item details:', details);

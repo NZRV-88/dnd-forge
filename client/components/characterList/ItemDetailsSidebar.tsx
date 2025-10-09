@@ -1,5 +1,6 @@
-import { Weapons } from "@/data/items/weapons";
-import { getWeaponMasteryByKey, getWeaponPropertyByName } from "@/data/items/weapon-mastery";
+import React from 'react';
+import { getWeaponMasteryByKey } from "@/data/items/weapon-mastery";
+import { getWeaponPropertyByName } from "@/data/items/weapons";
 
 interface ItemDetailsSidebarProps {
   itemDetails: any;
@@ -179,7 +180,33 @@ export function ItemDetailsSidebar({
       {(itemDetails as any).description && (
         <div className="text-gray-400 mt-3 pt-3 border-t border-gray-700">
           <div className="font-medium text-gray-200 mb-2">Описание</div>
-          <div>{(itemDetails as any).description}</div>
+          <div className="whitespace-pre-line">
+            {(itemDetails as any).description.split('\n').map((paragraph: string, index: number) => {
+              // Обрабатываем курсив (текст между * *)
+              const processItalic = (text: string) => {
+                return text.split(/(\*[^*]+\*)/g).map((part, i) => {
+                  if (part.startsWith('*') && part.endsWith('*')) {
+                    return (
+                      <em key={i} className="italic font-semibold">
+                        {part.slice(1, -1)}
+                      </em>
+                    );
+                  }
+                  return part;
+                });
+              };
+
+              // Определяем отступы по количеству пробелов в начале строки
+              const indent = paragraph.match(/^(\s*)/)?.[1]?.length || 0;
+              const indentClass = indent > 0 ? `ml-${Math.min(indent * 2, 16)}` : '';
+
+              return (
+                <div key={index} className={`${indentClass} ${index > 0 ? 'mt-1' : ''}`}>
+                  {processItalic(paragraph.trim())}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -228,4 +255,3 @@ export function ItemDetailsSidebar({
     </div>
   );
 }
-
