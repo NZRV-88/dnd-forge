@@ -162,6 +162,7 @@ export default function MagicItem() {
                          value={version}
                          onChange={(e) => setVersion(e.target.value)}
                          placeholder="Версия"
+                         className="w-20"
                        />
                      </div>
 
