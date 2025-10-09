@@ -144,7 +144,7 @@ export default function MagicItem() {
                    {/* Первый ряд полей */}
                    <div className="flex flex-wrap gap-2">
                      {/* Название */}
-                     <div className="space-y-2 flex-1 min-w-[200px]">
+                     <div className="space-y-2 flex-1 min-w-[185px]">
                        <label className="text-sm font-medium">
                          Название <span className="text-red-500">*</span>
                        </label>
