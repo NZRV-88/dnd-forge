@@ -115,16 +115,32 @@ export default function ClassPick() {
 
     const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls);
 
-    // Автоматически устанавливаем hpCurrent равным maxHP при выборе класса или изменении уровня
+    // Отслеживаем предыдущие значения для определения реальных изменений
+    const [prevLevel, setPrevLevel] = useState(draft.basics.level);
+    const [prevClass, setPrevClass] = useState(draft.basics.class);
+    const [prevHpMode, setPrevHpMode] = useState(draft.basics.hpMode);
+    const [prevHpRolls, setPrevHpRolls] = useState(draft.hpRolls);
+
+    // Автоматически устанавливаем hpCurrent равным maxHP только при реальном изменении уровня/класса
     useEffect(() => {
         if (draft.basics.class && maxHP > 0) {
-            // Если hpCurrent равен null, обновляем его до maxHP
-            // Если hpCurrent не null, но больше maxHP (например, при понижении уровня), обновляем его
-            if (draft.basics.hpCurrent === null || (draft.basics.hpCurrent !== null && draft.basics.hpCurrent > maxHP)) {
+            const levelChanged = prevLevel !== draft.basics.level;
+            const classChanged = prevClass !== draft.basics.class;
+            const hpModeChanged = prevHpMode !== draft.basics.hpMode;
+            const hpRollsChanged = JSON.stringify(prevHpRolls) !== JSON.stringify(draft.hpRolls);
+            
+            // Обновляем hpCurrent только если что-то реально изменилось
+            if (levelChanged || classChanged || hpModeChanged || hpRollsChanged) {
                 setBasics({ hpCurrent: maxHP });
             }
+            
+            // Обновляем предыдущие значения
+            setPrevLevel(draft.basics.level);
+            setPrevClass(draft.basics.class);
+            setPrevHpMode(draft.basics.hpMode);
+            setPrevHpRolls(draft.hpRolls);
         }
-    }, [draft.basics.class, draft.basics.level, draft.basics.hpMode, draft.hpRolls, maxHP, setBasics]);
+    }, [draft.basics.class, draft.basics.level, draft.basics.hpMode, draft.hpRolls, maxHP, setBasics, prevLevel, prevClass, prevHpMode, prevHpRolls]);
 
     const feats = useMemo(() => {
         if (!info) return [];
