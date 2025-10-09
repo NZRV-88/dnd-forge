@@ -32,6 +32,7 @@ export default function CharacterList() {
 
     // character + local controlled HP state
     const [char, setChar] = useState<any | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     
     // Обернем setChar для отладки
     let setCharCallCounter = 0;
@@ -64,6 +65,7 @@ export default function CharacterList() {
 
     // Load character by id from Supabase
     useEffect(() => {
+        setIsLoading(true);
         (async () => {
             try {
                 const { data, error } = await supabase
@@ -73,6 +75,7 @@ export default function CharacterList() {
                     .single();
                 if (error || !data) {
                     setCharWithLog(null);
+                    setIsLoading(false);
                     return;
                 }
                 const draft = data.data || {};
@@ -146,8 +149,10 @@ export default function CharacterList() {
                 const initialHp = draft.basics?.hpCurrent === null || draft.basics?.hpCurrent === 0 ? hpMax : (draft.basics?.hpCurrent ?? 0);
                 setCurHp(initialHp);
                 setTempHp(draft.basics?.tempHp ?? 0);
+                setIsLoading(false);
             } catch {
                 setCharWithLog(null);
+                setIsLoading(false);
             }
         })();
     }, [id]);
@@ -282,6 +287,19 @@ export default function CharacterList() {
 
     // skill profs set (normalized)
     const skillProfs: string[] = Array.isArray(char?.skills) ? char.skills : [];
+
+    if (isLoading) {
+        return (
+            <div className="container mx-auto py-10 text-center">
+                <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-10">
+                    <div className="flex flex-col items-center space-y-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <div className="text-lg">Загрузка персонажа...</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!char) {
         return (
