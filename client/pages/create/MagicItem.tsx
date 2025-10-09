@@ -4,7 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { WEAPON_MASTERY } from '@/data/items/weapon-mastery';
+import { WEAPON_PROPERTY } from '@/data/items/weapons';
+import { DamageTypes } from '@/data/damageTypes';
 
 export default function MagicItem() {
   const [name, setName] = useState<string>('');
@@ -13,15 +16,35 @@ export default function MagicItem() {
   const [itemType, setItemType] = useState<string>('weapon'); // По умолчанию "Оружие"
   
   // Поля для оружия
-  const [attackBonus, setAttackBonus] = useState<string>('');
-  const [damageBonus, setDamageBonus] = useState<string>('');
+  const [attackBonus, setAttackBonus] = useState<string>('0'); // По умолчанию 0
+  const [damageBonus, setDamageBonus] = useState<string>('0'); // По умолчанию 0
   const [weaponType, setWeaponType] = useState<string>('');
   const [weaponMastery, setWeaponMastery] = useState<string>('');
+  const [weaponProperties, setWeaponProperties] = useState<string[]>([]); // Мультивыбор свойств
+  const [damageDiceCount, setDamageDiceCount] = useState<string>(''); // Количество костей
+  const [damageDiceType, setDamageDiceType] = useState<string>(''); // Тип костей
+  const [damageType, setDamageType] = useState<string>(''); // Тип урона
   
   const navigate = useNavigate();
 
   const handleBack = () => {
     navigate('/workshop');
+  };
+
+  // Функция для валидации числовых полей (только положительные числа)
+  const handleNumberChange = (value: string, setter: (value: string) => void) => {
+    if (value === '' || /^\d+$/.test(value)) {
+      setter(value);
+    }
+  };
+
+  // Функция для работы с мультивыбором свойств оружия
+  const handlePropertyChange = (propertyKey: string, checked: boolean) => {
+    if (checked) {
+      setWeaponProperties(prev => [...prev, propertyKey]);
+    } else {
+      setWeaponProperties(prev => prev.filter(key => key !== propertyKey));
+    }
   };
 
   return (
@@ -102,90 +125,165 @@ export default function MagicItem() {
               </div>
             </div>
 
-            {/* Контент в зависимости от типа предмета */}
-            {itemType === 'weapon' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold">Свойства оружия</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Бонус Атаки */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Бонус Атаки</label>
-                    <Select value={attackBonus} onValueChange={setAttackBonus}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите бонус" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="-5">-5</SelectItem>
-                        <SelectItem value="-4">-4</SelectItem>
-                        <SelectItem value="-3">-3</SelectItem>
-                        <SelectItem value="-2">-2</SelectItem>
-                        <SelectItem value="-1">-1</SelectItem>
-                        <SelectItem value="0">0</SelectItem>
-                        <SelectItem value="+1">+1</SelectItem>
-                        <SelectItem value="+2">+2</SelectItem>
-                        <SelectItem value="+3">+3</SelectItem>
-                        <SelectItem value="+4">+4</SelectItem>
-                        <SelectItem value="+5">+5</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                   {/* Контент в зависимости от типа предмета */}
+                   {itemType === 'weapon' && (
+                     <div className="space-y-6">
+                       <h3 className="text-lg font-semibold">Свойства оружия</h3>
+                       
+                       {/* Первый ряд - основные бонусы */}
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                         {/* Бонус Атаки */}
+                         <div className="space-y-2">
+                           <label className="text-sm font-medium">Бонус Атаки</label>
+                           <Select value={attackBonus} onValueChange={setAttackBonus}>
+                             <SelectTrigger>
+                               <SelectValue placeholder="Выберите бонус" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="-5">-5</SelectItem>
+                               <SelectItem value="-4">-4</SelectItem>
+                               <SelectItem value="-3">-3</SelectItem>
+                               <SelectItem value="-2">-2</SelectItem>
+                               <SelectItem value="-1">-1</SelectItem>
+                               <SelectItem value="0">0</SelectItem>
+                               <SelectItem value="+1">+1</SelectItem>
+                               <SelectItem value="+2">+2</SelectItem>
+                               <SelectItem value="+3">+3</SelectItem>
+                               <SelectItem value="+4">+4</SelectItem>
+                               <SelectItem value="+5">+5</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
 
-                  {/* Бонус Урона */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Бонус Урона</label>
-                    <Select value={damageBonus} onValueChange={setDamageBonus}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите бонус" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="-5">-5</SelectItem>
-                        <SelectItem value="-4">-4</SelectItem>
-                        <SelectItem value="-3">-3</SelectItem>
-                        <SelectItem value="-2">-2</SelectItem>
-                        <SelectItem value="-1">-1</SelectItem>
-                        <SelectItem value="0">0</SelectItem>
-                        <SelectItem value="+1">+1</SelectItem>
-                        <SelectItem value="+2">+2</SelectItem>
-                        <SelectItem value="+3">+3</SelectItem>
-                        <SelectItem value="+4">+4</SelectItem>
-                        <SelectItem value="+5">+5</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                         {/* Бонус Урона */}
+                         <div className="space-y-2">
+                           <label className="text-sm font-medium">Бонус Урона</label>
+                           <Select value={damageBonus} onValueChange={setDamageBonus}>
+                             <SelectTrigger>
+                               <SelectValue placeholder="Выберите бонус" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="-5">-5</SelectItem>
+                               <SelectItem value="-4">-4</SelectItem>
+                               <SelectItem value="-3">-3</SelectItem>
+                               <SelectItem value="-2">-2</SelectItem>
+                               <SelectItem value="-1">-1</SelectItem>
+                               <SelectItem value="0">0</SelectItem>
+                               <SelectItem value="+1">+1</SelectItem>
+                               <SelectItem value="+2">+2</SelectItem>
+                               <SelectItem value="+3">+3</SelectItem>
+                               <SelectItem value="+4">+4</SelectItem>
+                               <SelectItem value="+5">+5</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
 
-                  {/* Тип Оружия */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Тип Оружия</label>
-                    <Select value={weaponType} onValueChange={setWeaponType}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите тип оружия" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="melee">Ближний бой</SelectItem>
-                        <SelectItem value="ranged">Дальний бой</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                         {/* Тип Оружия */}
+                         <div className="space-y-2">
+                           <label className="text-sm font-medium">Тип Оружия</label>
+                           <Select value={weaponType} onValueChange={setWeaponType}>
+                             <SelectTrigger>
+                               <SelectValue placeholder="Выберите тип оружия" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="melee">Ближний бой</SelectItem>
+                               <SelectItem value="ranged">Дальний бой</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
 
-                  {/* Мастерство */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Мастерство</label>
-                    <Select value={weaponMastery} onValueChange={setWeaponMastery}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите мастерство" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {WEAPON_MASTERY.map((mastery) => (
-                          <SelectItem key={mastery.key} value={mastery.key}>
-                            {mastery.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            )}
+                         {/* Мастерство */}
+                         <div className="space-y-2">
+                           <label className="text-sm font-medium">Мастерство</label>
+                           <Select value={weaponMastery} onValueChange={setWeaponMastery}>
+                             <SelectTrigger>
+                               <SelectValue placeholder="Выберите мастерство" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {WEAPON_MASTERY.map((mastery) => (
+                                 <SelectItem key={mastery.key} value={mastery.key}>
+                                   {mastery.name}
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                         </div>
+                       </div>
+
+                       {/* Второй ряд - свойства оружия */}
+                       <div className="space-y-4">
+                         <h4 className="text-md font-medium">Свойства оружия</h4>
+                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                           {WEAPON_PROPERTY.map((property) => (
+                             <div key={property.key} className="flex items-center space-x-2">
+                               <Checkbox
+                                 id={property.key}
+                                 checked={weaponProperties.includes(property.key)}
+                                 onCheckedChange={(checked) => 
+                                   handlePropertyChange(property.key, checked as boolean)
+                                 }
+                               />
+                               <label
+                                 htmlFor={property.key}
+                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                               >
+                                 {property.name}
+                               </label>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+
+                       {/* Третий ряд - кость урона и тип урона */}
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         {/* Количество костей */}
+                         <div className="space-y-2">
+                           <label className="text-sm font-medium">Количество костей</label>
+                           <Input
+                             value={damageDiceCount}
+                             onChange={(e) => handleNumberChange(e.target.value, setDamageDiceCount)}
+                             placeholder="1"
+                             type="text"
+                           />
+                         </div>
+
+                         {/* Тип костей */}
+                         <div className="space-y-2">
+                           <label className="text-sm font-medium">Тип костей</label>
+                           <Select value={damageDiceType} onValueChange={setDamageDiceType}>
+                             <SelectTrigger>
+                               <SelectValue placeholder="Выберите тип костей" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="d4">d4</SelectItem>
+                               <SelectItem value="d6">d6</SelectItem>
+                               <SelectItem value="d8">d8</SelectItem>
+                               <SelectItem value="d10">d10</SelectItem>
+                               <SelectItem value="d12">d12</SelectItem>
+                               <SelectItem value="d20">d20</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+
+                         {/* Тип урона */}
+                         <div className="space-y-2">
+                           <label className="text-sm font-medium">Тип урона</label>
+                           <Select value={damageType} onValueChange={setDamageType}>
+                             <SelectTrigger>
+                               <SelectValue placeholder="Выберите тип урона" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {DamageTypes.map((type) => (
+                                 <SelectItem key={type.key} value={type.key}>
+                                   {type.key}
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                         </div>
+                       </div>
+                     </div>
+                   )}
 
             {itemType === 'armor' && (
               <div className="space-y-6">
