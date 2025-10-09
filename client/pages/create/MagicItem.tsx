@@ -21,9 +21,12 @@ export default function MagicItem() {
   const [weaponType, setWeaponType] = useState<string>('');
   const [weaponMastery, setWeaponMastery] = useState<string>('');
   const [weaponProperties, setWeaponProperties] = useState<string[]>([]); // Мультивыбор свойств
-  const [damageDiceCount, setDamageDiceCount] = useState<string>(''); // Количество костей
-  const [damageDiceType, setDamageDiceType] = useState<string>(''); // Тип костей
-  const [damageType, setDamageType] = useState<string>(''); // Тип урона
+  const [damageSources, setDamageSources] = useState<Array<{
+    id: string;
+    diceCount: string;
+    diceType: string;
+    damageType: string;
+  }>>([{ id: '1', diceCount: '', diceType: '', damageType: '' }]); // Источники урона
   
   const navigate = useNavigate();
 
@@ -45,6 +48,29 @@ export default function MagicItem() {
     } else {
       setWeaponProperties(prev => prev.filter(key => key !== propertyKey));
     }
+  };
+
+  // Функции для управления источниками урона
+  const addDamageSource = () => {
+    const newId = (damageSources.length + 1).toString();
+    setDamageSources(prev => [...prev, { 
+      id: newId, 
+      diceCount: '', 
+      diceType: '', 
+      damageType: '' 
+    }]);
+  };
+
+  const removeDamageSource = (id: string) => {
+    if (damageSources.length > 1) {
+      setDamageSources(prev => prev.filter(source => source.id !== id));
+    }
+  };
+
+  const updateDamageSource = (id: string, field: 'diceCount' | 'diceType' | 'damageType', value: string) => {
+    setDamageSources(prev => prev.map(source => 
+      source.id === id ? { ...source, [field]: value } : source
+    ));
   };
 
   return (
@@ -234,52 +260,95 @@ export default function MagicItem() {
                          </div>
                        </div>
 
-                       {/* Третий ряд - кость урона и тип урона */}
-                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         {/* Количество костей */}
-                         <div className="space-y-2">
-                           <label className="text-sm font-medium">Количество костей</label>
-                           <Input
-                             value={damageDiceCount}
-                             onChange={(e) => handleNumberChange(e.target.value, setDamageDiceCount)}
-                             placeholder="1"
-                             type="text"
-                           />
+                       {/* Третий ряд - источники урона */}
+                       <div className="space-y-4">
+                         <div className="flex items-center justify-between">
+                           <h4 className="text-md font-medium">Источники урона</h4>
+                           <Button
+                             type="button"
+                             variant="outline"
+                             size="sm"
+                             onClick={addDamageSource}
+                             className="flex items-center gap-2"
+                           >
+                             <span className="text-lg">+</span>
+                             Добавить источник урона
+                           </Button>
                          </div>
+                         
+                         <div className="space-y-3">
+                           {damageSources.map((source, index) => (
+                             <div key={source.id} className="relative border rounded-lg p-4 bg-muted/30">
+                               {/* Кнопка удаления */}
+                               {damageSources.length > 1 && (
+                                 <button
+                                   type="button"
+                                   onClick={() => removeDamageSource(source.id)}
+                                   className="absolute top-2 right-2 text-muted-foreground hover:text-destructive transition-colors"
+                                 >
+                                   <span className="text-lg">×</span>
+                                 </button>
+                               )}
+                               
+                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                 {/* Количество костей */}
+                                 <div className="space-y-2">
+                                   <label className="text-sm font-medium">
+                                     Количество костей {index > 0 && `#${index + 1}`}
+                                   </label>
+                                   <Input
+                                     value={source.diceCount}
+                                     onChange={(e) => handleNumberChange(e.target.value, (value) => 
+                                       updateDamageSource(source.id, 'diceCount', value)
+                                     )}
+                                     placeholder="1"
+                                     type="text"
+                                   />
+                                 </div>
 
-                         {/* Тип костей */}
-                         <div className="space-y-2">
-                           <label className="text-sm font-medium">Тип костей</label>
-                           <Select value={damageDiceType} onValueChange={setDamageDiceType}>
-                             <SelectTrigger>
-                               <SelectValue placeholder="Выберите тип костей" />
-                             </SelectTrigger>
-                             <SelectContent>
-                               <SelectItem value="d4">d4</SelectItem>
-                               <SelectItem value="d6">d6</SelectItem>
-                               <SelectItem value="d8">d8</SelectItem>
-                               <SelectItem value="d10">d10</SelectItem>
-                               <SelectItem value="d12">d12</SelectItem>
-                               <SelectItem value="d20">d20</SelectItem>
-                             </SelectContent>
-                           </Select>
-                         </div>
+                                 {/* Тип костей */}
+                                 <div className="space-y-2">
+                                   <label className="text-sm font-medium">Тип костей</label>
+                                   <Select 
+                                     value={source.diceType} 
+                                     onValueChange={(value) => updateDamageSource(source.id, 'diceType', value)}
+                                   >
+                                     <SelectTrigger>
+                                       <SelectValue placeholder="Выберите тип костей" />
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                       <SelectItem value="d4">d4</SelectItem>
+                                       <SelectItem value="d6">d6</SelectItem>
+                                       <SelectItem value="d8">d8</SelectItem>
+                                       <SelectItem value="d10">d10</SelectItem>
+                                       <SelectItem value="d12">d12</SelectItem>
+                                       <SelectItem value="d20">d20</SelectItem>
+                                     </SelectContent>
+                                   </Select>
+                                 </div>
 
-                         {/* Тип урона */}
-                         <div className="space-y-2">
-                           <label className="text-sm font-medium">Тип урона</label>
-                           <Select value={damageType} onValueChange={setDamageType}>
-                             <SelectTrigger>
-                               <SelectValue placeholder="Выберите тип урона" />
-                             </SelectTrigger>
-                             <SelectContent>
-                               {DamageTypes.map((type) => (
-                                 <SelectItem key={type.key} value={type.key}>
-                                   {type.key}
-                                 </SelectItem>
-                               ))}
-                             </SelectContent>
-                           </Select>
+                                 {/* Тип урона */}
+                                 <div className="space-y-2">
+                                   <label className="text-sm font-medium">Тип урона</label>
+                                   <Select 
+                                     value={source.damageType} 
+                                     onValueChange={(value) => updateDamageSource(source.id, 'damageType', value)}
+                                   >
+                                     <SelectTrigger>
+                                       <SelectValue placeholder="Выберите тип урона" />
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                       {DamageTypes.map((type) => (
+                                         <SelectItem key={type.key} value={type.key}>
+                                           {type.key}
+                                         </SelectItem>
+                                       ))}
+                                     </SelectContent>
+                                   </Select>
+                                 </div>
+                               </div>
+                             </div>
+                           ))}
                          </div>
                        </div>
                      </div>
