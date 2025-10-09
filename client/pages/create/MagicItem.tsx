@@ -14,6 +14,7 @@ export default function MagicItem() {
   const [version, setVersion] = useState<string>('');
   const [rarity, setRarity] = useState<string>('common'); // По умолчанию "Обычный"
   const [itemType, setItemType] = useState<string>('weapon'); // По умолчанию "Оружие"
+  const [description, setDescription] = useState<string>(''); // Описание предмета
   
   // Поля для оружия
   const [attackBonus, setAttackBonus] = useState<string>('0'); // По умолчанию 0
@@ -359,14 +360,27 @@ export default function MagicItem() {
                 <h3 className="text-lg font-semibold">Свойства доспеха</h3>
                 <p className="text-muted-foreground">Свойства доспеха будут добавлены позже</p>
               </div>
-            )}
+                   )}
 
-            {/* Кнопка назад */}
-            <div className="flex justify-start pt-4">
-              <Button variant="outline" onClick={handleBack}>
-                Назад к мастерской
-              </Button>
-            </div>
+                   {/* Описание предмета */}
+                   <div className="space-y-2">
+                     <label className="text-sm font-medium">
+                       Описание <span className="text-red-500">*</span>
+                     </label>
+                     <textarea
+                       value={description}
+                       onChange={(e) => setDescription(e.target.value)}
+                       placeholder="Опишите магический предмет, его историю, особенности и эффекты..."
+                       className="w-full min-h-[120px] px-3 py-2 border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md resize-vertical"
+                     />
+                   </div>
+
+                   {/* Кнопка назад */}
+                   <div className="flex justify-start pt-4">
+                     <Button variant="outline" onClick={handleBack}>
+                       Назад к мастерской
+                     </Button>
+                   </div>
           </CardContent>
         </Card>
       </div>
