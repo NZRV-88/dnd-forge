@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 export default function Workshop() {
   const [creating, setCreating] = useState(false);
   const [magicItems, setMagicItems] = useState<any[]>([]); // Пока пустой массив
+  const navigate = useNavigate();
 
   const createNewItem = async () => {
     setCreating(true);
-    // Здесь будет логика создания магического предмета
-    setTimeout(() => {
-      setCreating(false);
-    }, 1000);
+    // Переходим на страницу создания магического предмета
+    navigate('/create/magic-item');
+    setCreating(false);
   };
 
   return (
