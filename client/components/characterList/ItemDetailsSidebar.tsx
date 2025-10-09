@@ -1,6 +1,7 @@
 import React from 'react';
 import { getWeaponMasteryByKey } from "@/data/items/weapon-mastery";
 import { getWeaponPropertyByName } from "@/data/items/weapons";
+import { X, Loader2 } from "lucide-react";
 
 interface ItemDetailsSidebarProps {
   itemDetails: any;
@@ -9,6 +10,11 @@ interface ItemDetailsSidebarProps {
   translateAbility: (ability: string) => string;
   getFrameColor: (color: string) => string;
   frameColor: string;
+  onDeleteItem?: (itemName: string) => void;
+  loadingItems?: Set<string>;
+  hoveredDeleteItem?: string | null;
+  onMouseEnterDelete?: (itemName: string) => void;
+  onMouseLeaveDelete?: () => void;
 }
 
 export function ItemDetailsSidebar({
@@ -17,8 +23,15 @@ export function ItemDetailsSidebar({
   hasMagicWeaponMastery,
   translateAbility,
   getFrameColor,
-  frameColor
+  frameColor,
+  onDeleteItem,
+  loadingItems,
+  hoveredDeleteItem,
+  onMouseEnterDelete,
+  onMouseLeaveDelete
 }: ItemDetailsSidebarProps) {
+  
+  
   if (!itemDetails) {
     return (
       <div className="text-gray-400">
@@ -85,7 +98,7 @@ export function ItemDetailsSidebar({
                 <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
               </div>
             )}
-            {itemDetails.cost && (
+            {itemDetails.cost !== 0 && itemDetails.cost !== '0' && itemDetails.cost !== null && itemDetails.cost !== undefined && (
               <div className="text-gray-400">
                 <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
               </div>
@@ -106,40 +119,88 @@ export function ItemDetailsSidebar({
         {/* Для доспехов */}
         {itemDetails.itemType === 'armor' && (
           <>
-            <div className="text-gray-400">
-              <span className="font-medium text-gray-200">Владение:</span> {(() => {
-                // Проверяем владение доспехами по категориям
-                const armorCategory = itemDetails.category === 'Лёгкий доспех' ? 'light' :
-                                     itemDetails.category === 'Средний доспех' ? 'medium' :
-                                     itemDetails.category === 'Тяжёлый доспех' ? 'heavy' :
-                                     itemDetails.category === 'Щит' ? 'shield' :
-                                     itemDetails.category;
-                const hasArmorProficiency = characterData?.armors?.includes(armorCategory) ||
-                                           characterData?.armors?.includes(itemDetails.key);
-                return hasArmorProficiency ? 'Да' : 'Нет';
-              })()}
-            </div>
-            <div className="text-gray-400">
-              <span className="font-medium text-gray-200">Класс брони:</span> {(itemDetails as any).baseAC}
-            </div>
+         <div className="text-gray-400">
+           <span className="font-medium text-gray-200">Владение:</span> {(() => {
+             // Проверяем владение доспехами по категориям
+             let armorCategory;
+             if ((itemDetails as any).armorCategory) {
+               // Для магических доспехов нужно перевести обратно в английский ключ
+               const translatedCategory = (itemDetails as any).armorCategory;
+               armorCategory = translatedCategory === 'Легкая' ? 'light' :
+                              translatedCategory === 'Средняя' ? 'medium' :
+                              translatedCategory === 'Тяжелая' ? 'heavy' :
+                              translatedCategory === 'Щит' ? 'shield' :
+                              translatedCategory;
+             } else {
+               // Для обычных доспехов используем старую логику
+               armorCategory = itemDetails.category === 'Лёгкий доспех' ? 'light' :
+                              itemDetails.category === 'Средний доспех' ? 'medium' :
+                              itemDetails.category === 'Тяжёлый доспех' ? 'heavy' :
+                              itemDetails.category === 'Щит' ? 'shield' :
+                              itemDetails.category;
+             }
+             const hasArmorProficiency = characterData?.armors?.includes(armorCategory) ||
+                                        characterData?.armors?.includes(itemDetails.key);
+             return hasArmorProficiency ? 'Да' : 'Нет';
+           })()}
+         </div>
+            
+            {/* Для магических доспехов показываем дополнительные свойства */}
+            {(itemDetails as any).armorClass && (itemDetails as any).armorClass !== '' && (
+              <>
+                {(itemDetails as any).armorCategory && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Категория:</span> {(itemDetails as any).armorCategory}
+                  </div>
+                )}
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Класс брони:</span> {(itemDetails as any).armorClass}
+                </div>
+                {(itemDetails as any).dexBonus && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Бонус ловкости:</span> {(itemDetails as any).dexBonus}
+                  </div>
+                )}
+                {(itemDetails as any).strengthRequirement && (itemDetails as any).strengthRequirement !== '0' && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Требование к силе:</span> {(itemDetails as any).strengthRequirement}
+                  </div>
+                )}
+                {(itemDetails as any).stealthDisadvantage && (itemDetails as any).stealthDisadvantage !== 'Нет' && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Проверка скрытности:</span> {(itemDetails as any).stealthDisadvantage}
+                  </div>
+                )}
+              </>
+            )}
+            
+            {/* Для обычных доспехов показываем стандартные поля */}
+            {!(itemDetails as any).armorCategory && (
+              <>
+                <div className="text-gray-400">
+                  <span className="font-medium text-gray-200">Класс брони:</span> {(itemDetails as any).baseAC}
+                </div>
+                {(itemDetails as any).disadvantageStealth && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Помеха:</span> Помеха к Скрытности
+                  </div>
+                )}
+                {(itemDetails as any).requirements && (itemDetails as any).requirements.strength && (
+                  <div className="text-gray-400">
+                    <span className="font-medium text-gray-200">Требования:</span> Сила {(itemDetails as any).requirements.strength}
+                  </div>
+                )}
+              </>
+            )}
+            
             {itemDetails.weight !== undefined && (
               <div className="text-gray-400">
                 <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
               </div>
             )}
-            {itemDetails.cost && (
+            {itemDetails.cost !== 0 && itemDetails.cost !== '0' && itemDetails.cost !== null && itemDetails.cost !== undefined && (
               <div className="text-gray-400">
                 <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
-              </div>
-            )}
-            {(itemDetails as any).disadvantageStealth && (
-              <div className="text-gray-400">
-                <span className="font-medium text-gray-200">Помеха:</span> Помеха к Скрытности
-              </div>
-            )}
-            {(itemDetails as any).requirements && (itemDetails as any).requirements.strength && (
-              <div className="text-gray-400">
-                <span className="font-medium text-gray-200">Требования:</span> Сила {(itemDetails as any).requirements.strength}
               </div>
             )}
           </>
@@ -167,7 +228,7 @@ export function ItemDetailsSidebar({
                 <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
               </div>
             )}
-            {itemDetails.cost && (
+            {itemDetails.cost !== 0 && itemDetails.cost !== '0' && itemDetails.cost !== null && itemDetails.cost !== undefined && (
               <div className="text-gray-400">
                 <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
               </div>
@@ -250,6 +311,32 @@ export function ItemDetailsSidebar({
           <div className="text-xs text-gray-400">
             {getWeaponMasteryByKey((itemDetails as any).mastery)?.desc || 'Описание мастерства не найдено'}
           </div>
+        </div>
+      )}
+
+      {/* Кнопка удаления для предметов */}
+      {onDeleteItem && (
+        <div className="mt-4 pt-3 border-t border-gray-700 flex justify-center">
+          <button
+            className="relative group flex items-center justify-center text-red-400 hover:text-red-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => onDeleteItem(itemDetails.name)}
+            onMouseEnter={() => onMouseEnterDelete?.(itemDetails.name)}
+            onMouseLeave={() => onMouseLeaveDelete?.()}
+            disabled={loadingItems?.has(`delete-${itemDetails.name}`)}
+          >
+            {loadingItems?.has(`delete-${itemDetails.name}`) ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <X size={20} />
+            )}
+            
+            {/* Подсказка */}
+            {hoveredDeleteItem === itemDetails.name && (
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap pointer-events-none z-[9999]">
+                <div className="text-white font-semibold">Удалить предмет</div>
+              </div>
+            )}
+          </button>
         </div>
       )}
     </div>

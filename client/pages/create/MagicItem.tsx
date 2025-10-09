@@ -14,7 +14,7 @@ export default function MagicItem() {
   const [name, setName] = useState<string>('');
   const [version, setVersion] = useState<string>('');
   const [rarity, setRarity] = useState<string>('common'); // По умолчанию "Обычный"
-  const [itemType, setItemType] = useState<string>('weapon'); // По умолчанию "Оружие"
+  const [itemType, setItemType] = useState<string>(''); // Без значения по умолчанию
   const [weight, setWeight] = useState<string>(''); // Вес предмета
   const [cost, setCost] = useState<string>(''); // Стоимость предмета
   const [description, setDescription] = useState<string>(''); // Описание предмета
@@ -34,6 +34,20 @@ export default function MagicItem() {
     diceType: string;
     damageType: string;
   }>>([{ id: '1', diceCount: '', diceType: '', damageType: '' }]); // Источники урона
+  
+  // Поля для доспеха
+  const [armorCategory, setArmorCategory] = useState<string>(''); // Категория доспеха
+  const [armorClass, setArmorClass] = useState<string>(''); // Класс брони
+  const [dexBonus, setDexBonus] = useState<string>('none'); // Бонус ловкости (по умолчанию "Нет")
+  const [strengthRequirement, setStrengthRequirement] = useState<string>(''); // Требование к силе
+  const [stealthDisadvantage, setStealthDisadvantage] = useState<string>('none'); // Проверка скрытности (по умолчанию "Нет")
+  
+  // Поля для предмета
+  const [itemSubType, setItemSubType] = useState<string>(''); // Тип предмета (Кольцо, Головной убор, Обувь, Перчатки)
+  const [itemBonus, setItemBonus] = useState<string>(''); // Бонус (Класс Брони, Характеристика, Скорость, Инициатива)
+  const [itemBonusValue, setItemBonusValue] = useState<string>(''); // Значение бонуса
+  const [itemResistance, setItemResistance] = useState<string>(''); // Сопротивление
+  const [itemImmunity, setItemImmunity] = useState<string>(''); // Иммунитет
   
   const [isEditing, setIsEditing] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -89,6 +103,22 @@ export default function MagicItem() {
         setWeaponRange(itemData.weapon.weaponRange || '');
         setWeaponProperties(itemData.weapon.weaponProperties || []);
         setDamageSources(itemData.weapon.damageSources || [{ id: '1', diceCount: '', diceType: '', damageType: '' }]);
+      }
+
+      if (itemData.armor) {
+        setArmorCategory(itemData.armor.armorCategory || '');
+        setArmorClass(itemData.armor.armorClass || '');
+        setDexBonus(itemData.armor.dexBonus || 'none');
+        setStrengthRequirement(itemData.armor.strengthRequirement || '');
+        setStealthDisadvantage(itemData.armor.stealthDisadvantage || 'none');
+      }
+
+      if (itemData.item) {
+        setItemSubType(itemData.item.itemSubType || '');
+        setItemBonus(itemData.item.itemBonus || '');
+        setItemBonusValue(itemData.item.itemBonusValue || '');
+        setItemResistance(itemData.item.itemResistance || '');
+        setItemImmunity(itemData.item.itemImmunity || '');
       }
     } catch (error) {
       console.error('Ошибка при загрузке предмета:', error);
@@ -220,6 +250,20 @@ export default function MagicItem() {
           weaponRange,
           weaponProperties,
           damageSources
+        } : null,
+        armor: itemType === 'armor' ? {
+          armorCategory,
+          armorClass,
+          dexBonus,
+          strengthRequirement,
+          stealthDisadvantage
+        } : null,
+        item: itemType === 'item' ? {
+          itemSubType,
+          itemBonus,
+          itemBonusValue,
+          itemResistance,
+          itemImmunity
         } : null
       };
 
@@ -350,6 +394,7 @@ export default function MagicItem() {
                          <SelectContent>
                            <SelectItem value="weapon">Оружие</SelectItem>
                            <SelectItem value="armor">Доспех</SelectItem>
+                           <SelectItem value="item">Предмет</SelectItem>
                          </SelectContent>
                        </Select>
                      </div>
@@ -628,10 +673,166 @@ export default function MagicItem() {
 
             {itemType === 'armor' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold">Свойства доспеха</h3>
-                <p className="text-muted-foreground">Свойства доспеха будут добавлены позже</p>
+                <h3 className="text-lg font-semibold">Доспех</h3>
+                
+                {/* Поля для доспеха */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Категория */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Категория</label>
+                    <Select value={armorCategory} onValueChange={setArmorCategory}>
+                      <SelectTrigger className="pl-2">
+                        <SelectValue placeholder="--" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="light">Легкая</SelectItem>
+                        <SelectItem value="medium">Средняя</SelectItem>
+                        <SelectItem value="heavy">Тяжелая</SelectItem>
+                        <SelectItem value="shield">Щит</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Класс брони */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Класс брони</label>
+                    <Input
+                      value={armorClass}
+                      onChange={(e) => handleNumberChange(e.target.value, setArmorClass)}
+                      placeholder="10"
+                      type="text"
+                    />
+                  </div>
+
+                  {/* Бонус ловкости */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Бонус ловкости</label>
+                    <Select value={dexBonus} onValueChange={setDexBonus}>
+                      <SelectTrigger className="pl-2">
+                        <SelectValue placeholder="--" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Нет</SelectItem>
+                        <SelectItem value="limited">+2</SelectItem>
+                        <SelectItem value="full">Полный модификатор</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Требование к силе */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Требование к силе</label>
+                    <Input
+                      value={strengthRequirement}
+                      onChange={(e) => handleNumberChange(e.target.value, setStrengthRequirement)}
+                      placeholder="0"
+                      type="text"
+                    />
+                  </div>
+
+                  {/* Проверка скрытности */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Проверка скрытности</label>
+                    <Select value={stealthDisadvantage} onValueChange={setStealthDisadvantage}>
+                      <SelectTrigger className="pl-2">
+                        <SelectValue placeholder="--" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Нет</SelectItem>
+                        <SelectItem value="disadvantage">Помеха</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-                   )}
+            )}
+
+            {itemType === 'item' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold">Предмет</h3>
+                
+                {/* Поля для предмета */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Тип предмета */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Тип</label>
+                    <Select value={itemSubType} onValueChange={setItemSubType}>
+                      <SelectTrigger className="pl-2">
+                        <SelectValue placeholder="--" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ring">Кольцо</SelectItem>
+                        <SelectItem value="headwear">Головной убор</SelectItem>
+                        <SelectItem value="footwear">Обувь</SelectItem>
+                        <SelectItem value="gloves">Перчатки</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Бонус */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Бонус</label>
+                    <Select value={itemBonus} onValueChange={setItemBonus}>
+                      <SelectTrigger className="pl-2">
+                        <SelectValue placeholder="--" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ac">Класс Брони</SelectItem>
+                        <SelectItem value="ability">Характеристика</SelectItem>
+                        <SelectItem value="speed">Скорость</SelectItem>
+                        <SelectItem value="initiative">Инициатива</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Значение бонуса */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Значение</label>
+                    <Input
+                      value={itemBonusValue}
+                      onChange={(e) => handleNumberChange(e.target.value, setItemBonusValue)}
+                      placeholder="0"
+                      type="text"
+                      disabled={!itemBonus}
+                    />
+                  </div>
+
+                  {/* Сопротивление */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Сопротивление</label>
+                    <Select value={itemResistance} onValueChange={setItemResistance}>
+                      <SelectTrigger className="pl-2">
+                        <SelectValue placeholder="--" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DamageTypes.map((damageType) => (
+                          <SelectItem key={damageType.key} value={damageType.key}>
+                            {damageType.key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Иммунитет */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Иммунитет</label>
+                    <Select value={itemImmunity} onValueChange={setItemImmunity}>
+                      <SelectTrigger className="pl-2">
+                        <SelectValue placeholder="--" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DamageTypes.map((damageType) => (
+                          <SelectItem key={damageType.key} value={damageType.key}>
+                            {damageType.key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
 
                    {/* Описание предмета */}
                    <div className="space-y-2">

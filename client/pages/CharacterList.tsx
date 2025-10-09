@@ -373,11 +373,25 @@ export default function CharacterList() {
         
         // Добавляем AC от доспехов - ищем полные данные по имени
         if (armor) {
-            const armorData = Armors.find(a => a.name === armor.name);
-            if (armorData) {
-                totalAC = armorData.baseAC || baseAC;
+            // Сначала проверяем магические доспехи
+            const magicArmor = characterData?.equipment?.find((item: any) => 
+                typeof item === 'object' && 
+                item.type === 'magic_item' && 
+                item.itemType === 'armor' && 
+                item.name === armor.name
+            );
+            
+            if (magicArmor && typeof magicArmor === 'object' && (magicArmor as any).armor) {
+                // Используем данные магического доспеха
+                totalAC = parseInt((magicArmor as any).armor.armorClass) || baseAC;
             } else {
-                totalAC = baseAC;
+                // Ищем в обычных доспехах
+                const armorData = Armors.find(a => a.name === armor.name);
+                if (armorData) {
+                    totalAC = armorData.baseAC || baseAC;
+                } else {
+                    totalAC = baseAC;
+                }
             }
         }
         
@@ -385,22 +399,46 @@ export default function CharacterList() {
         if (!armor) {
             totalAC += dexMod;
         } else {
-            const armorData = Armors.find(a => a.name === armor.name);
-            if (armorData) {
-                if (armorData.category === 'light') {
+            // Сначала проверяем магические доспехи
+            const magicArmor = characterData?.equipment?.find((item: any) => 
+                typeof item === 'object' && 
+                item.type === 'magic_item' && 
+                item.itemType === 'armor' && 
+                item.name === armor.name
+            );
+            
+            if (magicArmor && typeof magicArmor === 'object' && (magicArmor as any).armor) {
+                // Используем данные магического доспеха для модификатора ловкости
+                const dexBonusType = (magicArmor as any).armor.dexBonus;
+                if (dexBonusType === 'full') {
                     totalAC += dexMod;
-                } else if (armorData.category === 'medium') {
-                    const maxDex = armorData.maxDexBonus !== undefined ? armorData.maxDexBonus : 2;
-                    const dexBonus = Math.min(dexMod, maxDex);
-                    totalAC += dexBonus;
-                } else if (armorData.category === 'heavy') {
-                    const maxDex = armorData.maxDexBonus !== undefined ? armorData.maxDexBonus : 0;
-                    const dexBonus = Math.min(dexMod, maxDex);
-                    totalAC += dexBonus;
+                } else if (dexBonusType === 'limited') {
+                    totalAC += Math.min(dexMod, 2);
+                } else if (dexBonusType === 'none') {
+                    // Не добавляем модификатор ловкости
+                } else {
+                    // По умолчанию добавляем полный модификатор
+                    totalAC += dexMod;
                 }
             } else {
-                // Если данные доспеха не найдены, добавляем полный модификатор ловкости
-                totalAC += dexMod;
+                // Ищем в обычных доспехах
+                const armorData = Armors.find(a => a.name === armor.name);
+                if (armorData) {
+                    if (armorData.category === 'light') {
+                        totalAC += dexMod;
+                    } else if (armorData.category === 'medium') {
+                        const maxDex = armorData.maxDexBonus !== undefined ? armorData.maxDexBonus : 2;
+                        const dexBonus = Math.min(dexMod, maxDex);
+                        totalAC += dexBonus;
+                    } else if (armorData.category === 'heavy') {
+                        const maxDex = armorData.maxDexBonus !== undefined ? armorData.maxDexBonus : 0;
+                        const dexBonus = Math.min(dexMod, maxDex);
+                        totalAC += dexBonus;
+                    }
+                } else {
+                    // Если данные доспеха не найдены, добавляем полный модификатор ловкости
+                    totalAC += dexMod;
+                }
             }
         }
         
@@ -411,6 +449,34 @@ export default function CharacterList() {
         }
         if (activeSlot === 2 && shield2) {
             totalAC += 2; // Стандартный бонус щита из второго набора
+        }
+        
+        // Проверяем бонусы от магических предметов типа "item" (кольца, головные уборы, обувь, перчатки)
+        if (characterData?.equipment) {
+            const magicItems = characterData.equipment.filter((item: any) => 
+                typeof item === 'object' && 
+                item.type === 'magic_item' && 
+                item.itemType === 'item' &&
+                char.equipped.otherItems?.some((equippedItem: any) => equippedItem.name === item.name)
+            );
+            
+            // Ищем предметы с бонусом к классу брони
+            const acBonusItems = magicItems.filter((item: any) => 
+                item.item?.itemBonus === 'ac' && 
+                item.item?.itemBonusValue
+            );
+            
+            if (acBonusItems.length > 0) {
+                // Берем максимальный бонус к КБ
+                const maxACBonus = Math.max(...acBonusItems.map((item: any) => 
+                    parseInt(item.item.itemBonusValue) || 0
+                ));
+                
+                // Если бонус от предмета больше текущего КБ, используем его
+                if (maxACBonus > totalAC) {
+                    totalAC = maxACBonus;
+                }
+            }
         }
         
         return Math.floor(totalAC);

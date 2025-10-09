@@ -33,7 +33,6 @@ type Props = {
     shield1?: { name: string; type: string };
     shield2?: { name: string; type: string };
     capacityItem?: { name: string; capacity: number };
-    otherItems?: { name: string; type: string; slots: number }[];
   };
   stats?: Record<string, number>;
   proficiencyBonus?: number;
@@ -316,6 +315,12 @@ const getActionFrameSvg = (color: string) => {
 };
 
 export default function Attacks({ attacks, equipped, stats, proficiencyBonus, classKey, level, onRoll, onSwitchWeaponSlot, onUpdateEquipped, onUpdateEquipment, onUpdateCurrency, setDraft, onSaveAll, characterData, char, setChar }: Props) {
+  console.log('Attacks component rendered with:', {
+    characterData,
+    char,
+    classKey,
+    level
+  });
   const { frameColor } = useFrameColor();
   const [criticalHits, setCriticalHits] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabType>("actions");
@@ -323,19 +328,15 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const [loadingAttacks, setLoadingAttacks] = useState<Record<string, boolean>>({});
   const [loadingDamage, setLoadingDamage] = useState<Record<string, boolean>>({});
   
-  
-  
   // Состояние для экипировки (локальное, не синхронизируется с equipped)
   const [localEquipped, setLocalEquipped] = useState<{
     armor: string | null;
     mainSet: Array<{name: string, slots: number, isVersatile?: boolean, versatileMode?: boolean}>;
     additionalSet: Array<{name: string, slots: number, isVersatile?: boolean, versatileMode?: boolean}>;
-    otherItems: Array<{name: string, slots: number}>;
   }>({
     armor: null,
     mainSet: [],
-    additionalSet: [],
-    otherItems: []
+    additionalSet: []
   });
 
   // Состояние для сайдбара управления инвентарем
@@ -487,12 +488,27 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       });
     }
     
+    console.log('getAllCharacterSpells debug:', {
+      characterDataClass: characterData?.class?.key,
+      level: characterData?.level,
+      features: characterData?.class?.features,
+      allSpells: allSpells.map(s => ({ name: s.name, level: s.level, isClassFeature: s.isClassFeature }))
+    });
+    
     return allSpells;
   };
   
   // Функция для фильтрации заклинаний (только для блока "Добавить Заклинание")
   const getFilteredSpells = (search: string = addSpellSearch, levelFilter: number | "all" = addSpellLevelFilter) => {
     let spells = getAvailableSpells();
+    
+    console.log('getFilteredSpells debug:', {
+      search,
+      levelFilter,
+      totalAvailable: spells.length,
+      level2Spells: spells.filter(s => s.level === 2),
+      paladinLevel2: spells.filter(s => s.level === 2 && s.classes && s.classes.includes('paladin'))
+    });
     
     // Фильтр по поиску
     if (search.trim()) {
@@ -508,6 +524,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     
     // Сортировка по алфавиту
     spells.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    
+    console.log('getFilteredSpells result:', {
+      filteredCount: spells.length,
+      spells: spells.map(s => ({ name: s.name, level: s.level }))
+    });
     
     return spells;
   };
@@ -551,7 +572,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   // Функция для получения выбранных опций черты
   const getFeatChoices = (featKey: string) => {
     if (!draft?.chosen) return [];
-
+    
+    console.log('getFeatChoices debug:', {
+      featKey,
+      allFeats: draft.chosen.feats,
+      chosen: draft.chosen
+    });
     
     const choices: string[] = [];
     
@@ -563,7 +589,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         if (source.includes('skilled') || source.includes('background-skilled')) {
           skills.forEach(skill => {
             choices.push(`skill:${skill}`);
-          
+            console.log('getFeatChoices found skilled skill choice:', { source, skill });
           });
         }
       });
@@ -573,7 +599,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         if (source.includes('skilled') || source.includes('background-skilled')) {
           tools.forEach(tool => {
             choices.push(`tool:${tool}`);
-           
+            console.log('getFeatChoices found skilled tool choice:', { source, tool });
           });
         }
       });
@@ -587,6 +613,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           const sourceKey = parts[0];
           const feat = parts[1];
           
+          console.log('getFeatChoices processing entry:', { entry, sourceKey, feat });
           
           // Ищем все выборы для этого источника
           Object.entries(draft.chosen).forEach(([key, value]) => {
@@ -598,6 +625,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     const choiceType = choiceParts[1];
                     const choiceValue = choiceParts[2];
                     choices.push(`${choiceType}:${choiceValue}`);
+                    console.log('getFeatChoices found choice in array:', { key, v, choiceType, choiceValue });
                   }
                 }
               });
@@ -611,6 +639,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         const choiceType = choiceParts[1];
                         const choiceValue = choiceParts[2];
                         choices.push(`${choiceType}:${choiceValue}`);
+                        console.log('getFeatChoices found choice in object:', { key, source, v, choiceType, choiceValue });
                       }
                     }
                   });
@@ -622,6 +651,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       });
     }
     
+    console.log('getFeatChoices final choices:', choices);
     return choices;
   };
 
@@ -722,6 +752,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       });
     }
     
+    console.log('getCharacterFeats debug:', {
+      allFeats: allFeats.length,
+      featNames: allFeats.map(f => f.name),
+      addedKeys: Array.from(addedKeys),
+      characterDataBackground: characterData?.background,
+      backgroundFeatures: characterData?.background?.features,
+      characterDataFeats: characterData?.feats
+    });
     
     return allFeats;
   };
@@ -730,6 +768,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const getCharacterFightingStyles = () => {
     if (!draft?.chosen?.fightingStyle) return [];
     
+    console.log('getCharacterFightingStyles debug:', {
+      fightingStyle: draft.chosen.fightingStyle,
+      allFightingStyles: FIGHTING_STYLES.length
+    });
     
     // Собираем все боевые стили из всех источников
     const allFightingStyles: string[] = [];
@@ -739,9 +781,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       }
     });
     
+    console.log('getCharacterFightingStyles allFightingStyles:', allFightingStyles);
     
     return allFightingStyles.map(styleKey => {
       const style = FIGHTING_STYLES.find(s => s.key === styleKey);
+      console.log('getCharacterFightingStyles mapping:', { styleKey, style: style?.name });
       return style;
     }).filter(Boolean);
   };
@@ -805,26 +849,40 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для получения слотов заклинаний для уровня
   const getSpellSlotsForLevel = (spellLevel: number) => {
+    console.log('getSpellSlotsForLevel called with:', { 
+      spellLevel, 
+      characterData: characterData?.class, 
+      level: characterData?.level,
+      draft: draft?.basics?.class,
+      draftLevel: draft?.basics?.level,
+      fullCharacterData: characterData
+    });
 
     // Используем данные из characterData, если доступен, иначе из draft
     const currentClass = characterData?.class || draft?.basics?.class;
     const currentLevel = characterData?.level || draft?.basics?.level;
 
+    console.log('Using class and level:', { currentClass, currentLevel });
 
     if (!currentClass || !currentLevel) {
+      console.log('No class or level data available');
       return 0;
     }
 
     // Получаем информацию о классе
     const classData = currentClass;
+    console.log('classData:', classData);
 
     if (!classData.spellcasting?.progression) {
+      console.log('No spellcasting progression');
       return 0;
     }
 
     const levelSlots = classData.spellcasting.progression[currentLevel];
+    console.log('levelSlots for level', currentLevel, ':', levelSlots);
 
     if (!levelSlots?.slots) {
+      console.log('No slots for level', currentLevel);
       return 0;
     }
 
@@ -832,6 +890,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     // Для паладина: progression[1] = { slots: [2] } означает 2 ячейки 1-го уровня
     // slots[0] = количество ячеек 1-го уровня, slots[1] = количество ячеек 2-го уровня и т.д.
     const slots = levelSlots.slots[spellLevel - 1] || 0;
+    console.log('Final slots for spell level', spellLevel, ':', slots);
     return slots;
   };
   
@@ -1069,31 +1128,15 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   // Универсальная функция для получения статуса предмета
   const getItemStatus = (itemName: string) => {
     const cleanName = getCleanItemName(itemName);
-    let itemType = getItemType(cleanName);
-    
-    // Проверяем, является ли это магическим предметом
-    if (characterData?.equipment) {
-      const magicItem = characterData.equipment.find(item => 
-        typeof item === 'object' && 
-        item.type === 'magic_item' && 
-        item.name === cleanName
-      );
-      
-      if (magicItem) {
-        itemType = magicItem.itemType === 'weapon' ? 'weapon' : 
-                   magicItem.itemType === 'armor' ? 'armor' : 
-                   magicItem.itemType === 'item' ? 'other' : 'other';
-      }
-    }
+    const itemType = getItemType(cleanName);
     
     // Проверяем, экипирован ли предмет
     const isEquipped = localEquipped.armor === cleanName ||
       localEquipped.mainSet.some(item => item.name === cleanName) ||
-      localEquipped.additionalSet.some(item => item.name === cleanName) ||
-      localEquipped.otherItems.some(item => item.name === cleanName);
+      localEquipped.additionalSet.some(item => item.name === cleanName);
     
     // Проверяем, можно ли экипировать предмет
-    const canEquip = itemType === 'weapon' || itemType === 'armor' || itemType === 'shield' || itemType === 'other';
+    const canEquip = itemType === 'weapon' || itemType === 'armor' || itemType === 'shield';
     
     // Проверяем, является ли оружие универсальным
     const isVersatile = itemType === 'weapon' && isVersatileWeapon(cleanName);
@@ -1336,6 +1379,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       }
     });
     
+    console.log('getAvailableSpells debug:', {
+      classKey,
+      totalSpells: allSpells.length,
+      paladinSpells: allSpells.filter(s => s.classes && s.classes.includes('paladin')),
+      level2Spells: allSpells.filter(s => s.classes && s.classes.includes('paladin') && s.level === 2),
+      availableSpells: availableSpells.map(s => ({ name: s.name, level: s.level }))
+    });
     
     return availableSpells;
   };
@@ -1486,19 +1536,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           return weaponData ? weaponData.name : magicItem.weapon.weaponKind;
         }
         // Для магического доспеха показываем категорию
-        if (magicItem.itemType === 'armor') {
-          return getMagicItemCategory(magicItem);
-        }
-        // Для магических предметов типа "item" показываем тип предмета
-        if (magicItem.itemType === 'item' && magicItem.item?.itemSubType) {
-          const subTypeMap: Record<string, string> = {
-            'ring': 'Кольцо',
-            'headwear': 'Головной убор',
-            'footwear': 'Обувь',
-            'gloves': 'Перчатки'
-          };
-          return subTypeMap[magicItem.item.itemSubType] || magicItem.item.itemSubType;
-        }
         return getMagicItemCategory(magicItem);
       }
     }
@@ -1551,34 +1588,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     };
     
     return properties.map(prop => translations[prop] || prop);
-  };
-
-  // Функции для перевода свойств доспеха
-  const translateArmorCategory = (category: string) => {
-    const categoryTranslations: Record<string, string> = {
-      'light': 'Легкая',
-      'medium': 'Средняя',
-      'heavy': 'Тяжелая',
-      'shield': 'Щит'
-    };
-    return categoryTranslations[category] || category;
-  };
-
-  const translateDexBonus = (dexBonus: string) => {
-    const dexBonusTranslations: Record<string, string> = {
-      'none': 'Нет',
-      'limited': '+2',
-      'full': 'Полный модификатор'
-    };
-    return dexBonusTranslations[dexBonus] || dexBonus;
-  };
-
-  const translateStealthDisadvantage = (stealthDisadvantage: string) => {
-    const stealthTranslations: Record<string, string> = {
-      'none': 'Нет',
-      'disadvantage': 'Помеха'
-    };
-    return stealthTranslations[stealthDisadvantage] || stealthDisadvantage;
   };
 
   // Функция для перевода валюты
@@ -1638,6 +1647,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   const getItemDetails = (itemName: string) => {
     const cleanName = getCleanItemName(itemName);
     
+    console.log('getItemDetails: checking item:', itemName, 'clean name:', cleanName);
     
     // Проверяем, является ли это магическим предметом из инвентаря
     if (characterData?.equipment) {
@@ -1647,6 +1657,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         item.name === cleanName
       );
       
+      console.log('getItemDetails: found magic item:', magicItem);
       
       if (magicItem) {
         // Возвращаем данные магического предмета в формате, ожидаемом системой
@@ -1676,16 +1687,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
             weaponCategory: magicItem.weapon.weaponCategory,
             bonusAttack: magicItem.weapon.attackBonus,
             bonusDamage: magicItem.weapon.damageBonus
-          }),
-          // Для доспеха добавляем дополнительные свойства
-          ...(magicItem.itemType === 'armor' && magicItem.armor && {
-            armorCategory: translateArmorCategory(magicItem.armor.armorCategory),
-            armorClass: magicItem.armor.armorClass,
-            dexBonus: translateDexBonus(magicItem.armor.dexBonus),
-            strengthRequirement: magicItem.armor.strengthRequirement,
-            stealthDisadvantage: translateStealthDisadvantage(magicItem.armor.stealthDisadvantage)
           })
         };
+        console.log('getItemDetails: returning magic item details:', details);
         return details;
       }
     }
@@ -1798,10 +1802,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для получения предметов из рюкзака (не надетых)
   const getBackpackItems = () => {
+    console.log('getBackpackItems: START');
     if (!characterData?.equipment || characterData.equipment.length === 0) {
+      console.log('getBackpackItems: NO EQUIPMENT DATA');
       return [];
     }
     
+    console.log('getBackpackItems: characterData.equipment:', characterData.equipment);
     
     // Получаем все надетые предметы
     const allEquippedItems = [
@@ -1818,6 +1825,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         const cleanName = getCleanItemName(itemName);
         const isNotEquipped = !allEquippedItems.includes(cleanName);
         
+        console.log('getBackpackItems: filtering item:', itemName, 'clean:', cleanName, 'not equipped:', isNotEquipped);
         
         return isNotEquipped;
       })
@@ -1825,10 +1833,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         const itemName = typeof item === 'string' ? item : (item.name || String(item));
         const itemType = typeof item === 'object' && item.type ? item.type : getItemType(itemName);
         
+        console.log('getBackpackItems: mapping item:', itemName, 'type:', itemType);
         
         // Проверяем, является ли предмет магическим
         const isMagicItem = typeof item === 'object' && item.type === 'magic_item';
         
+        console.log('getBackpackItems: isMagicItem:', isMagicItem);
         
         // Определяем категорию для отображения
         let displayCategory;
@@ -1975,14 +1985,17 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для конвертации стоимости в медные монеты (ММ)
   const convertToCopper = (cost: string): number => {
+    console.log('convertToCopper called with:', cost);
     const match = cost.match(/(\d+)\s*(gp|sp|cp|ЗМ|СМ|ММ|pp|ep)/i);
     if (!match) {
+      console.log('No match found for cost:', cost);
       return 0;
     }
     
     const amount = parseInt(match[1]);
     const currency = match[2].toLowerCase();
     
+    console.log('Converted:', { amount, currency, cost });
     
     switch (currency) {
       case 'pp':
@@ -2022,6 +2035,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                      currentCurrency.silver * 10 + 
                      currentCurrency.copper;
     
+    console.log('convertCurrency input:', { currentCurrency, requiredCopper, totalCopper });
     
     // Если недостаточно средств, конвертируем начиная с самых крупных монет
     if (totalCopper < requiredCopper) {
@@ -2032,6 +2046,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         newCurrency.platinum--;
         newCurrency.gold += 10;
         totalCopper += 1000;
+        console.log('Converted 1 platinum to 10 gold, totalCopper now:', totalCopper);
       }
       
       // Конвертируем золото в серебро (1 ЗМ = 10 СМ = 100 ММ)
@@ -2039,6 +2054,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         newCurrency.gold--;
         newCurrency.silver += 10;
         totalCopper += 100;
+        console.log('Converted 1 gold to 10 silver, totalCopper now:', totalCopper);
       }
       
       // Конвертируем серебро в медь (1 СМ = 10 ММ)
@@ -2046,11 +2062,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         newCurrency.silver--;
         newCurrency.copper += 10;
         totalCopper += 10;
+        console.log('Converted 1 silver to 10 copper, totalCopper now:', totalCopper);
       }
       
+      console.log('convertCurrency output:', { newCurrency, totalCopper });
       return newCurrency;
     }
     
+    console.log('No conversion needed, returning original currency');
     return currentCurrency;
   };
 
@@ -2076,9 +2095,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       // Сначала обновляем валюту, затем инвентарь
       let currentCurrency = characterData.currency || { platinum: 0, gold: 0, electrum: 0, silver: 0, copper: 0 };
       
+      console.log('Before conversion:', currentCurrency);
+      console.log('Required copper:', costInCopper);
       
       // Конвертируем валюту при необходимости
       const convertedCurrency = convertCurrency(currentCurrency, costInCopper);
+      console.log('After conversion:', convertedCurrency);
       
       // Проверяем, достаточно ли денег после конвертации
       const totalCopperAfterConversion = convertedCurrency.platinum * 1000 + 
@@ -2565,11 +2587,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       setLocalEquipped({
         armor: equipped.armor?.name || null,
         mainSet: [...mainWeapons, ...mainShields],
-        additionalSet: [...additionalWeapons, ...additionalShields],
-        otherItems: equipped.otherItems?.map(item => ({
-          name: item.name,
-          slots: item.slots
-        })) || []
+        additionalSet: [...additionalWeapons, ...additionalShields]
       });
     }
   }, [equipped]);
@@ -2653,29 +2671,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       });
     });
     
-    // Прочие предметы (магические предметы типа "item")
-    localEquipped.otherItems.forEach(item => {
-      // Проверяем, является ли это магическим предметом
-      const magicItem = characterData.equipment.find(equipItem => 
-        typeof equipItem === 'object' && 
-        equipItem.type === 'magic_item' && 
-        equipItem.name === item.name
-      );
-      
-      equippedItems.push({
-        name: item.name,
-        type: 'item',
-        set: 'other',
-        weight: magicItem ? magicItem.weight : 0,
-        cost: magicItem ? magicItem.cost : 0,
-        quantity: magicItem ? magicItem.quantity : 1,
-        equipped: true,
-        slots: item.slots,
-        isVersatile: false,
-        versatileMode: false
-      });
-    });
-    
     return equippedItems;
   }, [localEquipped, characterData?.equipment]);
 
@@ -2686,8 +2681,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     const allEquippedItems = [
       ...(localEquipped.armor ? [localEquipped.armor] : []),
       ...localEquipped.mainSet.map(item => item.name),
-      ...localEquipped.additionalSet.map(item => item.name),
-      ...localEquipped.otherItems.map(item => item.name)
+      ...localEquipped.additionalSet.map(item => item.name)
     ];
     
     // Функция для определения приоритета сортировки предметов
@@ -3625,12 +3619,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           const canEquip = !localEquipped.armor;
           console.log('canEquipItem: armor can equip:', canEquip);
           return canEquip;
-        } else if (magicItem.itemType === 'item') {
-          // Для магических предметов типа "item" проверяем слоты в "Прочее"
-          const otherUsedSlots = getUsedSlots(localEquipped.otherItems);
-          const canEquip = otherUsedSlots < 4; // Максимум 4 слота в "Прочее"
-          console.log('canEquipItem: item can equip:', canEquip, 'otherUsedSlots:', otherUsedSlots);
-          return canEquip;
         }
         
         console.log('canEquipItem: other magic item type, cannot equip');
@@ -3810,12 +3798,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         slots: 1,
         isVersatile: false,
         versatileMode: false
-      } : null,
-      otherItems: newLocalEquipped.otherItems.map(item => ({
-        name: item.name,
-        type: 'item' as const,
-        slots: item.slots
-      }))
+      } : null
     };
     
     // Вызываем функцию обновления equipped из родительского компонента
@@ -3993,30 +3976,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                 mainSet: [newItem]
               };
             }
-          }
-          break;
-          
-        case 'other':
-          // Обработка магических предметов типа "item"
-          const otherItem = prev.otherItems.find(item => item.name === cleanName);
-          
-          if (otherItem) {
-            // Если предмет уже экипирован, снимаем его
-            newState = {
-              ...prev,
-              otherItems: prev.otherItems.filter(item => item.name !== cleanName)
-            };
-          } else {
-            // Если не экипирован, добавляем в прочие предметы
-            const newItem = {
-              name: cleanName,
-              slots: 1 // Магические предметы типа "item" занимают 1 слот
-            };
-            
-            newState = {
-              ...prev,
-              otherItems: [...prev.otherItems, newItem]
-            };
           }
           break;
           
@@ -5844,70 +5803,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       Дополнительный набор пуст
                     </div>
                   )}
-
-                  {/* Прочее */}
-                  <div className="text-xs text-gray-400 mt-4 mb-1 font-semibold uppercase flex items-center gap-2">
-                    ПРОЧЕЕ
-                        <div className="flex gap-1">
-                          {Array.from({ length: 4 }, (_, i) => (
-                            <div
-                              key={i}
-                              className="w-2 h-2 rounded-full"
-                              style={{
-                                backgroundColor: i < getUsedSlotsCount(localEquipped.otherItems)
-                                  ? getFrameColor(frameColor)
-                                  : '#4B5563'
-                              }}
-                            />
-                          ))}
-                        </div>
-                  </div>
-                  {equippedItems.filter(item => item.set === 'other').length > 0 ? (
-                    equippedItems.filter(item => item.set === 'other').map((item, index) => (
-                      <div key={`other-${index}`}>
-                        <div className="grid gap-2 text-sm py-1 items-center"
-                             style={{ gridTemplateColumns: 'auto 2fr 1fr 1fr 1fr' }}>
-                          <div className="flex justify-start items-center">
-                            <div 
-                              className="w-5 h-5 border-2 flex items-center justify-center relative cursor-pointer hover:opacity-80"
-                              style={{
-                                borderColor: item.equipped ? getFrameColor(frameColor) : '#6B7280',
-                                backgroundColor: 'transparent'
-                              }}
-                              onClick={() => toggleItemEquipped(item.name)}
-                            >
-                              {item.equipped && (
-                                <div
-                                  className="w-3 h-3"
-                                  style={{
-                                    backgroundColor: getFrameColor(frameColor)
-                                  }}
-                                />
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-gray-200 break-words cursor-pointer hover:text-gray-100" onClick={() => openItemDetails(item)}>
-                            <div>{getCleanItemName(item.name)}</div>
-                            <div className="text-xs text-gray-500 mt-1">{getEquippedItemCategory(item.name)}</div>
-                          </div>
-                          <div className="text-gray-400 text-center">{item.weight} фнт.</div>
-                          <div className="text-gray-400 text-center">{formatCost(item.cost)}</div>
-                        </div>
-                        {index < equippedItems.filter(item => item.set === 'other').length - 1 && (
-                          <div 
-                            className="w-full h-px my-1"
-                            style={{
-                              borderTop: `1px dotted ${frameColor === 'gold' ? '#B59E54' : frameColor === 'silver' ? '#C0C0C0' : frameColor === 'copper' ? '#B87333' : '#B59E54'}40`
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-500 text-sm py-2">
-                      Прочее пусто
-                    </div>
-                  )}
                   
                 </div>
               </div>
@@ -6445,8 +6340,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       {/* Сайдбар управления инвентарем */}
       {isInventorySidebarOpen && (
         <div 
-          className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-[99999] flex justify-end"
-          style={{ zIndex: '99999 !important' }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
           onClick={() => setIsInventorySidebarOpen(false)}
         >
           <div 
@@ -6655,7 +6549,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                               <CollapsibleContent>
                                 {(() => {
                                   const itemDetails = getItemDetails(item.name);
-                                  console.log('Attacks: itemDetails for', item.name, ':', itemDetails);
                                   if (!itemDetails) {
                                     return (
                                       <div className="p-2 text-xs text-gray-400">
@@ -6681,11 +6574,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                         translateAbility={translateAbility}
                                         getFrameColor={getFrameColor}
                                         frameColor={frameColor}
-                                        onDeleteItem={handleDeleteItem}
-                                        loadingItems={loadingItems}
-                                        hoveredDeleteItem={hoveredDeleteItem}
-                                        onMouseEnterDelete={setHoveredDeleteItem}
-                                        onMouseLeaveDelete={() => setHoveredDeleteItem(null)}
                                       />
                                       
                                       {/* Блок количества и добавления (для всех предметов) */}
@@ -6906,8 +6794,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       {/* Сайдбар с описанием предмета */}
       {isItemDetailsOpen && selectedItem && (
         <div 
-          className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-[99999] flex justify-end"
-          style={{ zIndex: '99999 !important' }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
           onClick={closeItemDetails}
         >
           <div 
@@ -6928,40 +6815,115 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
             {(() => {
               // Проверяем, является ли предмет магическим
-              // Проверяем как по типу, так и по наличию в equipment как magic_item
-              const isMagicItem = selectedItem.type === 'magic_item' || 
-                (characterData?.equipment && characterData.equipment.some((item: any) => 
-                  typeof item === 'object' && 
-                  item.type === 'magic_item' && 
-                  item.name === getCleanItemName(selectedItem.name)
-                ));
-              
-              if (isMagicItem) {
-                // Для магических предметов тоже получаем детали через getItemDetails
-                const itemDetails = getItemDetails(selectedItem.name);
-                
-                if (!itemDetails) {
-                  return (
-                    <div className="text-gray-400">
-                      Информация о предмете не найдена
-                    </div>
-                  );
-                }
-                // Используем ItemDetailsSidebar для магических предметов
+              if (selectedItem.type === 'magic_item') {
                 return (
-                  <ItemDetailsSidebar
-                    itemDetails={itemDetails}
-                    characterData={characterData}
-                    hasMagicWeaponMastery={hasMagicWeaponMastery}
-                    translateAbility={translateAbility}
-                    getFrameColor={getFrameColor}
-                    frameColor={frameColor}
-                    onDeleteItem={handleDeleteItem}
-                    loadingItems={loadingItems}
-                    hoveredDeleteItem={hoveredDeleteItem}
-                    onMouseEnterDelete={setHoveredDeleteItem}
-                    onMouseLeaveDelete={() => setHoveredDeleteItem(null)}
-                  />
+                  <div className="space-y-3 text-xs">
+                    {/* Редкость */}
+                    {selectedItem.rarity && (
+                      <div className="text-gray-400 mb-2">
+                        <span className="font-medium text-gray-200">Редкость:</span> 
+                        <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                          selectedItem.rarity === 'common' ? 'bg-gray-600 text-gray-200' :
+                          selectedItem.rarity === 'uncommon' ? 'bg-green-600 text-green-200' :
+                          selectedItem.rarity === 'rare' ? 'bg-blue-600 text-blue-200' :
+                          selectedItem.rarity === 'very_rare' ? 'bg-purple-600 text-purple-200' :
+                          selectedItem.rarity === 'legendary' ? 'bg-orange-600 text-orange-200' :
+                          selectedItem.rarity === 'artifact' ? 'bg-red-600 text-red-200' :
+                          'bg-gray-600 text-gray-200'
+                        }`}>
+                          {selectedItem.rarity === 'common' ? 'Обычный' :
+                           selectedItem.rarity === 'uncommon' ? 'Необычный' :
+                           selectedItem.rarity === 'rare' ? 'Редкий' :
+                           selectedItem.rarity === 'very_rare' ? 'Очень редкий' :
+                           selectedItem.rarity === 'legendary' ? 'Легендарный' :
+                           selectedItem.rarity === 'artifact' ? 'Артефакт' :
+                           selectedItem.rarity}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Тип предмета */}
+                    {selectedItem.itemType && (
+                      <div className="text-gray-400">
+                        <span className="font-medium text-gray-200">Тип предмета:</span> 
+                        <span className="ml-2">
+                          {selectedItem.itemType === 'weapon' ? 'Оружие' : 
+                           selectedItem.itemType === 'armor' ? 'Доспех' : 
+                           selectedItem.itemType}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Свойства оружия */}
+                    {selectedItem.weapon && (
+                      <div className="space-y-2 pt-2 border-t border-gray-700">
+                        <h4 className="text-sm font-medium text-gray-200">Свойства оружия</h4>
+                        
+                        {selectedItem.weapon.weaponType && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Тип оружия:</span> 
+                            <span className="ml-2">
+                              {selectedItem.weapon.weaponType === 'melee' ? 'Ближний бой' : 'Дальний бой'}
+                            </span>
+                          </div>
+                        )}
+
+                        {selectedItem.weapon.weaponKind && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Вид оружия:</span> 
+                            <span className="ml-2">{selectedItem.weapon.weaponKind}</span>
+                          </div>
+                        )}
+
+                        {selectedItem.weapon.attackBonus && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Бонус атаки:</span> 
+                            <span className="ml-2">{selectedItem.weapon.attackBonus}</span>
+                          </div>
+                        )}
+
+                        {selectedItem.weapon.damageBonus && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Бонус урона:</span> 
+                            <span className="ml-2">{selectedItem.weapon.damageBonus}</span>
+                          </div>
+                        )}
+
+                        {selectedItem.weapon.damageSources && selectedItem.weapon.damageSources.length > 0 && (
+                          <div className="text-gray-400">
+                            <span className="font-medium text-gray-200">Урон:</span> 
+                            <span className="ml-2">
+                              {selectedItem.weapon.damageSources.map((source: any, index: number) => 
+                                `${source.diceCount}${source.diceType} ${source.damageType}`
+                              ).join(' + ')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Описание */}
+                    {selectedItem.description && (
+                      <div className="pt-2 border-t border-gray-700">
+                        <h4 className="text-sm font-medium text-gray-200 mb-2">Описание</h4>
+                        <div className="text-gray-400 whitespace-pre-wrap">
+                          {selectedItem.description}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Вес и стоимость */}
+                    <div className="pt-2 border-t border-gray-700">
+                      <div className="text-gray-400">
+                        <span className="font-medium text-gray-200">Вес:</span> 
+                        <span className="ml-2">{selectedItem.weight || 'Не указан'} фнт.</span>
+                      </div>
+                      <div className="text-gray-400">
+                        <span className="font-medium text-gray-200">Стоимость:</span> 
+                        <span className="ml-2">{selectedItem.cost || 'Не указана'}</span>
+                      </div>
+                    </div>
+                  </div>
                 );
               }
 
@@ -6996,6 +6958,15 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         <div className="text-gray-400">
                           <span className="font-medium text-gray-200">Владение:</span> {(() => {
                             // Проверяем владение оружием
+                            console.log('Sidebar weapon proficiency debug:', {
+                              weaponKey: itemDetails.key,
+                              weaponCategory: itemDetails.category,
+                              characterWeapons: characterData?.weapons,
+                              characterWeaponsContent: characterData?.weapons?.map(w => ({ key: w, type: typeof w })),
+                              hasCategory: characterData?.weapons?.includes(itemDetails.category),
+                              hasKey: characterData?.weapons?.includes(itemDetails.key),
+                              itemDetails: itemDetails
+                            });
                             // Проверяем владение оружием по английским ключам
                             const weaponCategory = itemDetails.category === 'Простое оружие ближнего боя' || 
                                                   itemDetails.category === 'Простое оружие дальнего боя' ? 'simple' :
@@ -7199,6 +7170,122 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     </div>
                   )}
 
+                  {/* Блок количества и добавления (для всех предметов) */}
+                  <div className="mt-4 pt-3 border-t border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-medium">Количество:</span>
+                        <button
+                          onClick={() => decrementQuantity(itemDetails.key)}
+                          disabled={getQuantityForItem(itemDetails.key) <= 1}
+                          className="w-6 h-6 flex items-center justify-center text-white rounded transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-bold"
+                          style={{ backgroundColor: getFrameColor(frameColor) }}
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={getQuantityForItem(itemDetails.key)}
+                          onChange={(e) => updateItemQuantity(itemDetails.key, parseInt(e.target.value) || 1)}
+                          className="w-16 px-2 py-1 text-center text-gray-200 bg-neutral-800 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          style={{ 
+                            borderColor: getFrameColor(frameColor) + '40',
+                            '--tw-ring-color': getFrameColor(frameColor) + '40'
+                          } as any}
+                        />
+                        <button
+                          onClick={() => incrementQuantity(itemDetails.key)}
+                          className="w-6 h-6 flex items-center justify-center text-white rounded transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-bold"
+                          style={{ backgroundColor: getFrameColor(frameColor) }}
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => {
+                            const quantity = getQuantityForItem(itemDetails.key);
+                            handlePurchaseItem(itemDetails, quantity);
+                          }}
+                          disabled={loadingPurchase.has(`${itemDetails.itemType}-${itemDetails.key}`)}
+                          className="h-6 w-16 flex items-center justify-center text-white rounded transition-colors hover:bg-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed text-xs border"
+                          style={{ 
+                            borderColor: getFrameColor(frameColor),
+                            '--hover-bg': getFrameColor(frameColor) + '20'
+                          } as any}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = getFrameColor(frameColor) + '20';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          {loadingPurchase.has(`${itemDetails.itemType}-${itemDetails.key}`) ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            'КУПИТЬ'
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            const quantity = getQuantityForItem(itemDetails.key);
+                            handleAddItemWithQuantity(itemDetails, quantity);
+                          }}
+                          disabled={loadingItems.has(`${itemDetails.itemType}-${itemDetails.key}`)}
+                          className="h-6 w-20 flex items-center justify-center text-white rounded transition-colors hover:bg-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed text-xs border"
+                          style={{ 
+                            borderColor: getFrameColor(frameColor),
+                            '--hover-bg': getFrameColor(frameColor) + '20'
+                          } as any}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = getFrameColor(frameColor) + '20';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          {loadingItems.has(`${itemDetails.itemType}-${itemDetails.key}`) ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            'ДОБАВИТЬ'
+                          )}
+                        </button>
+                      </div>
+                      
+                      {/* Блок стоимости покупки */}
+                      <div className="mt-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium">Стоимость покупки:</span>
+                          <span className="text-gray-200 font-semibold">
+                            {calculatePurchaseCost(itemDetails, getQuantityForItem(itemDetails.key))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                  {/* Кнопка удаления */}
+                  <div className="mt-4 pt-3 border-t border-gray-700 flex justify-center">
+                    <button
+                      className="relative group flex items-center justify-center text-red-400 hover:text-red-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleDeleteItem(selectedItem.name)}
+                      onMouseEnter={() => setHoveredDeleteItem(selectedItem.name)}
+                      onMouseLeave={() => setHoveredDeleteItem(null)}
+                      disabled={loadingItems.has(`delete-${selectedItem.name}`)}
+                    >
+                      {loadingItems.has(`delete-${selectedItem.name}`) ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <X size={20} />
+                      )}
+                      
+                      {/* Подсказка */}
+                      {hoveredDeleteItem === selectedItem.name && (
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap pointer-events-none z-[9999]">
+                          <div className="text-white font-semibold">Удалить предмет</div>
+                          {/* Стрелочка вниз */}
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                        </div>
+                      )}
+                    </button>
+                  </div>
                 </div>
               );
             })()}
@@ -7251,8 +7338,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       {/* Сайдбар с описанием заклинания */}
       {isSpellDetailsOpen && selectedSpell && (
         <div 
-          className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-[99999] flex justify-end"
-          style={{ zIndex: '99999 !important' }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
           onClick={closeSpellDetails}
         >
           <div 
@@ -7380,8 +7466,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       {/* Сайдбар настроек заклинаний */}
       {isSpellSettingsOpen && (
         <div 
-          className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-[99999] flex justify-end"
-          style={{ zIndex: '99999 !important' }}
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end"
           onClick={closeSpellSettings}
         >
           <div 
