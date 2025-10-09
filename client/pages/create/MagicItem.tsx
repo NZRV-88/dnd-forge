@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { WEAPON_MASTERY } from '@/data/items/weapon-mastery';
 
 export default function MagicItem() {
   const [name, setName] = useState<string>('');
@@ -15,19 +16,12 @@ export default function MagicItem() {
   const [attackBonus, setAttackBonus] = useState<string>('');
   const [damageBonus, setDamageBonus] = useState<string>('');
   const [weaponType, setWeaponType] = useState<string>('');
+  const [weaponMastery, setWeaponMastery] = useState<string>('');
   
   const navigate = useNavigate();
 
   const handleBack = () => {
     navigate('/workshop');
-  };
-
-  // Функция для валидации числовых полей
-  const handleNumberChange = (value: string, setter: (value: string) => void) => {
-    // Разрешаем только цифры, знак минус в начале и пустую строку
-    if (value === '' || /^-?\d*$/.test(value)) {
-      setter(value);
-    }
   };
 
   return (
@@ -112,27 +106,51 @@ export default function MagicItem() {
             {itemType === 'weapon' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold">Свойства оружия</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Бонус Атаки */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Бонус Атаки</label>
-                    <Input
-                      value={attackBonus}
-                      onChange={(e) => handleNumberChange(e.target.value, setAttackBonus)}
-                      placeholder="+1, +2, +3..."
-                      type="text"
-                    />
+                    <Select value={attackBonus} onValueChange={setAttackBonus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите бонус" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="-5">-5</SelectItem>
+                        <SelectItem value="-4">-4</SelectItem>
+                        <SelectItem value="-3">-3</SelectItem>
+                        <SelectItem value="-2">-2</SelectItem>
+                        <SelectItem value="-1">-1</SelectItem>
+                        <SelectItem value="0">0</SelectItem>
+                        <SelectItem value="+1">+1</SelectItem>
+                        <SelectItem value="+2">+2</SelectItem>
+                        <SelectItem value="+3">+3</SelectItem>
+                        <SelectItem value="+4">+4</SelectItem>
+                        <SelectItem value="+5">+5</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Бонус Урона */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Бонус Урона</label>
-                    <Input
-                      value={damageBonus}
-                      onChange={(e) => handleNumberChange(e.target.value, setDamageBonus)}
-                      placeholder="+1, +2, +3..."
-                      type="text"
-                    />
+                    <Select value={damageBonus} onValueChange={setDamageBonus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите бонус" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="-5">-5</SelectItem>
+                        <SelectItem value="-4">-4</SelectItem>
+                        <SelectItem value="-3">-3</SelectItem>
+                        <SelectItem value="-2">-2</SelectItem>
+                        <SelectItem value="-1">-1</SelectItem>
+                        <SelectItem value="0">0</SelectItem>
+                        <SelectItem value="+1">+1</SelectItem>
+                        <SelectItem value="+2">+2</SelectItem>
+                        <SelectItem value="+3">+3</SelectItem>
+                        <SelectItem value="+4">+4</SelectItem>
+                        <SelectItem value="+5">+5</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Тип Оружия */}
@@ -145,6 +163,23 @@ export default function MagicItem() {
                       <SelectContent>
                         <SelectItem value="melee">Ближний бой</SelectItem>
                         <SelectItem value="ranged">Дальний бой</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Мастерство */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Мастерство</label>
+                    <Select value={weaponMastery} onValueChange={setWeaponMastery}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите мастерство" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WEAPON_MASTERY.map((mastery) => (
+                          <SelectItem key={mastery.key} value={mastery.key}>
+                            {mastery.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
