@@ -142,7 +142,7 @@ export default function MagicItem() {
           </CardHeader>
           <CardContent className="space-y-6">
                    {/* Первый ряд полей */}
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
                      {/* Название */}
                      <div className="space-y-2 xl:col-span-2">
                        <label className="text-sm font-medium">
@@ -162,7 +162,7 @@ export default function MagicItem() {
                          value={version}
                          onChange={(e) => setVersion(e.target.value)}
                          placeholder="Версия"
-                         className="w-20"
+                         className="w-16"
                        />
                      </div>
 
@@ -172,7 +172,7 @@ export default function MagicItem() {
                          Редкость <span className="text-red-500">*</span>
                        </label>
                        <Select value={rarity} onValueChange={setRarity}>
-                         <SelectTrigger>
+                         <SelectTrigger className="w-32">
                            <SelectValue placeholder="Выберите редкость" />
                          </SelectTrigger>
                          <SelectContent>
@@ -192,7 +192,7 @@ export default function MagicItem() {
                          Тип предмета <span className="text-red-500">*</span>
                        </label>
                        <Select value={itemType} onValueChange={setItemType}>
-                         <SelectTrigger>
+                         <SelectTrigger className="w-24">
                            <SelectValue placeholder="Выберите тип" />
                          </SelectTrigger>
                          <SelectContent>
@@ -210,7 +210,7 @@ export default function MagicItem() {
                          onChange={(e) => handleNumberChange(e.target.value, setWeight)}
                          placeholder="0"
                          type="text"
-                         className="w-20"
+                         className="w-16"
                        />
                      </div>
 
