@@ -221,7 +221,7 @@ export default function MagicItem() {
                          onChange={(e) => handleNumberChange(e.target.value, setCost)}
                          placeholder="0"
                          type="text"
-                         className="w-24"
+                         className="w-16"
                        />
                      </div>
                    </div>
