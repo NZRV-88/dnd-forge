@@ -1,22 +1,53 @@
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import * as Icons from '@/components/refs/icons';
 
 export default function Workshop() {
+  const [creating, setCreating] = useState(false);
+  const [magicItems, setMagicItems] = useState<any[]>([]); // Пока пустой массив
+
+  const createNewItem = async () => {
+    setCreating(true);
+    // Здесь будет логика создания магического предмета
+    setTimeout(() => {
+      setCreating(false);
+    }, 1000);
+  };
+
   return (
     <div className="container mx-auto py-10">
-      <div className="mx-auto max-w-6xl">
-        {/* Заголовок */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Мастерская</h1>
-          <p className="text-muted-foreground">
-            Инструменты и ресурсы для мастера подземелий
-          </p>
-        </div>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Мастерская</h1>
+        <Button
+          onClick={createNewItem}
+          disabled={creating}
+        >
+          {creating ? "Создание..." : "Создать магический предмет"}
+        </Button>
+      </div>
 
-        {/* Основные категории */}
+      {magicItems.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Здесь будут карточки магических предметов */}
+        </div>
+      ) : (
+        <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-10 text-center text-muted-foreground">
+          <div className="text-base">
+            Здесь появится список ваших магических предметов.
+          </div>
+          <div className="mt-2 text-sm">Создайте свой первый магический предмет.</div>
+          <div className="mt-6">
+            <Button onClick={createNewItem} disabled={creating}>
+              {creating ? "Создание..." : "Создать первый предмет"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Инструменты мастера */}
+      <div className="mt-12">
+        <h2 className="text-xl font-bold mb-6">Инструменты мастера</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           
           {/* Генераторы */}
@@ -32,23 +63,17 @@ export default function Workshop() {
                 Создавайте случайный контент для ваших приключений
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/name-generator">
-                    <Icons.User className="w-4 h-4 mr-2" />
-                    Генератор имён
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.User className="w-4 h-4 mr-2" />
+                  Генератор имён
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/encounter-generator">
-                    <Icons.Swords className="w-4 h-4 mr-2" />
-                    Генератор столкновений
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Swords className="w-4 h-4 mr-2" />
+                  Генератор столкновений
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/loot-generator">
-                    <Icons.Coins className="w-4 h-4 mr-2" />
-                    Генератор добычи
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Coins className="w-4 h-4 mr-2" />
+                  Генератор добычи
                 </Button>
               </div>
             </CardContent>
@@ -67,23 +92,17 @@ export default function Workshop() {
                 Вычисляйте сложности и баланс для ваших игр
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/encounter-calculator">
-                    <Icons.Scale className="w-4 h-4 mr-2" />
-                    Калькулятор столкновений
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Scale className="w-4 h-4 mr-2" />
+                  Калькулятор столкновений
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/xp-calculator">
-                    <Icons.Star className="w-4 h-4 mr-2" />
-                    Калькулятор опыта
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Star className="w-4 h-4 mr-2" />
+                  Калькулятор опыта
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/damage-calculator">
-                    <Icons.Zap className="w-4 h-4 mr-2" />
-                    Калькулятор урона
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Zap className="w-4 h-4 mr-2" />
+                  Калькулятор урона
                 </Button>
               </div>
             </CardContent>
@@ -102,23 +121,17 @@ export default function Workshop() {
                 Быстрый доступ к правилам и информации
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/conditions">
-                    <Icons.AlertTriangle className="w-4 h-4 mr-2" />
-                    Состояния
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.AlertTriangle className="w-4 h-4 mr-2" />
+                  Состояния
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/spells">
-                    <Icons.Sparkles className="w-4 h-4 mr-2" />
-                    Заклинания
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Sparkles className="w-4 h-4 mr-2" />
+                  Заклинания
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/monsters">
-                    <Icons.Skull className="w-4 h-4 mr-2" />
-                    Монстры
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Skull className="w-4 h-4 mr-2" />
+                  Монстры
                 </Button>
               </div>
             </CardContent>
@@ -137,23 +150,17 @@ export default function Workshop() {
                 Полезные инструменты для ведения игры
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/dice-roller">
-                    <Icons.Dice className="w-4 h-4 mr-2" />
-                    Бросок костей
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Dice className="w-4 h-4 mr-2" />
+                  Бросок костей
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/initiative-tracker">
-                    <Icons.List className="w-4 h-4 mr-2" />
-                    Трекер инициативы
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.List className="w-4 h-4 mr-2" />
+                  Трекер инициативы
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/notes">
-                    <Icons.FileText className="w-4 h-4 mr-2" />
-                    Заметки мастера
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.FileText className="w-4 h-4 mr-2" />
+                  Заметки мастера
                 </Button>
               </div>
             </CardContent>
@@ -172,23 +179,17 @@ export default function Workshop() {
                 Готовый контент для ваших приключений
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/maps">
-                    <Icons.Map className="w-4 h-4 mr-2" />
-                    Карты
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Map className="w-4 h-4 mr-2" />
+                  Карты
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/tokens">
-                    <Icons.Circle className="w-4 h-4 mr-2" />
-                    Токены
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Circle className="w-4 h-4 mr-2" />
+                  Токены
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/soundboard">
-                    <Icons.Volume2 className="w-4 h-4 mr-2" />
-                    Звуковая панель
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Volume2 className="w-4 h-4 mr-2" />
+                  Звуковая панель
                 </Button>
               </div>
             </CardContent>
@@ -207,58 +208,44 @@ export default function Workshop() {
                 Анализ и статистика ваших игр
               </p>
               <div className="space-y-2">
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/session-stats">
-                    <Icons.Calendar className="w-4 h-4 mr-2" />
-                    Статистика сессий
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Calendar className="w-4 h-4 mr-2" />
+                  Статистика сессий
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/character-stats">
-                    <Icons.Users className="w-4 h-4 mr-2" />
-                    Статистика персонажей
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.Users className="w-4 h-4 mr-2" />
+                  Статистика персонажей
                 </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link to="/workshop/campaign-analytics">
-                    <Icons.TrendingUp className="w-4 h-4 mr-2" />
-                    Аналитика кампаний
-                  </Link>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icons.TrendingUp className="w-4 h-4 mr-2" />
+                  Аналитика кампаний
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
+      </div>
 
-        {/* Быстрые действия */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6">Быстрые действия</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Button asChild size="lg" className="h-20 flex-col gap-2">
-              <Link to="/workshop/quick-roll">
-                <Icons.Dice className="w-6 h-6" />
-                <span>Быстрый бросок</span>
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-20 flex-col gap-2">
-              <Link to="/workshop/random-name">
-                <Icons.User className="w-6 h-6" />
-                <span>Случайное имя</span>
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-20 flex-col gap-2">
-              <Link to="/workshop/encounter-builder">
-                <Icons.Swords className="w-6 h-6" />
-                <span>Создать столкновение</span>
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-20 flex-col gap-2">
-              <Link to="/workshop/notes">
-                <Icons.FileText className="w-6 h-6" />
-                <span>Заметки</span>
-              </Link>
-            </Button>
-          </div>
+      {/* Быстрые действия */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-6">Быстрые действия</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Button size="lg" className="h-20 flex-col gap-2">
+            <Icons.Dice className="w-6 h-6" />
+            <span>Быстрый бросок</span>
+          </Button>
+          <Button size="lg" variant="outline" className="h-20 flex-col gap-2">
+            <Icons.User className="w-6 h-6" />
+            <span>Случайное имя</span>
+          </Button>
+          <Button size="lg" variant="outline" className="h-20 flex-col gap-2">
+            <Icons.Swords className="w-6 h-6" />
+            <span>Создать столкновение</span>
+          </Button>
+          <Button size="lg" variant="outline" className="h-20 flex-col gap-2">
+            <Icons.FileText className="w-6 h-6" />
+            <span>Заметки</span>
+          </Button>
         </div>
       </div>
     </div>
