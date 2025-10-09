@@ -842,7 +842,7 @@ export default function CharacterList() {
                     </div>
 
                     {/* Правая колонка: Initiative/AC + Condition + Attacks */}
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-[7px]">
                         {/* Initiative + AC + Condition */}
                         <div className="grid grid-cols-2 gap-4 -mt-4" style={{ overflow: 'visible' }}>
                             <InitiativeAC
