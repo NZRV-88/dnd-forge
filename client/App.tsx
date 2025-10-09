@@ -15,6 +15,7 @@ import BackgroundPick from "./pages/create/Background";
 import Characters from "./pages/Characters";
 import Campaigns from "./pages/Campaigns";
 import Graveyard from "./pages/Graveyard";
+import Workshop from "./pages/Workshop";
 import { CharacterProvider } from "@/store/character";
 import Start from "./pages/create/Start";
 import AbilitiesPick from "./pages/create/Abilities";
@@ -50,6 +51,7 @@ const App = () => (
                             />
                             <Route path="/campaigns" element={<Campaigns />} />
                             <Route path="/graveyard" element={<Graveyard />} />
+                            <Route path="/workshop" element={<Workshop />} />
                             <Route
                                 path="/create"
                                 element={

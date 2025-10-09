@@ -143,6 +143,11 @@ export default function Index() {
                 d: "Память о павших героях.",
                 href: "/graveyard",
               },
+              {
+                t: "Мастерская",
+                d: "Инструменты для мастера: генераторы, калькуляторы, справочники.",
+                href: "/workshop",
+              },
             ].map((f) => (
               <Link
                 key={f.t}
