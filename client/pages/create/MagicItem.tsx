@@ -142,9 +142,9 @@ export default function MagicItem() {
           </CardHeader>
           <CardContent className="space-y-6">
                    {/* Первый ряд полей */}
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
+                   <div className="flex flex-wrap gap-2">
                      {/* Название */}
-                     <div className="space-y-2 xl:col-span-2">
+                     <div className="space-y-2 flex-1 min-w-[200px]">
                        <label className="text-sm font-medium">
                          Название <span className="text-red-500">*</span>
                        </label>
@@ -156,23 +156,22 @@ export default function MagicItem() {
                      </div>
 
                      {/* Версия */}
-                     <div className="space-y-2">
+                     <div className="space-y-2 w-20">
                        <label className="text-sm font-medium">Версия</label>
                        <Input
                          value={version}
                          onChange={(e) => setVersion(e.target.value)}
                          placeholder="Версия"
-                         className="w-16"
                        />
                      </div>
 
                      {/* Редкость */}
-                     <div className="space-y-2">
+                     <div className="space-y-2 w-32">
                        <label className="text-sm font-medium">
                          Редкость <span className="text-red-500">*</span>
                        </label>
                        <Select value={rarity} onValueChange={setRarity}>
-                         <SelectTrigger className="w-32">
+                         <SelectTrigger>
                            <SelectValue placeholder="Выберите редкость" />
                          </SelectTrigger>
                          <SelectContent>
@@ -187,12 +186,12 @@ export default function MagicItem() {
                      </div>
 
                      {/* Тип предмета */}
-                     <div className="space-y-2">
+                     <div className="space-y-2 w-24">
                        <label className="text-sm font-medium">
                          Тип предмета <span className="text-red-500">*</span>
                        </label>
                        <Select value={itemType} onValueChange={setItemType}>
-                         <SelectTrigger className="w-24">
+                         <SelectTrigger>
                            <SelectValue placeholder="Выберите тип" />
                          </SelectTrigger>
                          <SelectContent>
@@ -203,26 +202,24 @@ export default function MagicItem() {
                      </div>
 
                      {/* Вес */}
-                     <div className="space-y-2">
+                     <div className="space-y-2 w-20">
                        <label className="text-sm font-medium">Вес (фнт.)</label>
                        <Input
                          value={weight}
                          onChange={(e) => handleNumberChange(e.target.value, setWeight)}
                          placeholder="0"
                          type="text"
-                         className="w-16"
                        />
                      </div>
 
                      {/* Стоимость */}
-                     <div className="space-y-2">
-                       <label className="text-sm font-medium">Стоимость (ЗМ)</label>
+                     <div className="space-y-2 w-20">
+                       <label className="text-sm font-medium">Стоимость</label>
                        <Input
                          value={cost}
                          onChange={(e) => handleNumberChange(e.target.value, setCost)}
                          placeholder="0"
                          type="text"
-                         className="w-16"
                        />
                      </div>
                    </div>
