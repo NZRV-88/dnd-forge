@@ -144,7 +144,7 @@ export default function MagicItem() {
                    {/* Первый ряд полей */}
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                      {/* Название */}
-                     <div className="space-y-2">
+                     <div className="space-y-2 xl:col-span-2">
                        <label className="text-sm font-medium">
                          Название <span className="text-red-500">*</span>
                        </label>
@@ -203,23 +203,25 @@ export default function MagicItem() {
 
                      {/* Вес */}
                      <div className="space-y-2">
-                       <label className="text-sm font-medium">Вес (кг)</label>
+                       <label className="text-sm font-medium">Вес (фнт.)</label>
                        <Input
                          value={weight}
                          onChange={(e) => handleNumberChange(e.target.value, setWeight)}
                          placeholder="0"
                          type="text"
+                         className="w-20"
                        />
                      </div>
 
                      {/* Стоимость */}
                      <div className="space-y-2">
-                       <label className="text-sm font-medium">Стоимость (золото)</label>
+                       <label className="text-sm font-medium">Стоимость (ЗМ)</label>
                        <Input
                          value={cost}
                          onChange={(e) => handleNumberChange(e.target.value, setCost)}
                          placeholder="0"
                          type="text"
+                         className="w-24"
                        />
                      </div>
                    </div>
