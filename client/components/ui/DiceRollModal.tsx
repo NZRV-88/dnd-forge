@@ -71,11 +71,25 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
 
         {/* Кубик и результат */}
         <div className="flex items-center gap-3">
-          {/* Иконка кубика */}
-          <div className={`w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs font-bold text-gray-300 transition-all duration-300 ${
-            isAnimating ? 'animate-spin' : ''
-          }`}>
-            {isAnimating ? '🎲' : dice}
+          {/* Иконки кубиков */}
+          <div className="flex items-center gap-1">
+            {dice.includes(' + ') ? (
+              // Для нескольких кубиков показываем отдельные квадратики
+              dice.split(' + ').map((dicePart, index) => (
+                <div key={index} className={`w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs font-bold text-gray-300 transition-all duration-300 ${
+                  isAnimating ? 'animate-spin' : ''
+                }`}>
+                  {isAnimating ? '🎲' : dicePart.trim()}
+                </div>
+              ))
+            ) : (
+              // Для одного кубика показываем как раньше
+              <div className={`w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs font-bold text-gray-300 transition-all duration-300 ${
+                isAnimating ? 'animate-spin' : ''
+              }`}>
+                {isAnimating ? '🎲' : dice}
+              </div>
+            )}
           </div>
 
           {/* Расчет */}

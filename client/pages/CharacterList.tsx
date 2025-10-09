@@ -417,20 +417,61 @@ export default function CharacterList() {
     };
 
     // universal addRoll function: any child can call it
-    // Функция для парсинга кубиков урона (например, "1d8+3" или "1d8 +3" -> { dice: "1d8", modifier: 3 })
+    // Функция для парсинга кубиков урона (например, "1d8+3" или "2d6 + 1d10" -> { dice: "2d6 + 1d10", modifier: 0 })
     const parseDamageDice = (damageString: string) => {
-        const match = damageString.match(/^(\d+d\d+)\s*([+-]\d+)?$/);
+        // Проверяем, есть ли модификатор в конце строки
+        const modifierMatch = damageString.match(/([+-]\d+)$/);
+        const modifier = modifierMatch ? parseInt(modifierMatch[1]) : 0;
+        
+        // Убираем модификатор из строки для парсинга кубиков
+        const diceString = modifierMatch ? damageString.slice(0, modifierMatch.index) : damageString;
+        
+        // Проверяем, содержит ли строка несколько кубиков (например, "2d6 + 1d10")
+        if (diceString.includes(' + ')) {
+            return { dice: diceString.trim(), modifier };
+        }
+        
+        // Для одного кубика используем старое регулярное выражение
+        const match = diceString.match(/^(\d+d\d+)\s*([+-]\d+)?$/);
         if (match) {
             const dice = match[1]; // "1d8"
-            const modifier = match[2] ? parseInt(match[2]) : 0; // "+3" или "-1"
-            return { dice, modifier };
+            const diceModifier = match[2] ? parseInt(match[2]) : 0; // "+3" или "-1"
+            return { dice, modifier: diceModifier + modifier };
         }
+        
         return { dice: "1d4", modifier: 0 }; // По умолчанию
     };
 
     // Функция для броска кубика урона
     const rollDamageDice = (diceString: string) => {
         const { dice, modifier } = parseDamageDice(diceString);
+        
+        // Если строка содержит несколько кубиков (например, "2d6 + 1d10")
+        if (dice.includes(' + ')) {
+            const diceParts = dice.split(' + ');
+            const allIndividualRolls: number[] = [];
+            let total = 0;
+            
+            for (const dicePart of diceParts) {
+                const [numDice, diceSize] = dicePart.trim().split('d').map(Number);
+                for (let i = 0; i < numDice; i++) {
+                    const roll = Math.floor(Math.random() * diceSize) + 1;
+                    allIndividualRolls.push(roll);
+                    total += roll;
+                }
+            }
+            
+            const finalResult = total + modifier;
+            return { 
+                diceRoll: total, 
+                finalResult: finalResult, 
+                individualRolls: allIndividualRolls,
+                dice: dice,
+                modifier: modifier
+            };
+        }
+        
+        // Для одного кубика используем старую логику
         const [numDice, diceSize] = dice.split('d').map(Number);
         const individualRolls = [];
         let total = 0;
