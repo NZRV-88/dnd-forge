@@ -218,16 +218,6 @@ export default function ClassPick() {
     const cleanupOnLevelDecrease = (newLevel: number) => {
         if (!info) return;
         
-        console.log('🚨🚨🚨 CLEANUP FUNCTION CALLED 🚨🚨🚨', {
-            newLevel,
-            currentLevel: draft.basics.level,
-            classKey: info.key,
-            allChosenKeys: Object.keys(draft.chosen),
-            featuresKeys: Object.keys(draft.chosen.features || {}),
-            fightingStyleKeys: Object.keys(draft.chosen.fightingStyle || {}),
-            weaponMasteryKeys: Object.keys(draft.chosen.weaponMastery || {})
-        });
-        
 
         // Создаем функцию для очистки выборов по уровню
         const cleanupChoicesByLevel = (choices: any, targetLevel: number) => {
@@ -323,25 +313,20 @@ export default function ClassPick() {
         const cleanedWeaponMastery = { ...draft.chosen.weaponMastery };
         
         // Находим все особенности для удаления и удаляем связанные вложенные выборы
-        console.log('🔍 Поиск особенностей для удаления:', { newLevel, currentLevel: draft.basics.level });
         Object.keys(draft.chosen.features || {}).forEach(key => {
             const featureMatch = key.match(new RegExp(`^${info.key}-(\\d+)-\\d+-`));
             if (featureMatch) {
                 const level = parseInt(featureMatch[1]);
-                console.log('🎯 Проверяем особенность:', { key, level, shouldRemove: level > newLevel });
                 if (level > newLevel) {
-                    console.log('🗑️ Удаляем вложенные выборы для особенности:', key);
                     // Удаляем все ключи, начинающиеся с "feature-" из всех типов выборов
                     Object.keys(cleanedFightingStyle).forEach(fightingKey => {
                         if (fightingKey.startsWith('feature-')) {
-                            console.log('🗑️ Удаляем из fightingStyle:', fightingKey);
                             delete cleanedFightingStyle[fightingKey];
                         }
                     });
                     
                     Object.keys(cleanedWeaponMastery).forEach(weaponKey => {
                         if (weaponKey.startsWith('feature-')) {
-                            console.log('🗑️ Удаляем из weaponMastery:', weaponKey);
                             delete cleanedWeaponMastery[weaponKey];
                         }
                     });
@@ -420,13 +405,6 @@ export default function ClassPick() {
             },
             hpRolls: validHpRolls
         }));
-        
-        console.log('✅ CLEANUP COMPLETED', {
-            newLevel,
-            cleanedFeaturesKeys: Object.keys(cleanedFeatures),
-            cleanedFightingStyleKeys: Object.keys(cleanedFightingStyle),
-            cleanedWeaponMasteryKeys: Object.keys(cleanedWeaponMastery)
-        });
     };
 
     // Функция для получения максимального уровня заклинаний для данного уровня класса
