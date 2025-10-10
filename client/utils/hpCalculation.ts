@@ -9,7 +9,9 @@ export function calculateMaxHP(
     classKey?: string,
     level?: number,
     hpMode?: "fixed" | "roll",
-    hpRolls?: number[]
+    hpRolls?: number[],
+    race?: string,
+    subrace?: string
 ): number {
     if (!draft || !draft.basics) return 0;
     
@@ -27,7 +29,7 @@ export function calculateMaxHP(
     } catch (error) {
         console.warn('Error getting character data, using fallback calculation:', error);
         // Fallback calculation с попыткой получить hpPerLevel из расы
-        return calculateMaxHPFallback(actualClassKey, actualLevel, actualHpMode, actualHpRolls, draft.stats?.con || 10, draft.basics?.race, draft.basics?.subrace);
+        return calculateMaxHPFallback(actualClassKey, actualLevel, actualHpMode, actualHpRolls, draft.stats?.con || 10, race || draft.basics?.race, subrace || draft.basics?.subrace);
     }
     
     // Получаем информацию о классе

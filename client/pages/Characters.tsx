@@ -235,7 +235,7 @@ export default function Characters() {
                         // Используем "Безымянный" если имя не задано
                         const displayName = b.name || "Безымянный";
                         
-                        const hpMax = calculateMaxHP(char.data, b.class, b.level, b.hpMode, char.data.hpRolls);
+                        const hpMax = calculateMaxHP(char.data, b.class, b.level, b.hpMode, char.data.hpRolls, b.race, (b as any).subrace);
                         
                         // Если hpCurrent равен null или больше hpMax, используем hpMax
                         const currentHp = b.hpCurrent === null || b.hpCurrent > hpMax ? hpMax : b.hpCurrent;
