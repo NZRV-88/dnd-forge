@@ -991,6 +991,17 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                             
                             const finalIsAsi = isAsi || isAsiLevel;
                             
+                            console.log('🎯 ChoiceRenderer feat detection:', {
+                                source,
+                                featKey,
+                                isAsi,
+                                isAsiLevel,
+                                finalIsAsi,
+                                classKey: draft.basics.class,
+                                allFeatsCount: ALL_FEATS.length,
+                                abilityScoreImprovementExists: ALL_FEATS.find(f => f.key === 'ability-score-improvement')?.name
+                            });
+                            
                             // Если это не ASI, исключаем уже выбранные фиты
                             if (!finalIsAsi) {
                                 // Получаем все уже выбранные фиты (кроме текущего)
@@ -1033,6 +1044,13 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     !asiSelectedFeats.includes(feat.key)) &&
                                     !feat.isHidden // Исключаем скрытые черты
                                 );
+                                
+                                console.log('🎯 ASI available feats:', {
+                                    totalFeats: ALL_FEATS.length,
+                                    availableCount: availableFeats.length,
+                                    abilityScoreImprovementIncluded: availableFeats.some(f => f.key === 'ability-score-improvement'),
+                                    firstFewFeats: availableFeats.slice(0, 5).map(f => f.name)
+                                });
                             }
 
                             return (
