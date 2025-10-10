@@ -22,6 +22,8 @@ import { toast } from "@/hooks/use-toast";
 import { useCharacter } from "@/store/character";
 import { ALL_FEATS } from "@/data/feats/feats";
 import { FIGHTING_STYLES } from "@/data/classes/features/fightingStyles";
+import FightingStylesSection from "@/components/characterList/FightingStylesSection";
+import FeatsSection from "@/components/characterList/FeatsSection";
 
 type Props = {
   attacks: { name: string; bonus: number; damage: string }[];
@@ -732,25 +734,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return allFeats;
   };
 
-  // Функция для получения боевых стилей персонажа
-  const getCharacterFightingStyles = () => {
-    if (!draft?.chosen?.fightingStyle) return [];
-    
-    
-    // Собираем все боевые стили из всех источников
-    const allFightingStyles: string[] = [];
-    Object.values(draft.chosen.fightingStyle).forEach(styles => {
-      if (Array.isArray(styles)) {
-        allFightingStyles.push(...styles);
-      }
-    });
-    
-    
-    return allFightingStyles.map(styleKey => {
-      const style = FIGHTING_STYLES.find(s => s.key === styleKey);
-      return style;
-    }).filter(Boolean);
-  };
 
   // Функция для фильтрации черт
   const getFilteredFeats = () => {
@@ -766,19 +749,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return feats;
   };
 
-  // Функция для фильтрации боевых стилей
-  const getFilteredFightingStyles = () => {
-    let styles = getCharacterFightingStyles();
-    
-    // Фильтр по поиску
-    if (featuresSearchFilter.trim()) {
-      styles = styles.filter(style => 
-        style.name.toLowerCase().includes(featuresSearchFilter.toLowerCase())
-      );
-    }
-    
-    return styles;
-  };
 
   // Функция для проверки доступности слотов заклинаний
   const hasAvailableSlots = (spellLevel: number) => {
@@ -6348,36 +6318,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               )}
 
               {/* Боевые стили */}
-              {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'fighting-styles') && getCharacterFightingStyles().length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
-                    БОЕВЫЕ СТИЛИ
-                  </h3>
-                  <div className="space-y-2">
-                    {getFilteredFightingStyles().map((style, index) => (
-                        <div key={index} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
-                          <Collapsible>
-                            <CollapsibleTrigger asChild>
-                              <div className="w-full p-3 bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-white font-medium">{style.name}</span>
-                                  </div>
-                                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                                </div>
-                              </div>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <div className="p-4 bg-neutral-900">
-                                <p className="text-gray-300 text-sm leading-relaxed">{style.desc}</p>
-                              </div>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        </div>
-                      ))}
-                  </div>
-                </div>
+              {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'fighting-styles') && (
+                <FightingStylesSection
+                  draft={draft}
+                  frameColor={frameColor}
+                  getFrameColor={getFrameColor}
+                  featuresSearchFilter={featuresSearchFilter}
+                  showTitle={true}
+                />
               )}
             </div>
           </div>
