@@ -217,6 +217,17 @@ export default function ClassPick() {
     // Функция для очистки данных при понижении уровня
     const cleanupOnLevelDecrease = (newLevel: number) => {
         if (!info) return;
+        
+        console.log('🚨🚨🚨 CLEANUP FUNCTION CALLED 🚨🚨🚨', {
+            newLevel,
+            currentLevel: draft.basics.level,
+            classKey: info.key,
+            allChosenKeys: Object.keys(draft.chosen),
+            featuresKeys: Object.keys(draft.chosen.features || {}),
+            fightingStyleKeys: Object.keys(draft.chosen.fightingStyle || {}),
+            weaponMasteryKeys: Object.keys(draft.chosen.weaponMastery || {})
+        });
+        
 
         // Создаем функцию для очистки выборов по уровню
         const cleanupChoicesByLevel = (choices: any, targetLevel: number) => {
@@ -225,13 +236,73 @@ export default function ClassPick() {
             
             // Очищаем выборы для уровней выше targetLevel
             Object.keys(cleaned).forEach(key => {
-                // Проверяем, содержит ли ключ уровень выше targetLevel
-                const levelMatch = key.match(/-(\d+)-/);
-                if (levelMatch) {
-                    const level = parseInt(levelMatch[1]);
-                    if (level > targetLevel && (key.startsWith(`${currentClass}-`) || key.startsWith('class-'))) {
-                        delete cleaned[key];
+                // Проверяем разные паттерны ключей:
+                // 1. Стандартный паттерн: class-level-choice
+                const standardMatch = key.match(/-(\d+)-/);
+                // 2. Паттерн особенностей: class-level-featureIndex-featureName
+                const featureMatch = key.match(new RegExp(`^${currentClass}-(\\d+)-\\d+-`));
+                // 3. Паттерн подклассов: class-subclass-subclassName-level-featureIndex-featureName
+                const subclassMatch = key.match(new RegExp(`^${currentClass}-subclass-\\w+-(\\d+)-`));
+                
+                let level = -1;
+                if (standardMatch) {
+                    level = parseInt(standardMatch[1]);
+                } else if (featureMatch) {
+                    level = parseInt(featureMatch[1]);
+                } else if (subclassMatch) {
+                    level = parseInt(subclassMatch[1]);
+                }
+                
+                if (level > targetLevel && (key.startsWith(`${currentClass}-`) || key.startsWith('class-'))) {
+                    delete cleaned[key];
+                }
+            });
+            
+            return cleaned;
+        };
+
+        // Функция для очистки вложенных выборов особенностей
+        const cleanupNestedFeatureChoices = (choices: any, targetLevel: number) => {
+            const cleaned = { ...choices };
+            const currentClass = info.key;
+            
+            // Находим все ключи особенностей для уровней выше targetLevel
+            const featureKeysToRemove: string[] = [];
+            
+            Object.keys(cleaned).forEach(key => {
+                const featureMatch = key.match(new RegExp(`^${currentClass}-(\\d+)-\\d+-`));
+                if (featureMatch) {
+                    const level = parseInt(featureMatch[1]);
+                    if (level > targetLevel) {
+                        featureKeysToRemove.push(key);
                     }
+                }
+            });
+            
+            // Удаляем все вложенные выборы для найденных особенностей
+            featureKeysToRemove.forEach(featureKey => {
+                // Удаляем саму особенность
+                delete cleaned[featureKey];
+                
+                // Извлекаем название особенности из ключа (например, "boevoystil" из "paladin-2-0-boevoystil")
+                const featureNameMatch = featureKey.match(new RegExp(`^${currentClass}-\\d+-\\d+-(.+)$`));
+                if (featureNameMatch) {
+                    const featureName = featureNameMatch[1];
+                    
+                    // Удаляем вложенные выборы с ключами типа "feature-{featureName}"
+                    Object.keys(cleaned).forEach(key => {
+                        if (key === `feature-${featureName}`) {
+                            delete cleaned[key];
+                        }
+                    });
+                } else {
+                    // Если название особенности пустое (например, "paladin-2-0-"), 
+                    // удаляем все ключи, начинающиеся с "feature-"
+                    Object.keys(cleaned).forEach(key => {
+                        if (key.startsWith('feature-')) {
+                            delete cleaned[key];
+                        }
+                    });
                 }
             });
             
@@ -244,7 +315,39 @@ export default function ClassPick() {
         const cleanedTools = cleanupChoicesByLevel(draft.chosen.tools, newLevel);
         const cleanedToolProficiencies = cleanupChoicesByLevel(draft.chosen.toolProficiencies, newLevel);
         const cleanedLanguages = cleanupChoicesByLevel(draft.chosen.languages, newLevel);
-        const cleanedFeatures = cleanupChoicesByLevel(draft.chosen.features, newLevel);
+        // Очищаем особенности и вложенные выборы
+        const cleanedFeatures = cleanupNestedFeatureChoices(draft.chosen.features, newLevel);
+        
+        // Очищаем вложенные выборы из fightingStyle и weaponMastery
+        const cleanedFightingStyle = { ...draft.chosen.fightingStyle };
+        const cleanedWeaponMastery = { ...draft.chosen.weaponMastery };
+        
+        // Находим все особенности для удаления и удаляем связанные вложенные выборы
+        console.log('🔍 Поиск особенностей для удаления:', { newLevel, currentLevel: draft.basics.level });
+        Object.keys(draft.chosen.features || {}).forEach(key => {
+            const featureMatch = key.match(new RegExp(`^${info.key}-(\\d+)-\\d+-`));
+            if (featureMatch) {
+                const level = parseInt(featureMatch[1]);
+                console.log('🎯 Проверяем особенность:', { key, level, shouldRemove: level > newLevel });
+                if (level > newLevel) {
+                    console.log('🗑️ Удаляем вложенные выборы для особенности:', key);
+                    // Удаляем все ключи, начинающиеся с "feature-" из всех типов выборов
+                    Object.keys(cleanedFightingStyle).forEach(fightingKey => {
+                        if (fightingKey.startsWith('feature-')) {
+                            console.log('🗑️ Удаляем из fightingStyle:', fightingKey);
+                            delete cleanedFightingStyle[fightingKey];
+                        }
+                    });
+                    
+                    Object.keys(cleanedWeaponMastery).forEach(weaponKey => {
+                        if (weaponKey.startsWith('feature-')) {
+                            console.log('🗑️ Удаляем из weaponMastery:', weaponKey);
+                            delete cleanedWeaponMastery[weaponKey];
+                        }
+                    });
+                }
+            }
+        });
 
         // 2. Очищаем подготовленные заклинания, которые выходят за лимит
         const currentPreparedSpells = draft.chosen.spells[info.key] || [];
@@ -308,6 +411,8 @@ export default function ClassPick() {
                 toolProficiencies: cleanedToolProficiencies,
                 languages: cleanedLanguages,
                 features: cleanedFeatures,
+                fightingStyle: cleanedFightingStyle,
+                weaponMastery: cleanedWeaponMastery,
                 spells: {
                     ...d.chosen.spells,
                     [info.key]: validSpells
@@ -315,6 +420,13 @@ export default function ClassPick() {
             },
             hpRolls: validHpRolls
         }));
+        
+        console.log('✅ CLEANUP COMPLETED', {
+            newLevel,
+            cleanedFeaturesKeys: Object.keys(cleanedFeatures),
+            cleanedFightingStyleKeys: Object.keys(cleanedFightingStyle),
+            cleanedWeaponMasteryKeys: Object.keys(cleanedWeaponMastery)
+        });
     };
 
     // Функция для получения максимального уровня заклинаний для данного уровня класса
