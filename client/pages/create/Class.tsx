@@ -73,17 +73,6 @@ function calcMaxHP(
         hp += hpPerLevel * level;
     }
     
-    console.log('🔍 calcMaxHP debug:', {
-        hitDie,
-        level,
-        conMod,
-        hpMode,
-        hpPerLevel,
-        baseHp: hitDie + conMod,
-        additionalHp: level > 1 ? (hpMode === "fixed" ? (level - 1) * (Math.ceil(hitDie / 2) + 1 + conMod) : 'rolled') : 0,
-        raceBonus: hpPerLevel ? hpPerLevel * level : 0,
-        totalHp: hp
-    });
     
     return hp;
 }
@@ -133,18 +122,8 @@ export default function ClassPick() {
     const baseConScore = Number(draft.stats?.con) || 10;
     const conBonus = characterData.abilityBonuses.con || 0;
     const conScore = baseConScore + conBonus;
-    const conMod = Math.floor((conScore - 10) / 2);
-    console.log('🔍 Character data debug:', {
-        race: draft.basics.race,
-        subrace: draft.basics.subrace,
-        hpPerLevel: characterData.hpPerLevel,
-        baseConScore,
-        conBonus,
-        conScore,
-        conMod,
-        abilityBonuses: characterData.abilityBonuses
-    });
-    const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls, characterData.hpPerLevel);
+        const conMod = Math.floor((conScore - 10) / 2);
+        const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls, characterData.hpPerLevel);
 
     // Отслеживаем предыдущие значения для определения реальных изменений
     const [prevLevel, setPrevLevel] = useState(draft.basics.level);

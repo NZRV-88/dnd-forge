@@ -54,11 +54,6 @@ function applyTraits(
         if (t.speed) base.speed = t.speed;
         if (t.hpPerLevel) {
             base.hpPerLevel = (base.hpPerLevel || 0) + t.hpPerLevel;
-            console.log('🔍 getFixedRaceData: Found hpPerLevel trait:', {
-                traitName: t.name,
-                hpPerLevel: t.hpPerLevel,
-                totalHpPerLevel: base.hpPerLevel
-            });
         }
     });
 }
@@ -116,12 +111,6 @@ export function getFixedRaceData(raceKey?: string, subraceKey?: string): FixedRa
         applyTraits(subrace.traits, base);
     }
 
-    console.log('🔍 getFixedRaceData final result:', {
-        raceKey,
-        subraceKey,
-        hpPerLevel: base.hpPerLevel,
-        abilityBonuses: base.abilityBonuses
-    });
 
     return base;
 }
