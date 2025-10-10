@@ -11,7 +11,8 @@ export type Proficiency =
     | { type: "tool"; category?: ToolCategory; key?: string } 
     | { type: "tool-proficiency"; category?: ToolCategory; key?: string } 
     | { type: "skill"; key: string }
-    | { type: "savingThrow"; key: keyof Abilities };
+    | { type: "savingThrow"; key: keyof Abilities }
+    | { type: "language"; key: string };
 
 type StateSetters = {
     setSkills?: (skills: string[]) => void;
@@ -126,6 +127,10 @@ export function getProficiencyName(prof: Proficiency, lang: "ru" | "en" = "ru"):
             return lang === "en"
                 ? `${ability.labelEn} Saving Throw`
                 : `Спасбросок: ${ability.label}`;
+        }
+
+        case "language": {
+            return prof.key || (lang === "en" ? "Language" : "Язык");
         }
 
         default:

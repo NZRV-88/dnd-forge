@@ -89,14 +89,14 @@ export default function FrameColorPicker({
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button 
-          variant="outline" 
+          variant="ghost" 
           size="sm"
-          className={`flex items-center gap-2 ${className}`}
+          className={`flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-gray-200 hover:text-white border border-gray-600 ${className}`}
         >
           <Palette className="w-4 h-4" />
           <span className="hidden sm:inline">{getCurrentColorName()}</span>
           <div 
-            className="w-4 h-4 rounded border border-gray-300"
+            className="w-4 h-4 rounded border border-gray-400"
             style={{ backgroundColor: getCurrentColorValue() }}
           />
         </Button>

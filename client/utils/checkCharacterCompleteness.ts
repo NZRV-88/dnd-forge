@@ -56,29 +56,11 @@ function isChoiceComplete(choice: ChoiceOption, source: string, draft: Character
         case "ability": {
             const abilities = draft.chosen.abilities?.[source]?.filter(a => a) || [];
             const result = abilities.length >= count;
-            console.log('isChoiceComplete: ability:', {
-                choice,
-                source,
-                count,
-                abilities,
-                result,
-                allChosenAbilities: draft.chosen.abilities,
-                draftId: draft.id,
-                background: draft.basics.background
-            });
             return result;
         }
         case "skill": {
             const skills = draft.chosen.skills?.[source]?.filter(s => s) || [];
             const result = skills.length >= count;
-            console.log('isChoiceComplete: skill:', {
-                choice,
-                source,
-                count,
-                skills,
-                result,
-                allChosenSkills: draft.chosen.skills
-            });
             return result;
         }
         case "tool":
@@ -86,13 +68,6 @@ function isChoiceComplete(choice: ChoiceOption, source: string, draft: Character
         case "tool-proficiency": {
             const toolProficiencies = draft.chosen.toolProficiencies?.[source]?.filter(t => t) || [];
             const result = toolProficiencies.length >= count;
-            console.log('isChoiceComplete: tool-proficiency:', {
-                choice,
-                source,
-                count,
-                toolProficiencies,
-                result
-            });
             return result;
         }
         case "language":
@@ -102,14 +77,6 @@ function isChoiceComplete(choice: ChoiceOption, source: string, draft: Character
         case "feat": {
             const selectedFeats = draft.chosen.feats?.filter(f => f.startsWith(`${source}-`)) || [];
             const result = selectedFeats.length >= count;
-            console.log('=== isChoiceComplete: feat ===');
-            console.log('source:', source);
-            console.log('count:', count);
-            console.log('searchPrefix:', `${source}-`);
-            console.log('allFeats:', JSON.stringify(draft.chosen.feats || []));
-            console.log('selectedFeats:', JSON.stringify(selectedFeats));
-            console.log('result:', result);
-            console.log('===============================');
             return result;
         }
         case "feature":
@@ -120,15 +87,6 @@ function isChoiceComplete(choice: ChoiceOption, source: string, draft: Character
             const weaponMasteryArray = draft.chosen.weaponMastery?.[source] || [];
             const weaponMastery = weaponMasteryArray.filter(w => w).length;
             const result = weaponMastery >= count;
-            console.log('isChoiceComplete: weapon-mastery:', {
-                choice,
-                source,
-                count,
-                weaponMasteryArray,
-                weaponMastery,
-                result,
-                allChosenWeaponMastery: draft.chosen.weaponMastery
-            });
             return result;
         }
         case "subclass":
@@ -161,20 +119,8 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                     features.forEach((feature, featureIdx) => {
                         if (feature.choices) {
                             const source = `${draft.basics.class}-${level}-${featureIdx}-`;
-                            console.log('checkCharacterCompleteness: Проверяем особенность класса:', {
-                                feature: feature.name,
-                                featureKey: feature.key,
-                                source,
-                                choices: feature.choices
-                            });
                             for (const choice of feature.choices) {
                                 const isComplete = isChoiceComplete(choice, source, draft);
-                                console.log('checkCharacterCompleteness: Результат проверки особенности:', {
-                                    feature: feature.name,
-                                    choice: choice.type,
-                                    source,
-                                    isComplete
-                                });
                                 if (!isComplete) {
                                     incomplete.push({ 
                                         page: 'class', 
@@ -255,10 +201,6 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                 
                 // Проверяем выборы в чертах расы
         if (raceInfo?.traits) {
-            console.log('checkCharacterCompleteness: Проверяем черты расы:', {
-                race: draft.basics.race,
-                traits: raceInfo.traits
-            });
             raceInfo.traits.forEach((trait, traitIdx) => {
                 if (trait.choices) {
                     const baseSource = `race-${draft.basics.race}-trait-${traitIdx}`;
@@ -273,33 +215,13 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                         ...(draft.chosen.feats || []).map(feat => feat.split(':')[0]).filter(key => key.startsWith(baseSource))
                     ].filter(key => key.startsWith(baseSource));
                     
-                    console.log('checkCharacterCompleteness: Проверяем черту расы:', {
-                        trait,
-                        traitIdx,
-                        baseSource,
-                        possibleSources
-                    });
-                    
                         for (const choice of trait.choices) {
-                            console.log('checkCharacterCompleteness: Проверяем выбор черты расы:', {
-                                traitName: trait.name,
-                                traitIdx,
-                                choice,
-                                baseSource,
-                                possibleSources
-                            });
-                            
                             // Проверяем все возможные источники
                             let isComplete = false;
                             let actualSource = baseSource;
                             
                             for (const source of possibleSources) {
                                 const result = isChoiceComplete(choice, source, draft);
-                                console.log('checkCharacterCompleteness: Проверка выбора черты расы:', {
-                                    choice,
-                                    source,
-                                    result
-                                });
                                 if (result) {
                                     isComplete = true;
                                     actualSource = source;
@@ -324,10 +246,6 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
         if (draft.basics.subrace && raceInfo?.subraces) {
             const subrace = raceInfo.subraces.find(sr => sr.key === draft.basics.subrace);
             if (subrace?.traits) {
-                console.log('checkCharacterCompleteness: Проверяем черты подрасы:', {
-                    subrace: draft.basics.subrace,
-                    traits: subrace.traits
-                });
                 subrace.traits.forEach((trait, traitIdx) => {
                     if (trait.choices) {
                         const baseSource = `subrace-${draft.basics.subrace}-trait-${traitIdx}`;
@@ -341,13 +259,6 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                             ...(draft.chosen.feats || []).map(feat => feat.split(':')[0]).filter(key => key.startsWith(baseSource))
                         ].filter(key => key.startsWith(baseSource));
                         
-                        console.log('checkCharacterCompleteness: Проверяем черту подрасы:', {
-                            trait,
-                            traitIdx,
-                            baseSource,
-                            possibleSources
-                        });
-                        
                         for (const choice of trait.choices) {
                             // Проверяем все возможные источники
                             let isComplete = false;
@@ -355,11 +266,6 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                             
                             for (const source of possibleSources) {
                                 const result = isChoiceComplete(choice, source, draft);
-                                console.log('checkCharacterCompleteness: Проверка выбора черты подрасы:', {
-                                    choice,
-                                    source,
-                                    result
-                                });
                                 if (result) {
                                     isComplete = true;
                                     actualSource = source;
@@ -384,62 +290,9 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
         // Проверяем выборы в наследии, если оно выбрано (для Драконорожденного)
         if (draft.basics.subrace && raceInfo?.ancestries) {
             const ancestry = raceInfo.ancestries.find(anc => anc.key === draft.basics.subrace);
-            if (ancestry?.traits) {
-                console.log('checkCharacterCompleteness: Проверяем черты наследия:', {
-                    ancestry: draft.basics.subrace,
-                    traits: ancestry.traits
-                });
-                ancestry.traits.forEach((trait, traitIdx) => {
-                    if (trait.choices) {
-                        const baseSource = `ancestry-${draft.basics.subrace}-trait-${traitIdx}`;
-                        // Ищем все возможные источники для этой черты наследия (с учетом суффиксов)
-                        const possibleSources = [
-                            ...Object.keys(draft.chosen.abilities || {}),
-                            ...Object.keys(draft.chosen.skills || {}),
-                            ...Object.keys(draft.chosen.languages || {}),
-                            ...Object.keys(draft.chosen.tools || {}),
-                            ...Object.keys(draft.chosen.spells || {}),
-                            // Для талантов ищем в массиве feats, а не в объекте
-                            ...(draft.chosen.feats || []).map(feat => feat.split(':')[0]).filter(key => key.startsWith(baseSource))
-                        ].filter(key => key.startsWith(baseSource));
-                        
-                        console.log('checkCharacterCompleteness: Проверяем черту наследия:', {
-                            trait,
-                            traitIdx,
-                            baseSource,
-                            possibleSources
-                        });
-                        
-                        for (const choice of trait.choices) {
-                            // Проверяем все возможные источники
-                            let isComplete = false;
-                            let actualSource = baseSource;
-                            
-                            for (const source of possibleSources) {
-                                const result = isChoiceComplete(choice, source, draft);
-                                console.log('checkCharacterCompleteness: Проверка выбора черты наследия:', {
-                                    choice,
-                                    source,
-                                    result
-                                });
-                                if (result) {
-                                    isComplete = true;
-                                    actualSource = source;
-                                    break;
-                                }
-                            }
-                            
-                            if (!isComplete) {
-                                incomplete.push({ 
-                                    page: 'race', 
-                                    label: `Наследие: не завершены выборы в "${trait.name}"`, 
-                                    path: `/create/${draft.id}/race` 
-                                });
-                                return;
-                            }
-                        }
-                    }
-                });
+            if (ancestry) {
+                // DraconicAncestry не имеет traits, поэтому пропускаем проверку choices
+                // Наследие дракона не требует дополнительных выборов
             }
         }
     }
@@ -457,19 +310,8 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
         // Проверяем choices предыстории
         if (bgInfo?.choices) {
             const source = `background-${draft.basics.background}-traits`;
-            console.log('checkCharacterCompleteness: Проверяем выборы предыстории:', {
-                background: draft.basics.background,
-                source,
-                choices: bgInfo.choices,
-                chosenToolProficiencies: draft.chosen.toolProficiencies
-            });
             for (const choice of bgInfo.choices) {
                 const isComplete = isChoiceComplete(choice, source, draft);
-                console.log('checkCharacterCompleteness: Проверка выбора:', {
-                    choice,
-                    source,
-                    isComplete
-                });
                 if (!isComplete) {
                     incomplete.push({ 
                         page: 'background', 
@@ -484,39 +326,18 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
         // Проверяем features предыстории
         if (bgInfo?.feature) {
             const features = Array.isArray(bgInfo.feature) ? bgInfo.feature : [bgInfo.feature];
-            console.log('checkCharacterCompleteness: Проверяем features предыстории:', {
-                background: draft.basics.background,
-                features: features
-            });
             for (let i = 0; i < features.length; i++) {
                 const feature = features[i];
-                console.log('checkCharacterCompleteness: Проверяем feature:', {
-                    feature,
-                    index: i
-                });
                 
                 // Если это feat, проверяем его выборы
                 if (feature.feat) {
                     const featInfo = ALL_FEATS.find(f => f.key === feature.feat);
-                    console.log('checkCharacterCompleteness: Проверяем feat:', {
-                        featKey: feature.feat,
-                        featInfo
-                    });
                     if (featInfo?.effect) {
                         for (const eff of featInfo.effect) {
                             if (eff.choices) {
                                 const source = `background-${draft.basics.background}-feat-${feature.feat}`;
-                                console.log('checkCharacterCompleteness: Проверяем выборы feat:', {
-                                    source,
-                                    choices: eff.choices
-                                });
                                 for (const choice of eff.choices) {
                                     const isComplete = isChoiceComplete(choice, source, draft);
-                                    console.log('checkCharacterCompleteness: Проверка выбора feat:', {
-                                        choice,
-                                        source,
-                                        isComplete
-                                    });
                                     if (!isComplete) {
                                         incomplete.push({ 
                                             page: 'background', 
@@ -539,12 +360,6 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                         key.startsWith(baseSource)
                     );
                     
-                    console.log('checkCharacterCompleteness: Проверяем выборы feature:', {
-                        baseSource,
-                        possibleSources,
-                        choices: feature.choices
-                    });
-                    
                     for (const choice of feature.choices) {
                         // Проверяем все возможные источники
                         let isComplete = false;
@@ -552,11 +367,6 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                         
                         for (const source of possibleSources) {
                             const result = isChoiceComplete(choice, source, draft);
-                            console.log('checkCharacterCompleteness: Проверка выбора feature:', {
-                                choice,
-                                source,
-                                result
-                            });
                             if (result) {
                                 isComplete = true;
                                 actualSource = source;
@@ -589,4 +399,3 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
 
     return incomplete;
 }
-

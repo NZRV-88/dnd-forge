@@ -57,16 +57,6 @@ export default function FeatureBlock({
   // Создаем уникальный ключ на основе уникального идентификатора
   const featureKey = uniqueId || (featureLevel ? `${source}-${featureLevel}-${idx}` : `${source}-${idx}`); // уникальный ключ для этого блока
   
-  console.log('FeatureBlock:', {
-    name,
-    featureKey,
-    uniqueId,
-    source,
-    featureLevel,
-    idx,
-    choices: choices?.length || 0
-  });
-  
   // Временное логирование для отладки
 
   useEffect(() => {
@@ -121,11 +111,6 @@ export default function FeatureBlock({
         return draft.chosen.fightingStyle?.[sourceKey] ? [...draft.chosen.fightingStyle[sourceKey]] : [];
                 case "weapon-mastery":
                     const weaponMasteryResult = draft.chosen.weaponMastery?.[sourceKey] ? [...draft.chosen.weaponMastery[sourceKey]] : [];
-                    console.log('FeatureBlock getSelectedForChoice: weapon-mastery:', {
-                        sourceKey,
-                        weaponMasteryResult,
-                        allWeaponMastery: draft.chosen.weaponMastery
-                    });
                     return weaponMasteryResult;
       case "feature":
         return draft.chosen.features?.[sourceKey] ? [...draft.chosen.features[sourceKey]] : [];
@@ -147,24 +132,6 @@ export default function FeatureBlock({
   // sourceKey — ключ, по которому хранятся выборы для текущего блока (обычно featureKey)
   const countChoicesRecursive = (choiceList: ChoiceOption[], sourceKey: string) => {
     let selected = 0;
-    
-    console.log('FeatureBlock countChoicesRecursive:', {
-      name,
-      sourceKey,
-      choiceList,
-      draft: {
-        abilities: draft.chosen.abilities?.[sourceKey],
-        skills: draft.chosen.skills?.[sourceKey],
-        tools: draft.chosen.tools?.[sourceKey],
-        languages: draft.chosen.languages?.[sourceKey],
-        spells: draft.chosen.spells?.[sourceKey],
-        weaponMastery: draft.chosen.weaponMastery?.[sourceKey],
-        features: draft.chosen.features?.[sourceKey],
-        fightingStyle: draft.chosen.fightingStyle?.[sourceKey]
-      },
-      allWeaponMastery: draft.chosen.weaponMastery,
-      allSkills: draft.chosen.skills
-    });
     let total = 0;
 
     for (const choice of choiceList) {
@@ -223,7 +190,7 @@ export default function FeatureBlock({
 
   return (
     <div className={`relative border-2 rounded ${hasUnfinishedChoice ? "border-blue-300" : "border-stone-200"}`}>
-      {/* Верхний индикатор незавершённого выбора */}
+      {/* Верхний индикатор незавершенного выбора */}
       {hasUnfinishedChoice && (
         <div className="absolute -top-3 -left-3 z-20">
           <div className="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-lg">!</div>

@@ -72,7 +72,7 @@ function calcMaxHP(
 export default function ClassPick() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
-    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, setChosenSpells, removeChosenSpell, loadFromSupabase, isLoading, abilityBonuses } = useCharacter();
+    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, setChosenSpells, removeChosenSpell, loadFromSupabase, isLoading, abilityBonuses, setDraft } = useCharacter();
     
     // Модальные окна
     const [previewClass, setPreviewClass] = useState<string | null>(null);
@@ -95,13 +95,10 @@ export default function ClassPick() {
     
     // Получаем подготовленные заклинания из драфта
     const preparedSpells = draft.basics.class ? (draft.chosen.spells[draft.basics.class] || []) : [];
-    console.log('Class: draft.chosen.spells:', draft.chosen.spells);
-    console.log('Class: preparedSpells for class', draft.basics.class, ':', preparedSpells);
     
     // Загружаем персонажа при редактировании
     useEffect(() => {
         if (id && draft.id !== id && !isLoading) {
-            console.log('Class: Loading character from Supabase, id:', id, 'draft.id:', draft.id);
             loadFromSupabase(id);
         }
     }, [id, draft.id, loadFromSupabase, isLoading]);
@@ -216,6 +213,154 @@ export default function ClassPick() {
         clearClassChoices(); // clearClassChoices уже сбрасывает уровень на 1
         setShowRemoveConfirm(false);
     };
+
+    // Функция для очистки данных при понижении уровня
+    const cleanupOnLevelDecrease = (newLevel: number) => {
+        if (!info) return;
+
+        // Создаем функцию для очистки выборов по уровню
+        const cleanupChoicesByLevel = (choices: any, targetLevel: number) => {
+            const cleaned = { ...choices };
+            const currentClass = info.key;
+            
+            // Очищаем выборы для уровней выше targetLevel
+            Object.keys(cleaned).forEach(key => {
+                // Проверяем, содержит ли ключ уровень выше targetLevel
+                const levelMatch = key.match(/-(\d+)-/);
+                if (levelMatch) {
+                    const level = parseInt(levelMatch[1]);
+                    if (level > targetLevel && (key.startsWith(`${currentClass}-`) || key.startsWith('class-'))) {
+                        delete cleaned[key];
+                    }
+                }
+            });
+            
+            return cleaned;
+        };
+
+        // 1. Очищаем выборы класса по уровням
+        const cleanedAbilities = cleanupChoicesByLevel(draft.chosen.abilities, newLevel);
+        const cleanedSkills = cleanupChoicesByLevel(draft.chosen.skills, newLevel);
+        const cleanedTools = cleanupChoicesByLevel(draft.chosen.tools, newLevel);
+        const cleanedToolProficiencies = cleanupChoicesByLevel(draft.chosen.toolProficiencies, newLevel);
+        const cleanedLanguages = cleanupChoicesByLevel(draft.chosen.languages, newLevel);
+        const cleanedFeatures = cleanupChoicesByLevel(draft.chosen.features, newLevel);
+
+        // 2. Очищаем подготовленные заклинания, которые выходят за лимит
+        const currentPreparedSpells = draft.chosen.spells[info.key] || [];
+        
+        // Получаем заклинания, которые должны быть доступны через особенности класса на новом уровне
+        const classSpellsFromFeatures = getClassSpellsFromFeatures(info, newLevel);
+        
+        // Рассчитываем лимит подготовленных заклинаний для нового уровня
+        const preparedLimit = getPreparedSpellsLimit(info, newLevel, draft.stats?.cha || 10);
+        
+        // Разделяем заклинания на полученные через особенности и обычные
+        const featureSpells: string[] = [];
+        const regularSpells: string[] = [];
+        
+        currentPreparedSpells.forEach((spell: any) => {
+            const spellName = typeof spell === 'string' ? spell : spell.name;
+            
+            if (classSpellsFromFeatures.includes(spellName)) {
+                featureSpells.push(spellName);
+            } else {
+                regularSpells.push(spellName);
+            }
+        });
+        
+        // Рассчитываем лимит для текущего уровня персонажа
+        const currentPreparedLimit = getPreparedSpellsLimit(info, draft.basics.level, draft.stats?.cha || 10);
+        
+        
+        let validSpells: string[] = [];
+        
+        // Убираем заклинания ТОЛЬКО если лимит уменьшился
+        if (preparedLimit < currentPreparedLimit) {
+            const limitDifference = currentPreparedLimit - preparedLimit;
+            
+            // Убираем только то количество заклинаний, на которое уменьшился лимит
+            // НЕ убираем все заклинания сверх нового лимита
+            const spellsToRemove = limitDifference;
+            const validRegularSpells = regularSpells.slice(0, regularSpells.length - spellsToRemove);
+            
+            
+            validSpells = [...featureSpells, ...validRegularSpells];
+        } else {
+            // Если лимит не изменился или увеличился - оставляем все заклинания
+            validSpells = [...featureSpells, ...regularSpells];
+        }
+
+        // 3. Очищаем броски HP для уровней выше нового
+        let validHpRolls: number[] = [];
+        if (draft.hpRolls && draft.hpRolls.length > newLevel - 1) {
+            validHpRolls = draft.hpRolls.slice(0, newLevel - 1);
+        }
+
+        // Применяем все изменения через setDraft
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                abilities: cleanedAbilities,
+                skills: cleanedSkills,
+                tools: cleanedTools,
+                toolProficiencies: cleanedToolProficiencies,
+                languages: cleanedLanguages,
+                features: cleanedFeatures,
+                spells: {
+                    ...d.chosen.spells,
+                    [info.key]: validSpells
+                }
+            },
+            hpRolls: validHpRolls
+        }));
+    };
+
+    // Функция для получения максимального уровня заклинаний для данного уровня класса
+    const getMaxSpellLevelForLevel = (classInfo: ClassInfo, level: number) => {
+        if (!classInfo.spellcasting) return 0;
+        
+        const levelSlots = classInfo.spellcasting.progression[level as keyof typeof classInfo.spellcasting.progression];
+        if (!levelSlots) return 0;
+        
+        return levelSlots.slots.length;
+    };
+
+    // Функция для получения заклинаний из особенностей класса на определенном уровне
+    const getClassSpellsFromFeatures = (classInfo: ClassInfo, maxLevel: number) => {
+        const spells: string[] = [];
+        
+        // Проходим по всем уровням от 1 до maxLevel
+        for (let level = 1; level <= maxLevel; level++) {
+            const features = classInfo.features[level as keyof typeof classInfo.features];
+            if (features) {
+                features.forEach(feature => {
+                    // Проверяем, есть ли у особенности поле spells
+                    if ((feature as any).spells && Array.isArray((feature as any).spells)) {
+                        spells.push(...(feature as any).spells);
+                    }
+                });
+            }
+        }
+        
+        return spells;
+    };
+
+    // Функция для расчета лимита подготовленных заклинаний
+    const getPreparedSpellsLimit = (classInfo: ClassInfo, level: number, chaScore: number) => {
+        if (!classInfo.spellcasting || !classInfo.spellcasting.preparedFormula) {
+            return 0;
+        }
+        
+        const chaMod = Math.floor((chaScore - 10) / 2);
+        
+        // Вычисляем формулу: Math.max(1, chaMod + Math.floor(level / 2))
+        const limit = Math.max(1, chaMod + Math.floor(level / 2));
+        
+        return limit;
+    };
+
 
     const hasSelectedClass = Boolean(draft.basics.class);
 
@@ -552,7 +697,13 @@ export default function ClassPick() {
                                 {draft.basics.level}
                             </div>
                             <button
-                                onClick={() => setLevel(Math.max(1, draft.basics.level - 1))}
+                                onClick={() => {
+                                    const newLevel = Math.max(1, draft.basics.level - 1);
+                                    if (newLevel < draft.basics.level) {
+                                        cleanupOnLevelDecrease(newLevel);
+                                    }
+                                    setLevel(newLevel);
+                                }}
                                 className="w-8 h-8 rounded-lg border border-border bg-background hover:bg-muted transition-colors disabled:opacity-50 flex items-center justify-center"
                                 disabled={draft.basics.level <= 1}
                                 title="Понизить уровень"
@@ -882,12 +1033,10 @@ export default function ClassPick() {
                                                                             if (preparedSpells.includes(spell.key)) {
                                                                                 // Убираем заклинание из подготовленных
                                                                                 const newSpells = preparedSpells.filter(key => key !== spell.key);
-                                                                                console.log('Class: removing spell', spell.key, 'from prepared spells:', newSpells);
                                                                                 setChosenSpells(draft.basics.class, newSpells);
                                                                             } else if (preparedSpells.length < getMaxPreparedSpells()) {
                                                                                 // Добавляем заклинание в подготовленные
                                                                                 const newSpells = [...preparedSpells, spell.key];
-                                                                                console.log('Class: adding spell', spell.key, 'to prepared spells:', newSpells);
                                                                                 setChosenSpells(draft.basics.class, newSpells);
                                                                             }
                                                                         }

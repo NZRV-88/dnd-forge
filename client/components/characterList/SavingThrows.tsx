@@ -5,6 +5,8 @@ import { useFrameColor } from "@/contexts/FrameColorContext";
 type Props = {
   stats: Record<string, number>;
   onRoll: (label: string, key: string, value: number, type: string) => void;
+  savingThrowProfs?: string[]; // владения спасбросками
+  proficiencyBonus?: number; // бонус мастерства
 };
 
 const ABILITIES: Record<string, string> = {
@@ -21,7 +23,7 @@ const mod = (v: number) => {
   return m >= 0 ? `+${m}` : `${m}`;
 };
 
-export default function SavingThrows({ stats, onRoll }: Props) {
+export default function SavingThrows({ stats, onRoll, savingThrowProfs = [], proficiencyBonus = 0 }: Props) {
   const { frameColor } = useFrameColor();
   
   // Преобразуем цвет из контекста в hex-код
@@ -86,7 +88,7 @@ export default function SavingThrows({ stats, onRoll }: Props) {
     <DynamicFrame
       frameType="st"
       size="custom"
-      className="relative p-4 text-gray-300 w-[300px]"
+      className="relative p-4 text-gray-300 w-[300px] h-[197px]"
     >
       {/* Фон под рамкой */}
       <div 
@@ -100,20 +102,50 @@ export default function SavingThrows({ stats, onRoll }: Props) {
         }}
       />
       
-      <div className="grid grid-cols-2 gap-2 mb-4 relative z-10">
+      <div className="grid grid-cols-2 gap-2 relative z-10">
         {Object.entries(ABILITIES).map(([key, label]) => {
-          const value = stats[key] || 0;
+          const abilityValue = stats[key] || 0;
+          const abilityMod = Math.floor((abilityValue - 10) / 2);
+          const hasProf = savingThrowProfs.includes(key);
+          const totalBonus = abilityMod + (hasProf ? proficiencyBonus : 0);
+          
           return (
             <div
               key={key}
               className="relative w-[140px] h-[40px]"
             >
+              {/* Кружок владения на рамке */}
+              <div 
+                className="absolute -left-[5px] top-1/2 transform -translate-y-1/2 w-4 h-4 rounded-full flex items-center justify-center z-30"
+              >
+                {hasProf ? (
+                  <span 
+                    className="w-3 h-3 rounded-full block"
+                    style={{ backgroundColor: hexColor }}
+                  />
+                ) : (
+                  <span 
+                    className="w-3 h-3 rounded-full border block transition-colors duration-200"
+                    style={{ 
+                      borderColor: hexColor,
+                      backgroundColor: '#4B5563'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#6B7280';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#4B5563';
+                    }}
+                  />
+                )}
+              </div>
+              
               <DynamicFrame
                 frameType="st-mode"
                 size="custom"
                 className="absolute inset-0 w-[93%] h-full"
               />
-              <div className="flex justify-between px-[19px] text-sm mt-[10px] ml-[13px] relative z-10">
+              <div className="flex items-center justify-between px-[19px] text-sm mt-[10px] ml-[13px] relative z-10">
                 <span className="font-bold">{label}</span>
                 <span 
                   className="flex justify-center border-2 rounded-md w-7 h-7 -mt-[3px] transition-all duration-200 relative z-20 cursor-pointer"
@@ -122,7 +154,7 @@ export default function SavingThrows({ stats, onRoll }: Props) {
                     '--hover-bg': `${hexColor}80`
                   } as React.CSSProperties}
                   onClick={() =>
-                    onRoll(label, key, value, "Спасбросок")
+                    onRoll(label, key, totalBonus, "Спасбросок")
                   }
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = `${hexColor}20`;
@@ -131,7 +163,7 @@ export default function SavingThrows({ stats, onRoll }: Props) {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  {mod(value)}
+                  {totalBonus >= 0 ? `+${totalBonus}` : `${totalBonus}`}
                 </span>
               </div>
             </div>
@@ -139,7 +171,8 @@ export default function SavingThrows({ stats, onRoll }: Props) {
         })}
       </div>
 
-      <div className="text-center text-gray-300 uppercase text-sm font-semibold -mt-2 z-10">
+      {/* Заголовок - абсолютно позиционирован внизу */}
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-gray-400 uppercase text-sm font-semibold z-10">
         СПАСБРОСКИ
       </div>
     </DynamicFrame>

@@ -45,14 +45,6 @@ export function getFixedBackgroundData(backgroundKey?: string): FixedBackgroundD
         });
     }
 
-    // если фон даёт бонусы к характеристикам
-    if (background.abilityBonuses) {
-        for (const [k, v] of Object.entries(background.abilityBonuses)) {
-            base.abilityBonuses[k as keyof Abilities] =
-                (base.abilityBonuses[k as keyof Abilities] || 0) + v;
-        }
-    }
-
     // языки (если они отдельным полем, а не Proficiency[])
     if (background.languages) {
         base.proficiencies.languages.push(...background.languages);
@@ -61,7 +53,6 @@ export function getFixedBackgroundData(backgroundKey?: string): FixedBackgroundD
     // особенности предыстории
     if (background.feature) {
         base.features.push(...background.feature);
-        console.log('getFixedBackgroundData: adding background features:', background.feature);
     }
 
     return base;

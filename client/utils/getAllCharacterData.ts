@@ -20,23 +20,6 @@ import { applyProficiencies, Proficiency } from "@/data/proficiencies";
  * фиксированные + выбранные игроком.
  */
 export function getAllCharacterData(draft: CharacterDraft) {
-    console.log('getAllCharacterData: starting with draft:', {
-        chosenAbilities: draft.chosen.abilities,
-        chosenAbilitiesSources: Object.keys(draft.chosen.abilities),
-        chosenAbilitiesDetails: Object.entries(draft.chosen.abilities).map(([source, abilities]) => ({
-            source,
-            abilities,
-            count: abilities.length
-        })),
-        chosenSkills: draft.chosen.skills,
-        chosenTools: draft.chosen.tools,
-        chosenLanguages: draft.chosen.languages,
-        chosenSpells: draft.chosen.spells,
-        chosenFeatures: draft.chosen.features,
-        chosenFightingStyle: draft.chosen.fightingStyle,
-        chosenWeaponMastery: draft.chosen.weaponMastery,
-        timestamp: new Date().toISOString()
-    });
 
     const skills = new Set<string>();
     const tools = new Set<string>();
@@ -73,7 +56,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
     ----------------------------- */
     const raceFixed = getFixedRaceData(draft.basics.race, draft.basics.subrace);
     const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
-    const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+    const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.race, draft.basics.subrace)?.name : null;
     const raceSource = subraceName ? `${raceName} (${subraceName})` : raceName;
     
     raceFixed.proficiencies.skills.forEach(s => {
@@ -158,9 +141,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
 
                 // Владения через applyProficiencies (сохраняем категории как есть)
                 if (bonus.proficiencies) {
-                    const profs: Proficiency[] = bonus.proficiencies
-                        .map(mapKeyToProficiency)
-                        .filter((p): p is Proficiency => p !== null);
+                    const profs: Proficiency[] = bonus.proficiencies;
 
                     profs.forEach((prof: Proficiency) => {
                         switch (prof.type) {
@@ -231,8 +212,8 @@ export function getAllCharacterData(draft: CharacterDraft) {
                 if (subclass.features) {
                     Object.entries(subclass.features).forEach(([level, features]) => {
                         features.forEach((feature, featureIdx) => {
-                            if (feature.proficiencies) {
-                                feature.proficiencies.forEach((prof: Proficiency) => {
+                            if ((feature as any).proficiencies) {
+                                (feature as any).proficiencies.forEach((prof: Proficiency) => {
                                     switch (prof.type) {
                                         case "skill":
                                             if (prof.key) {
@@ -294,7 +275,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
             // Для навыков из расы учитываем подрасу
             if (source === "race" || source.startsWith("subrace")) {
                 const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
-                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.race, draft.basics.subrace)?.name : null;
                 proficiencySources.skills[s] = subraceName ? `${raceName} (${subraceName})` : raceName;
             } else if (source.startsWith("background")) {
                 // Все источники, начинающиеся с "background" - это предыстория
@@ -316,7 +297,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
             // Для инструментов из расы учитываем подрасу
             if (source === "race") {
                 const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
-                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.race, draft.basics.subrace)?.name : null;
                 proficiencySources.tools[t] = subraceName ? `${raceName} (${subraceName})` : raceName;
             } else if (source.startsWith("background")) {
                 // Все источники, начинающиеся с "background" - это предыстория
@@ -337,7 +318,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
             // Для инструментов из расы учитываем подрасу
             if (source === "race") {
                 const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
-                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.race, draft.basics.subrace)?.name : null;
                 proficiencySources.tools[tp] = subraceName ? `${raceName} (${subraceName})` : raceName;
             } else if (source.startsWith("background")) {
                 // Все источники, начинающиеся с "background" - это предыстория
@@ -359,7 +340,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
             // Для языков из расы учитываем подрасу
             if (source === "race" || source.startsWith("subrace")) {
                 const raceName = getRaceByKey(draft.basics.race)?.name || "Раса";
-                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.subrace)?.name : null;
+                const subraceName = draft.basics.subrace ? getSubraceByKey(draft.basics.race, draft.basics.subrace)?.name : null;
                 proficiencySources.languages[l] = subraceName ? `${raceName} (${subraceName})` : raceName;
             } else if (source.startsWith("background")) {
                 // Все источники, начинающиеся с "background" - это предыстория
@@ -373,11 +354,8 @@ export function getAllCharacterData(draft: CharacterDraft) {
             }
         });
     });
-    console.log('getAllCharacterData: draft.chosen.spells:', draft.chosen.spells);
     const allSpells = Object.values(draft.chosen.spells).flat();
-    console.log('getAllCharacterData: allSpells:', allSpells);
     allSpells.forEach(sp => {
-        console.log('getAllCharacterData: adding spell:', sp);
         spells.add(sp);
     });
     draft.chosen.feats.forEach(f => feats.add(f));
@@ -394,37 +372,15 @@ export function getAllCharacterData(draft: CharacterDraft) {
         if (!uniqueSources.has(normalizedSource)) {
             uniqueSources.add(normalizedSource);
             sourceMap.set(normalizedSource, abilities);
-            console.log('getAllCharacterData: adding unique source:', {
-                originalSource: source,
-                normalizedSource,
-                abilities,
-                abilitiesLength: abilities.length,
-                timestamp: new Date().toISOString()
-            });
-        } else {
-            console.log('getAllCharacterData: skipping duplicate source:', {
-                originalSource: source,
-                normalizedSource,
-                abilities,
-                abilitiesLength: abilities.length,
-                timestamp: new Date().toISOString()
-            });
         }
     }
     
     // Теперь обрабатываем только уникальные источники
     for (const [source, abilities] of sourceMap) {
-        console.log('getAllCharacterData: processing abilities from unique source:', {
-            source,
-            abilities,
-            abilitiesLength: abilities.length,
-            timestamp: new Date().toISOString()
-        });
         
         for (const ab of abilities) {
             const oldBonus = abilityBonuses[ab] || 0;
             abilityBonuses[ab] = oldBonus + 1;
-            console.log(`getAllCharacterData: ability ${ab}: ${oldBonus} + 1 = ${abilityBonuses[ab]}`);
         }
     }
 
@@ -432,7 +388,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
        Background bonuses
     ----------------------------- */
     const backgroundFixed = getFixedBackgroundData(draft.basics.background);
-    const backgroundName = backgroundFixed.name || "Предыстория";
+    const backgroundName = getBackgroundByKey(draft.basics.background)?.name || "Предыстория";
     
     // Обрабатываем владения из предыстории
     if (backgroundFixed.proficiencies) {
@@ -459,7 +415,6 @@ export function getAllCharacterData(draft: CharacterDraft) {
         backgroundFixed.features.forEach((feature: any) => {
             if (feature.feat) {
                 feats.add(feature.feat);
-                console.log('getAllCharacterData: adding background feat:', feature.feat);
             }
         });
     }
@@ -475,11 +430,6 @@ export function getAllCharacterData(draft: CharacterDraft) {
     }
 
     // Отладочная информация о итоговых характеристиках
-    console.log('getAllCharacterData: final abilityBonuses:', {
-        abilityBonuses,
-        timestamp: new Date().toISOString()
-    });
-    
     return {
         skills: Array.from(skills),
         tools: Array.from(tools),

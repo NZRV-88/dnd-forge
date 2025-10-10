@@ -201,7 +201,7 @@ export default function Skills({
               {/* Бонус */}
               <div
                 className="flex justify-center"
-                onClick={() => onRoll(ru, ability, bonus, "Навык")}
+                onClick={() => onRoll(ru, ability, bonus)}
               >
                 <span 
                   className="flex items-center justify-center w-10 h-8 border-2 rounded-md font-bold text-sm cursor-pointer transition-colors min-w-10 min-h-8 ml-2"
@@ -229,7 +229,7 @@ export default function Skills({
       </div>
 
       {/* Заголовок снизу - внутри рамки, но с абсолютным позиционированием */}
-      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center text-gray-400 text-xs font-bold uppercase z-10">
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-gray-400 uppercase text-sm font-semibold z-10">
         НАВЫКИ
       </div>
     </DynamicFrame>

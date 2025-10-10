@@ -4,6 +4,7 @@ interface DiceRollModalProps {
   isOpen: boolean;
   onClose: () => void;
   rollData: {
+    characterName?: string;
     description: string;
     dice: string;
     modifier: number;

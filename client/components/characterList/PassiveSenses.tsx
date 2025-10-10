@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import DynamicFrame from "@/components/ui/DynamicFrame";
 import { Settings, X } from "lucide-react";
+import { getVisionData, type VisionData } from "@/utils/getVisionData";
+import { CharacterDraft } from "@/store/character";
 
 type Props = {
     stats: Record<string, number> | undefined;
-    race?: string;
+    draft?: CharacterDraft;
 };
 
 const mod = (v: number) => Math.floor((v - 10) / 2);
@@ -17,16 +19,6 @@ interface Vision {
     source: string;
 }
 
-const raceDarkvision: Record<string, number> = {
-    Человек: 0,
-    Эльф: 60,
-    Дроу: 120,
-    Дворф: 60,
-    Полурослик: 0,
-    Тифлинг: 60,
-    Полуорк: 60,
-};
-
 const tooltips: Record<string, string> = {
     Восприятие: "Используется для замечания скрытых объектов и угроз.",
     Проницательность: "Определяет способность понимать мотивы и эмоции других.",
@@ -37,7 +29,7 @@ const tooltips: Record<string, string> = {
     "Истинное зрение": "Позволяет видеть истинный облик существ и предметов.",
 };
 
-export default function PassiveSenses({ stats, race = "Человек" }: Props) {
+export default function PassiveSenses({ stats, draft }: Props) {
     const wis = stats?.wis ?? 0;
     const int = stats?.int ?? 0;
 
@@ -56,15 +48,35 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
         investigation: "",
     });
 
+    // Получаем данные о зрении из draft
+    const raceVisionData = draft ? getVisionData(draft) : {
+        "Ночное зрение": { distance: 0, source: "" },
+        "Слепое зрение": { distance: 0, source: "" },
+        "Чувство вибраций": { distance: 0, source: "" },
+        "Истинное зрение": { distance: 0, source: "" },
+    };
+
     const [visions, setVisions] = useState<Record<VisionType, Vision>>({
         "Ночное зрение": {
             name: "Ночное зрение",
-            distance: raceDarkvision[race] ?? 0,
-            source: race,
+            distance: raceVisionData["Ночное зрение"].distance,
+            source: raceVisionData["Ночное зрение"].source,
         },
-        "Слепое зрение": { name: "Слепое зрение", distance: 0, source: "" },
-        "Чувство вибраций": { name: "Чувство вибраций", distance: 0, source: "" },
-        "Истинное зрение": { name: "Истинное зрение", distance: 0, source: "" },
+        "Слепое зрение": {
+            name: "Слепое зрение",
+            distance: raceVisionData["Слепое зрение"].distance,
+            source: raceVisionData["Слепое зрение"].source,
+        },
+        "Чувство вибраций": {
+            name: "Чувство вибраций",
+            distance: raceVisionData["Чувство вибраций"].distance,
+            source: raceVisionData["Чувство вибраций"].source,
+        },
+        "Истинное зрение": {
+            name: "Истинное зрение",
+            distance: raceVisionData["Истинное зрение"].distance,
+            source: raceVisionData["Истинное зрение"].source,
+        },
     });
 
     const [isOpen, setIsOpen] = useState(false);
@@ -77,6 +89,29 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
         if (savedSources) setSources(JSON.parse(savedSources));
         if (savedVisions) setVisions(JSON.parse(savedVisions));
     }, []);
+
+    // Обновляем данные о зрении при изменении draft
+    useEffect(() => {
+        if (draft) {
+            const newVisionData = getVisionData(draft);
+            setVisions(prevVisions => {
+                const updatedVisions = { ...prevVisions };
+                Object.keys(newVisionData).forEach(visionType => {
+                    const visionKey = visionType as VisionType;
+                    const newData = newVisionData[visionKey as keyof VisionData];
+                    // Обновляем только если данные из расы лучше (больше расстояние)
+                    if (newData.distance > updatedVisions[visionKey].distance) {
+                        updatedVisions[visionKey] = {
+                            name: visionKey,
+                            distance: newData.distance,
+                            source: newData.source,
+                        };
+                    }
+                });
+                return updatedVisions;
+            });
+        }
+    }, [draft]);
 
     useEffect(() => {
         localStorage.setItem("passiveModifiers", JSON.stringify(modifiers));
@@ -96,7 +131,7 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
         <DynamicFrame
             frameType="st"
             size="custom"
-            className="relative p-4 text-gray-300 w-[300px]"
+            className="relative p-4 text-gray-300 w-[300px] h-[216px]"
         >
             {/* Фон под рамкой */}
             <div 
@@ -109,7 +144,7 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
                 }}
             />
             
-            <div className="relative z-10 space-y-2">
+            <div className="relative z-10 space-y-2 h-[160px] overflow-visible">
                 {/* Чувства */}
                 <div className="relative w-full h-[35px] flex items-center px-2">
                     <DynamicFrame
@@ -145,17 +180,20 @@ export default function PassiveSenses({ stats, race = "Человек" }: Props)
                 </div>
 
                 {/* Зрения по центру */}
-                {Object.values(visions)
-                    .filter((v) => v.distance > 0)
-                    .map((v) => (
-                        <div key={v.name} className="text-center text-sm font-medium mt-2">
-                            {v.name}: {v.distance} фт.
-                        </div>
-                    ))}
+                <div className="max-h-[80px] overflow-y-auto">
+                    {Object.values(visions)
+                        .filter((v) => v.distance > 0)
+                        .map((v) => (
+                            <div key={v.name} className="text-center text-xs font-medium mt-1">
+                                {v.name}: {v.distance} фт.
+                            </div>
+                        ))}
+                </div>
+
             </div>
 
-            {/* Заголовок + шестерёнка */}
-            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold mt-4 z-10">
+            {/* Заголовок + шестерёнка - позиционирован относительно основного блока */}
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-2 text-gray-400 uppercase text-sm font-semibold z-10">
                 ЧУВСТВА
                 <button
                     onClick={() => setIsOpen(true)}

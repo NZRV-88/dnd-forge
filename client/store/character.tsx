@@ -350,17 +350,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
     // Мониторинг изменений всех типов выборов для отладки
     useEffect(() => {
-        console.log('chosen data changed:', {
-            abilities: draft.chosen.abilities,
-            skills: draft.chosen.skills,
-            tools: draft.chosen.tools,
-            languages: draft.chosen.languages,
-            spells: draft.chosen.spells,
-            features: draft.chosen.features,
-            fightingStyle: draft.chosen.fightingStyle,
-            weaponMastery: draft.chosen.weaponMastery,
-            timestamp: new Date().toISOString()
-        });
     }, [draft.chosen.abilities, draft.chosen.skills, draft.chosen.tools, draft.chosen.languages, draft.chosen.spells, draft.chosen.features, draft.chosen.fightingStyle, draft.chosen.weaponMastery]);
 
     const resetCharacter = () => {
@@ -558,25 +547,12 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     ----------------------------- */
 
     const setChosenAbilities = (source: string, abilities: (keyof Abilities)[]) => {
-        console.log('setChosenAbilities called:', {
-            source,
-            abilities,
-            currentAbilities: draft.chosen.abilities,
-            timestamp: new Date().toISOString()
-        });
         
         setDraft(d => {
             const newDraft = {
                 ...d,
                 chosen: { ...d.chosen, abilities: { ...d.chosen.abilities, [source]: abilities } },
             };
-            
-            console.log('setChosenAbilities result:', {
-                source,
-                abilities,
-                newAbilities: newDraft.chosen.abilities,
-                timestamp: new Date().toISOString()
-            });
             
             return newDraft;
         });
@@ -596,25 +572,12 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         }));
 
     const setChosenSkills = (source: string, skills: string[]) => {
-        console.log('setChosenSkills called:', {
-            source,
-            skills,
-            currentSkills: draft.chosen.skills,
-            timestamp: new Date().toISOString()
-        });
         
         setDraft(d => {
             const newDraft = {
                 ...d,
                 chosen: { ...d.chosen, skills: { ...d.chosen.skills, [source]: skills } },
             };
-            
-            console.log('setChosenSkills result:', {
-                source,
-                skills,
-                newSkills: newDraft.chosen.skills,
-                timestamp: new Date().toISOString()
-            });
             
             return newDraft;
         });
@@ -723,12 +686,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         }));
 
     const setChosenWeaponMastery = (source: string, weapons: string[]) => {
-        console.log('setChosenWeaponMastery called:', {
-            source,
-            weapons,
-            currentWeaponMastery: draft.chosen.weaponMastery,
-            timestamp: new Date().toISOString()
-        });
         
         setDraft(d => {
             const newDraft = {
@@ -741,13 +698,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                     } 
                 },
             };
-            
-            console.log('setChosenWeaponMastery result:', {
-                source,
-                weapons,
-                newWeaponMastery: newDraft.chosen.weaponMastery,
-                timestamp: new Date().toISOString()
-            });
             
             return newDraft;
         });
@@ -1139,8 +1089,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 saveToSupabase().catch(console.error);
             }
             
-            console.log("Очищенные выборы:", newChosen);
-            console.log("Очищенный ASI:", newAsi);
             
             return newDraft;
         });
@@ -1277,11 +1225,9 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     };
 
     const createNewCharacter = async (id: string) => {
-        console.log('createNewCharacter: Creating character with ID:', id);
         
         // Проверяем, не создается ли уже персонаж с таким ID
         if (draft.id === id) {
-            console.log('createNewCharacter: Character with this ID already exists, skipping creation');
             return;
         }
         
@@ -1289,15 +1235,11 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                console.log('createNewCharacter: User not authenticated');
-                // Пользователь не авторизован
                 return;
             }
 
             // Создаем новый чистый draft с переданным ID
             const newDraft = makeDefaultDraft(id);
-
-            console.log('createNewCharacter: Saving to Supabase, newDraft.id:', newDraft.id);
 
             // Сохраняем в БД
             const { error } = await supabase.from("characters").insert({
@@ -1314,7 +1256,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            console.log('createNewCharacter: Successfully saved to Supabase, setting draft');
             // Устанавливаем новый draft в состояние
             setDraft(newDraft);
         } finally {
@@ -1323,7 +1264,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     };
 
     const loadFromSupabase = async (id: string) => {
-        console.log('loadFromSupabase: Loading character with ID:', id);
         const startTime = performance.now();
         setIsLoading(true);
         try {
@@ -1334,7 +1274,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 .eq("id", id)
                 .single();
             const dbEndTime = performance.now();
-            console.log(`loadFromSupabase: DB query took ${dbEndTime - dbStartTime}ms`);
 
             if (error) {
                 console.error('loadFromSupabase: Error loading from Supabase:', error);
@@ -1343,7 +1282,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             }
 
             if (data) {
-                console.log('loadFromSupabase: Successfully loaded character from Supabase');
                 const migrationStartTime = performance.now();
                 
                 // достаём draft из JSON-поля data
@@ -1353,14 +1291,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 const migratedChosen = migrateOldKeys(savedDraft.chosen || {});
                 const migratedBasics = migrateRaceKeys(savedDraft.basics || {});
                 const migrationEndTime = performance.now();
-                console.log(`loadFromSupabase: Migration took ${migrationEndTime - migrationStartTime}ms`);
                 
                 // Отладочная информация для weaponMastery
-                console.log('loadFromSupabase: weaponMastery debug:', {
-                    originalChosen: savedDraft.chosen?.weaponMastery,
-                    migratedChosen: migratedChosen.weaponMastery,
-                    allChosen: migratedChosen
-                });
 
                 const mergeStartTime = performance.now();
                 // мержим с дефолтами, чтобы не поломались старые персонажи
@@ -1371,12 +1303,10 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                     chosen: { ...makeDefaultDraft().chosen, ...migratedChosen },
                 });
                 const mergeEndTime = performance.now();
-                console.log(`loadFromSupabase: Merge took ${mergeEndTime - mergeStartTime}ms`);
             }
         } finally {
             setIsLoading(false);
             const endTime = performance.now();
-            console.log(`loadFromSupabase: Total time ${endTime - startTime}ms`);
         }
     };
 
@@ -1517,8 +1447,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         setAbilitiesMode: () => {}
     };
 
-    console.log('CharacterProvider render:', { isInitialized, hasApi: !!api, hasFallback: !!fallbackApi });
-    
     return (
         <CharacterContext.Provider value={isInitialized ? api : fallbackApi}>
             {!isInitialized ? (
@@ -1536,7 +1464,6 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
 export const useCharacter = () => {
     const ctx = useContext(CharacterContext);
-    console.log('useCharacter called:', { ctx, isUndefined: ctx === undefined, isNull: ctx === null });
     if (!ctx) {
         console.error("useCharacter must be used within CharacterProvider. Context value:", ctx);
         throw new Error("useCharacter must be used within CharacterProvider");

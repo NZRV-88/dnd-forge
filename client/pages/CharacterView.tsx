@@ -10,6 +10,7 @@ import PassiveSenses from "@/components/characterList/PassiveSenses";
 import Proficiencies from "@/components/characterList/Proficiencies";
 import InitiativeAC from "@/components/characterList/InitiativeAC";
 import RollLog from "@/components/characterList/RollLog";
+import { useDiceRolls } from "@/hooks/useDiceRolls";
 import DiceRollModal from "@/components/ui/DiceRollModal";
 import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
@@ -42,12 +43,22 @@ export default function CharacterView() {
     };
 
     // roll log UI
-    const [rollLog, setRollLog] = useState<string[]>([]);
     const [showLog, setShowLog] = useState(false);
-
-    // dice roll modal
-    const [diceModalOpen, setDiceModalOpen] = useState(false);
-    const [diceRollData, setDiceRollData] = useState<any>(null);
+    
+    // Используем хук для бросков кубиков
+    const {
+        rollLog,
+        setRollLog,
+        diceModalOpen,
+        setDiceModalOpen,
+        diceRollData,
+        addRoll
+    } = useDiceRolls({ 
+        characterName: char?.basics.name,
+        onRollAdded: (logEntry) => {
+            // Дополнительная логика при добавлении броска, если нужна
+        }
+    });
 
 
     // Load character by id from Supabase
@@ -265,102 +276,6 @@ export default function CharacterView() {
 
     // skill profs set (normalized)
     const skillProfs: string[] = Array.isArray(char.skills) ? char.skills : [];
-
-    // Функция для парсинга кубиков урона (например, "1d8+3" или "1d8 +3" -> { dice: "1d8", modifier: 3 })
-    const parseDamageDice = (damageString: string) => {
-        const match = damageString.match(/^(\d+d\d+)\s*([+-]\d+)?$/);
-        if (match) {
-            const dice = match[1]; // "1d8"
-            const modifier = match[2] ? parseInt(match[2]) : 0; // "+3" или "-1"
-            return { dice, modifier };
-        }
-        return { dice: "1d4", modifier: 0 }; // По умолчанию
-    };
-
-    // Функция для броска кубика урона
-    const rollDamageDice = (diceString: string) => {
-        const { dice, modifier } = parseDamageDice(diceString);
-        const [numDice, diceSize] = dice.split('d').map(Number);
-        const individualRolls = [];
-        let total = 0;
-        for (let i = 0; i < numDice; i++) {
-            const roll = Math.floor(Math.random() * diceSize) + 1;
-            individualRolls.push(roll);
-            total += roll;
-        }
-        return { 
-            diceRoll: total, 
-            finalResult: total + modifier, 
-            individualRolls: individualRolls,
-            dice: dice,
-            modifier: modifier
-        };
-    };
-
-    // universal addRoll function: any child can call it
-    const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "", damageString?: string) => {
-        const d20 = Math.floor(Math.random() * 20) + 1;
-        const total = d20 + bonus;
-        
-        let entry = "";
-        let dice = "d20";
-        let diceRoll = d20;
-        let modifier = bonus;
-        let result = total;
-
-        if (type === "Спасбросок") {
-            entry = `${desc.toUpperCase()}: СПАС: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (desc === "Инициатива") {
-            entry = `ИНИЦИАТИВА: БРОСОК: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (type === "Навык") {
-            entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (type === "Атака") {
-            // Для атак: название оружия uppercase: ПОПАДАНИЕ: бросок
-            entry = `${desc.toUpperCase()}: ПОПАДАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (type === "Урон") {
-            // Для урона: используем правильный кубик урона
-            if (damageString) {
-                const { diceRoll: damageDiceRoll, finalResult, individualRolls, dice: damageDice, modifier: damageModifier } = rollDamageDice(damageString);
-                dice = damageDice;
-                diceRoll = damageDiceRoll;
-                modifier = damageModifier;
-                result = finalResult;
-                
-                if (modifier !== 0) {
-                    const individualRollsStr = individualRolls.join('+');
-                    entry = `${desc.toUpperCase()}: УРОН: ${dice}${modifier >= 0 ? '+' : ''}${modifier} = ${individualRollsStr}${modifier >= 0 ? '+' : ''}${modifier} = ${finalResult}`;
-                } else {
-                    const individualRollsStr = individualRolls.join('+');
-                    entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${individualRollsStr} = ${finalResult}`;
-                }
-            } else {
-                // Fallback на d20 если нет строки урона
-                entry = `${desc.toUpperCase()}: УРОН: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-            }
-        } else if (type === "Заклинание") {
-            // Для заклинаний: название заклинания uppercase: ЗАКЛИНАНИЕ: бросок
-            entry = `${desc.toUpperCase()}: ЗАКЛИНАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else {
-            // Для характеристик
-            entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        }
-
-        // Показываем модальное окно с результатом броска
-        setDiceRollData({
-            description: desc,
-            dice: dice,
-            modifier: modifier,
-            result: result,
-            diceRoll: diceRoll,
-            type: type,
-            individualRolls: type === "Урон" && damageString ? 
-                rollDamageDice(damageString).individualRolls : 
-                undefined
-        });
-        setDiceModalOpen(true);
-
-        setRollLog((prev) => [entry, ...prev].slice(0, 200));
-    };
 
     // Save changes back to Supabase
     const saveAll = async () => {

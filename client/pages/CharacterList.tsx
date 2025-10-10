@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AbilityScoresEditable from "@/components/characterList/AbilityScoresEditable";
 import FrameSettingsButton from "@/components/ui/FrameSettingsButton";
+import SettingsSidebar from "@/components/ui/SettingsSidebar";
 import AvatarFrameWithImage from "@/components/ui/AvatarFrameWithImage";
 import { useFrameColor } from "@/contexts/FrameColorContext";
 import ProficiencySpeed from "@/components/characterList/ProficiencySpeed";
@@ -14,7 +15,9 @@ import Proficiencies from "@/components/characterList/Proficiencies";
 import InitiativeAC from "@/components/characterList/InitiativeAC";
 import Attacks from "@/components/characterList/Attacks";
 import RollLog from "@/components/characterList/RollLog";
+import { useDiceRolls } from "@/hooks/useDiceRolls";
 import DiceRollModal from "@/components/ui/DiceRollModal";
+import { useSocialSharing } from "@/hooks/useSocialSharing";
 import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
 import { RACE_CATALOG } from "@/data/races";
@@ -53,15 +56,71 @@ export default function CharacterList() {
     const [tempHp, setTempHp] = useState<number>(0);
 
     // roll log UI
-    const [rollLog, setRollLog] = useState<string[]>([]);
     const [showLog, setShowLog] = useState(false);
-
-    // dice roll modal
-    const [diceModalOpen, setDiceModalOpen] = useState(false);
-    const [diceRollData, setDiceRollData] = useState<any>(null);
+    
+    // Settings sidebar
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    
+    // Telegram settings with localStorage persistence
+    const [telegramEnabled, setTelegramEnabled] = useState(() => {
+        const saved = localStorage.getItem('telegramEnabled');
+        return saved ? JSON.parse(saved) : false;
+    });
+    const [telegramChatId, setTelegramChatId] = useState(() => {
+        return localStorage.getItem('telegramChatId') || '-1002519374277';
+    });
+    const [telegramThreadId, setTelegramThreadId] = useState(() => {
+        return localStorage.getItem('telegramThreadId') || '7357';
+    });
+    const [autoShare, setAutoShare] = useState(() => {
+        const saved = localStorage.getItem('autoShare');
+        return saved ? JSON.parse(saved) : false;
+    });
+    
+    // Используем хук для бросков кубиков
+    const {
+        rollLog,
+        setRollLog,
+        diceModalOpen,
+        setDiceModalOpen,
+        diceRollData,
+        addRoll
+    } = useDiceRolls({ 
+        characterName: char?.basics.name,
+        onRollAdded: (logEntry) => {
+            // Автоматически отправляем в Telegram если включено
+            if (autoShare && telegramEnabled && telegramChatId && logEntry.rollData) {
+                const shareData = {
+                    ...logEntry.rollData,
+                    characterName: logEntry.rollData.characterName || char?.basics.name || 'Персонаж'
+                };
+                shareRoll('telegram', shareData, telegramChatId, undefined, telegramThreadId);
+            }
+        }
+    });
+    
+    // Social sharing hook
+    const { shareRoll } = useSocialSharing();
 
     // frame color from context
     const { frameColor, setFrameColor } = useFrameColor();
+
+    // Save Telegram settings to localStorage when they change
+    useEffect(() => {
+        localStorage.setItem('telegramEnabled', JSON.stringify(telegramEnabled));
+    }, [telegramEnabled]);
+
+    useEffect(() => {
+        localStorage.setItem('telegramChatId', telegramChatId);
+    }, [telegramChatId]);
+
+    useEffect(() => {
+        localStorage.setItem('telegramThreadId', telegramThreadId);
+    }, [telegramThreadId]);
+
+    useEffect(() => {
+        localStorage.setItem('autoShare', JSON.stringify(autoShare));
+    }, [autoShare]);
 
     // Load character by id from Supabase
     useEffect(() => {
@@ -483,174 +542,6 @@ export default function CharacterList() {
         return Math.floor(totalAC);
     };
 
-    // universal addRoll function: any child can call it
-    // Функция для парсинга кубиков урона (например, "1d8+3" или "2d6 + 1d10" -> { dice: "2d6 + 1d10", modifier: 0 })
-    const parseDamageDice = (damageString: string) => {
-        // Проверяем, есть ли модификатор в конце строки
-        const modifierMatch = damageString.match(/([+-]\d+)$/);
-        const modifier = modifierMatch ? parseInt(modifierMatch[1]) : 0;
-        
-        // Убираем модификатор из строки для парсинга кубиков
-        const diceString = modifierMatch ? damageString.slice(0, modifierMatch.index) : damageString;
-        
-        // Проверяем, содержит ли строка несколько кубиков (например, "2d6 + 1d10")
-        if (diceString.includes(' + ')) {
-            return { dice: diceString.trim(), modifier };
-        }
-        
-        // Для одного кубика используем старое регулярное выражение
-        const match = diceString.match(/^(\d+d\d+)\s*([+-]\d+)?$/);
-        if (match) {
-            const dice = match[1]; // "1d8"
-            const diceModifier = match[2] ? parseInt(match[2]) : 0; // "+3" или "-1"
-            return { dice, modifier: diceModifier + modifier };
-        }
-        
-        return { dice: "1d4", modifier: 0 }; // По умолчанию
-    };
-
-    // Функция для броска кубика урона
-    const rollDamageDice = (diceString: string) => {
-        const { dice, modifier } = parseDamageDice(diceString);
-        
-        // Если строка содержит несколько кубиков (например, "2d6 + 1d10")
-        if (dice.includes(' + ')) {
-            const diceParts = dice.split(' + ');
-            const allIndividualRolls: number[] = [];
-            let total = 0;
-            
-            for (const dicePart of diceParts) {
-                const [numDice, diceSize] = dicePart.trim().split('d').map(Number);
-                for (let i = 0; i < numDice; i++) {
-                    const roll = Math.floor(Math.random() * diceSize) + 1;
-                    allIndividualRolls.push(roll);
-                    total += roll;
-                }
-            }
-            
-            const finalResult = total + modifier;
-            return { 
-                diceRoll: total, 
-                finalResult: finalResult, 
-                individualRolls: allIndividualRolls,
-                dice: dice,
-                modifier: modifier
-            };
-        }
-        
-        // Для одного кубика используем старую логику
-        const [numDice, diceSize] = dice.split('d').map(Number);
-        const individualRolls = [];
-        let total = 0;
-        for (let i = 0; i < numDice; i++) {
-            const roll = Math.floor(Math.random() * diceSize) + 1;
-            individualRolls.push(roll);
-            total += roll;
-        }
-        const finalResult = total + modifier;
-        return { 
-            diceRoll: total, 
-            finalResult: finalResult, 
-            individualRolls: individualRolls,
-            dice: dice,
-            modifier: modifier
-        };
-    };
-
-    const addRoll = (desc: string, abilityKey: string, bonus: number, type: string = "", damageString?: string, attackRoll?: number) => {
-        const d20 = attackRoll !== undefined ? attackRoll : Math.floor(Math.random() * 20) + 1;
-        const total = d20 + bonus;
-        
-        let entry = "";
-        let dice = "d20";
-        let diceRoll = d20;
-        let modifier = bonus;
-        let result = total;
-        let individualRolls: number[] = [];
-
-        if (type === "Спасбросок") {
-            entry = `${desc.toUpperCase()}: СПАС: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (desc === "Инициатива") {
-            entry = `ИНИЦИАТИВА: БРОСОК: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (type === "Навык") {
-            entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (type === "Атака") {
-            // Для атак: название оружия uppercase: ПОПАДАНИЕ: бросок
-            entry = `${desc.toUpperCase()}: ПОПАДАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (type === "Урон") {
-            // Для урона: используем правильный кубик урона
-            if (damageString) {
-                const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier } = rollDamageDice(damageString);
-                dice = damageDice;
-                diceRoll = damageDiceRoll;
-                modifier = damageModifier;
-                result = finalResult;
-                individualRolls = damageIndividualRolls;
-                
-                if (modifier !== 0) {
-                    const individualRollsStr = individualRolls.join('+');
-                    const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
-                    entry = `${desc.toUpperCase()}: УРОН: ${dice}${modStr} = ${individualRollsStr}${modStr} = ${finalResult}`;
-                } else {
-                    const individualRollsStr = individualRolls.join('+');
-                    entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${individualRollsStr} = ${finalResult}`;
-                }
-            } else {
-                // Fallback на d20 если нет строки урона
-                entry = `${desc.toUpperCase()}: УРОН: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-            }
-        } else if (type === "Заклинание") {
-            // Для заклинаний: название заклинания uppercase: ЗАКЛИНАНИЕ: бросок
-            entry = `${desc.toUpperCase()}: ЗАКЛИНАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        } else if (type === "Лечение") {
-            // Для лечения: используем правильный кубик лечения
-            if (damageString) {
-                // Если есть строка урона, парсим её и добавляем переданный модификатор
-                const { diceRoll: healDiceRoll, individualRolls: healIndividualRolls, dice: healDice } = rollDamageDice(damageString);
-                const baseModifier = rollDamageDice(damageString).modifier;
-                const totalModifier = baseModifier + bonus; // Добавляем переданный модификатор к базовому
-                
-                dice = healDice;
-                diceRoll = healDiceRoll;
-                modifier = totalModifier;
-                result = healDiceRoll + totalModifier;
-                individualRolls = healIndividualRolls;
-                
-                if (totalModifier !== 0) {
-                    const individualRollsStr = healIndividualRolls.join('+');
-                    const modStr = totalModifier >= 0 ? `+${totalModifier}` : `${totalModifier}`;
-                    entry = `${desc.toUpperCase()}: ЛЕЧЕНИЕ: ${dice}${modStr} = ${individualRollsStr}${modStr} = ${result}`;
-                } else {
-                    const individualRollsStr = healIndividualRolls.join('+');
-                    entry = `${desc.toUpperCase()}: ЛЕЧЕНИЕ: ${dice} = ${individualRollsStr} = ${result}`;
-                }
-            } else {
-                // Fallback на d20 если нет строки лечения
-                entry = `${desc.toUpperCase()}: ЛЕЧЕНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-            }
-        } else {
-            // Для характеристик
-            entry = `${desc.toUpperCase()}: ПРОВЕРКА: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
-        }
-
-        // Показываем модальное окно с результатом броска
-        const rollData = {
-            description: desc,
-            dice: dice,
-            modifier: modifier,
-            result: result,
-            diceRoll: diceRoll,
-            type: type,
-            individualRolls: individualRolls.length > 0 ? 
-                individualRolls : 
-                undefined
-        };
-        setDiceRollData(rollData);
-        setDiceModalOpen(true);
-
-        setRollLog((prev) => [entry, ...prev].slice(0, 200));
-    };
-
     // Функция переключения активного слота оружия
     const switchWeaponSlot = (slot: number) => {
         setCharWithLog((prev: any) => ({
@@ -856,22 +747,29 @@ export default function CharacterList() {
         (s) => s.key.toLowerCase() === b.subclass.toLowerCase()
     );
 
+    // Получаем информацию о подрасе
+    const subraceInfo = raceInfo?.subraces?.find(
+        (s) => s.key.toLowerCase() === b.subrace?.toLowerCase()
+    );
+
     return (
         <div 
-            className="text-gray-200 min-h-screen p-4 sm:p-6 font-sans flex justify-center relative"
+            className="text-gray-200 overflow-y-auto p-2 sm:p-4 font-sans flex justify-center relative"
             style={{
+                minHeight: 'calc(100vh - 68px)', // 64px header + 4px gradient
                 backgroundImage: `url('/assets/class-bgs/paladin-bg.png')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
+                backgroundRepeat: 'no-repeat',
+                backgroundAttachment: 'fixed'
             }}
         >
             {/* Overlay для затемнения фона */}
-            <div className="absolute inset-0 bg-neutral-900 bg-opacity-80"></div>
-            <div className="w-full max-w-[1200px] px-1 sm:px-0 relative z-10">
+            <div className="absolute inset-0 bg-neutral-900 bg-opacity-80" style={{ minHeight: '100%' }}></div>
+            <div className="w-full max-w-[1200px] relative z-10">
 
                 {/* HEADER */}
-                <div className="flex flex-col sm:flex-row sm:items-center border-b border-yellow-600 pb-4 mb-6 gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center pb-2 mb-3 gap-2">
                     {/* Левая часть: аватар */}
                     <div className="flex flex-col items-center sm:items-start sm:mr-6">
                         <AvatarFrameWithImage
@@ -882,28 +780,27 @@ export default function CharacterList() {
                     {/* Правая часть: имя + инфо + настройки */}
                     <div className="flex flex-col items-start flex-1">
                         <div className="flex items-center gap-4 w-full">
-                            <h1 className="text-3xl sm:text-4xl font-serif font-bold text-yellow-400">
+                            <h1 className="text-5xl sm:text-6xl font-monomakh text-white">
                                 {b.name || "Без имени"}
                             </h1>
                             <FrameSettingsButton
                                 className="ml-auto"
+                                onClick={() => setIsSettingsOpen(true)}
                             />
                         </div>
-                        <div className="mt-2 text-base sm:text-lg italic text-gray-300">
-                            {raceInfo?.name || b.race}
-                            {b.subrace ? ` (${b.subrace})` : ""} {/* TODO: сюда можно русское имя подрасы */}
+                        <div className="mt-2 text-sm sm:text-base text-gray-400">
+                            {subraceInfo?.name || raceInfo?.name || b.race}
                             {" • "}
                             {classInfo?.name || b.class}
                             {subclassInfo?.name ? ` (${subclassInfo.name})` : ""}
                             {" • ур. "}
                             {b.level || 1}
-
                         </div>
                     </div>
                 </div>
 
                 {/* ROW 1 */}
-                <div className="grid gap-4 mb-6 grid-cols-1 lg:grid-cols-[620px_240px_320px]">
+                <div className="grid gap-3 mb-4 grid-cols-1 lg:grid-cols-[620px_240px_320px]">
                     <div className="pt-3">
                         <AbilityScoresEditable
                             stats={finalStats}
@@ -932,12 +829,14 @@ export default function CharacterList() {
                 </div>
 
                 {/* ROW 2: SavingThrows + Skills + Initiative/AC + Attacks */}
-                <div className="grid gap-4 mb-6 -mt-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-[300px_300px_600px]">
+                <div className="grid gap-3 mb-3 -mt-2 grid-cols-1 md:grid-cols-2 lg:grid-cols-[300px_300px_600px]">
                     {/* Saving Throws (лево) */}
                     <div className="flex flex-col">
                         <SavingThrows
                             stats={finalStats}
                             onRoll={(label, ability, value, type) => addRoll(label, ability, value, type)}
+                            savingThrowProfs={characterData?.savingThrows || []}
+                            proficiencyBonus={proficiencyBonus}
                         />
                         <div className="mt-4">
                             <PassiveSenses stats={finalStats} />
@@ -1011,19 +910,34 @@ export default function CharacterList() {
                     </div>
                 </div>
 
-                {/* Navigation buttons */}
-                <div className="flex flex-col sm:flex-row justify-end gap-2">
-                    <Button onClick={() => nav(-1)}>Назад</Button>
-                </div>
 
-                {/* ROLL LOG (floating bottom-right) */}
-                <RollLog rolls={rollLog} show={showLog} onToggle={() => setShowLog((s) => !s)} />
 
                 {/* DICE ROLL MODAL */}
                 <DiceRollModal 
                     isOpen={diceModalOpen}
                     onClose={() => setDiceModalOpen(false)}
                     rollData={diceRollData}
+                />
+
+                {/* SETTINGS SIDEBAR */}
+                <SettingsSidebar 
+                    isOpen={isSettingsOpen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    telegramEnabled={telegramEnabled}
+                    setTelegramEnabled={setTelegramEnabled}
+                    telegramChatId={telegramChatId}
+                    setTelegramChatId={setTelegramChatId}
+                    telegramThreadId={telegramThreadId}
+                    setTelegramThreadId={setTelegramThreadId}
+                    autoShare={autoShare}
+                    setAutoShare={setAutoShare}
+                />
+
+                {/* ROLL LOG */}
+                <RollLog 
+                    rolls={rollLog} 
+                    show={showLog} 
+                    onToggle={() => setShowLog((s) => !s)} 
                 />
 
             </div>

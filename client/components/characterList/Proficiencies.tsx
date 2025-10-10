@@ -79,6 +79,12 @@ interface ProficienciesProps {
         weapons?: string[];
         toolProficiencies?: string[];
         languages?: string[];
+        proficiencySources?: {
+            armors?: Record<string, string>;
+            weapons?: Record<string, string>;
+            tools?: Record<string, string>;
+            languages?: Record<string, string>;
+        };
     };
 }
 
@@ -310,7 +316,7 @@ export default function Proficiencies({ data }: ProficienciesProps) {
                 {renderBlock("БРОНЯ", categories.armor, false, getArmorSource)}
                 {renderBlock("ОРУЖИЕ", categories.weapons, false, getWeaponSource)}
                 {renderBlock("ИНСТРУМЕНТЫ", categories.tools, false, getToolSource)}
-                {renderBlock("ЯЗЫКИ", categories.languages, true, (translatedItem) => {
+                {renderBlock("ЯЗЫКИ", categories.languages, true, (translatedItem): string | undefined => {
                     // Ищем по переведенному названию среди всех языков
                     const allLanguages = data?.proficiencySources?.languages || {};
                     for (const [key, source] of Object.entries(allLanguages)) {
@@ -324,7 +330,7 @@ export default function Proficiencies({ data }: ProficienciesProps) {
             </div>
 
             {/* Заголовок + шестерёнка снизу */}
-            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold -mt-2 z-10">
+            <div className="flex items-center justify-center gap-2 text-gray-400 uppercase text-sm font-semibold -mt-[6px] z-10">
                 ВЛАДЕНИЯ
                 <button
                     onClick={() => setIsOpen(true)}
