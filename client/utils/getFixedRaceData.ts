@@ -14,6 +14,7 @@ export type FixedRaceData = {
     spells: string[];
     abilityBonuses: Partial<Record<keyof Abilities, number>>;
     speed?: number;
+    hpPerLevel?: number; // Бонус хитов за уровень от расы/подрасы
 };
 
 /**
@@ -51,6 +52,9 @@ function applyTraits(
             });
         }
         if (t.speed) base.speed = t.speed;
+        if (t.hpPerLevel) {
+            base.hpPerLevel = (base.hpPerLevel || 0) + t.hpPerLevel;
+        }
     });
 }
 
@@ -70,6 +74,7 @@ export function getFixedRaceData(raceKey?: string, subraceKey?: string): FixedRa
         spells: [],
         abilityBonuses: {},
         speed: 30,
+        hpPerLevel: 0,
     };
 
     if (!raceKey) return base;

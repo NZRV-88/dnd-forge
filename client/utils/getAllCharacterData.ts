@@ -35,6 +35,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
     const abilityMax: Partial<Record<keyof Abilities, number>> = {};
     let speed: number | undefined;
     let initiativeBonus: number | undefined;
+    let hpPerLevel: number | undefined;
 
     // Отслеживание источников владений
     const proficiencySources: {
@@ -73,6 +74,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
     });
     raceFixed.spells.forEach(sp => spells.add(sp));
     speed = raceFixed.speed;
+    hpPerLevel = raceFixed.hpPerLevel;
     for (const [k, v] of Object.entries(raceFixed.abilityBonuses)) {
         abilityBonuses[k as keyof Abilities] =
             (abilityBonuses[k as keyof Abilities] || 0) + v;
@@ -444,6 +446,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
         abilityMax,
         speed,
         initiativeBonus,
+        hpPerLevel,
         proficiencySources,
         equipment: draft.basics?.equipment || [],
         currency: draft.basics?.currency || null,

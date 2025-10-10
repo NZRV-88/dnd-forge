@@ -14,6 +14,7 @@ import ClassPreviewModal from "@/components/ui/ClassPreviewModal";
 import ClassRemoveModal from "@/components/ui/ClassRemoveModal";
 import HealthSettingsModal from "@/components/ui/HealthSettingsModal";
 import { Spells } from "@/data/spells";
+import { getAllCharacterData } from "@/utils/getAllCharacterData";
 
 const ALL_CLASSES = [
     "fighter",
@@ -43,6 +44,7 @@ function calcMaxHP(
     conMod: number,
     hpMode: "fixed" | "roll",
     hpRolls?: number[],
+    hpPerLevel?: number,
 ) {
     if (!info || level < 1) return 0;
     
@@ -64,6 +66,11 @@ function calcMaxHP(
                 hp += dieValue + conMod;
             }
         }
+    }
+    
+    // Добавляем бонус хитов за уровень от расы/подрасы
+    if (hpPerLevel) {
+        hp += hpPerLevel * level;
     }
     
     return hp;
@@ -110,7 +117,9 @@ export default function ClassPick() {
     const conScore = Number(draft.stats?.con) || 10;
     const conMod = Math.floor((conScore - 10) / 2);
 
-    const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls);
+    // Получаем данные персонажа для hpPerLevel
+    const characterData = getAllCharacterData(draft);
+    const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls, characterData.hpPerLevel);
 
     // Отслеживаем предыдущие значения для определения реальных изменений
     const [prevLevel, setPrevLevel] = useState(draft.basics.level);
