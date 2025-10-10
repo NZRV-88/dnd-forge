@@ -380,16 +380,7 @@ export default function ClassPick() {
         // 3. Проверяем, правильно ли удаляются особенности при понижении уровня
         const cleanedSpells = { ...draft.chosen.spells };
 
-        // 4. Очищаем ASI выборы для уровней выше нового
-        const cleanedAsi = { ...draft.asi };
-        Object.keys(cleanedAsi).forEach(levelKey => {
-            const level = parseInt(levelKey);
-            if (level > newLevel) {
-                delete cleanedAsi[level];
-            }
-        });
-
-        // 5. Очищаем броски HP для уровней выше нового
+        // 4. Очищаем броски HP для уровней выше нового
         let validHpRolls: number[] = [];
         if (draft.hpRolls && draft.hpRolls.length > newLevel - 1) {
             validHpRolls = draft.hpRolls.slice(0, newLevel - 1);
@@ -398,7 +389,6 @@ export default function ClassPick() {
         // Применяем все изменения через setDraft
         setDraft(d => ({
             ...d,
-            asi: cleanedAsi,
             chosen: {
                 ...d.chosen,
                 abilities: cleanedAbilities,
