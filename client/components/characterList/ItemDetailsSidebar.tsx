@@ -85,22 +85,12 @@ export function ItemDetailsSidebar({
             </div>
             {(itemDetails as any).bonusAttack && (
               <div className="text-gray-400">
-                <span className="font-medium text-gray-200">Бонус к атаке:</span> +{(itemDetails as any).bonusAttack}
+                <span className="font-medium text-gray-200">Бонус к атаке:</span> {(itemDetails as any).bonusAttack}
               </div>
             )}
             {(itemDetails as any).bonusDamage && (
               <div className="text-gray-400">
-                <span className="font-medium text-gray-200">Бонус к урону:</span> +{(itemDetails as any).bonusDamage}
-              </div>
-            )}
-            {itemDetails.weight !== undefined && (
-              <div className="text-gray-400">
-                <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
-              </div>
-            )}
-            {itemDetails.cost !== 0 && itemDetails.cost !== '0' && itemDetails.cost !== null && itemDetails.cost !== undefined && (
-              <div className="text-gray-400">
-                <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
+                <span className="font-medium text-gray-200">Бонус к урону:</span> {(itemDetails as any).bonusDamage}
               </div>
             )}
             {(itemDetails as any).properties && (itemDetails as any).properties.length > 0 && (
@@ -111,6 +101,16 @@ export function ItemDetailsSidebar({
             {hasMagicWeaponMastery(itemDetails) && (
               <div className="text-gray-400">
                 <span className="font-medium text-gray-200">Мастерство:</span> {getWeaponMasteryByKey((itemDetails as any).mastery)?.name || (itemDetails as any).mastery}
+              </div>
+            )}
+                        {itemDetails.weight !== undefined && (
+              <div className="text-gray-400">
+                <span className="font-medium text-gray-200">Вес:</span> {itemDetails.weight} фнт.
+              </div>
+            )}
+            {itemDetails.cost !== 0 && itemDetails.cost !== '0' && itemDetails.cost !== null && itemDetails.cost !== undefined && (
+              <div className="text-gray-400">
+                <span className="font-medium text-gray-200">Стоимость:</span> {itemDetails.cost}
               </div>
             )}
           </>

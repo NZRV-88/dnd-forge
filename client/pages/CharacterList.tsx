@@ -318,7 +318,8 @@ export default function CharacterList() {
 
 
     // speed, initiative, hpMax, proficiency
-    const speed = (b.speed || 30) + (finalStats as any)._extraSpeed;
+    const speed = getEffectiveSpeed(char.race, char.subrace);
+    // const speed = (b.speed || 30) + (finalStats as any)._extraSpeed;
     const initiative =
         Math.floor((((finalStats as any).dex || 0) - 10) / 2) +
         ((finalStats as any)._extraInitiative || 0);
