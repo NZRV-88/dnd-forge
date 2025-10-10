@@ -987,6 +987,13 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     const level = parseInt(levelMatch[1]);
                                     isAsiLevel = [4, 6, 8, 12, 14, 16, 19].includes(level);
                                 }
+                            } else if (draft.basics.class && source.startsWith(draft.basics.class + '-')) {
+                                // Проверяем формат class-level-index- (например, paladin-4-0-)
+                                const levelMatch = source.match(new RegExp(`^${draft.basics.class}-(\\d+)-`));
+                                if (levelMatch) {
+                                    const level = parseInt(levelMatch[1]);
+                                    isAsiLevel = [4, 6, 8, 12, 14, 16, 19].includes(level);
+                                }
                             }
                             
                             const finalIsAsi = isAsi || isAsiLevel;
