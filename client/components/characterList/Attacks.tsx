@@ -17,6 +17,7 @@ import { LANGUAGES } from "@/data/languages/languages";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import LayOnHandsManager from "@/components/ui/LayOnHandsManager";
 import ChannelDivinityManager from "@/components/ui/ChannelDivinityManager";
+import AuraManager from "@/components/ui/AuraManager";
 import { ItemDetailsSidebar } from "@/components/characterList/ItemDetailsSidebar";
 import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X, Zap, Wand, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -6203,6 +6204,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         />
                       );
                     })()}
+                    <AuraManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
                   </div>
                 </div>
               )}
