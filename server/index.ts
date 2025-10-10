@@ -4,6 +4,7 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { handleNameGenerator } from "./routes/name-generator";
 import { handleAdvancedNameGenerator } from "./routes/advanced-name-generator";
+import { shareToTelegram, shareToVK } from "./routes/share-roll";
 
 export function createServer() {
   const app = express();
@@ -26,6 +27,10 @@ export function createServer() {
   
   // Advanced name generator API (syllable-based) - прокси к основному файлу
   app.post("/api/advanced-name-generator", handleAdvancedNameGenerator);
+
+  // Social sharing API
+  app.post("/api/share/telegram", shareToTelegram);
+  app.post("/api/share/vk", shareToVK);
 
   return app;
 }
