@@ -470,7 +470,10 @@ export default function ClassPick() {
             cleanedCount: cleanedFeats.length,
             removedCount: draft.chosen.feats.length - cleanedFeats.length,
             originalFeats: draft.chosen.feats,
-            cleanedFeats
+            cleanedFeats,
+            willDecrease: draft.basics.level > newLevel,
+            currentLevel: draft.basics.level,
+            newLevel
         });
 
         // 5. Очищаем броски HP для уровней выше нового
