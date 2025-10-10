@@ -51,7 +51,9 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
     subclass,
     channelDivinity: channelDivinity ? 'exists' : 'null',
     draftSubclass: draft.basics?.subclass,
-    draftClass: draft.basics?.class
+    draftClass: draft.basics?.class,
+    isOathOfVengeance: subclass === 'oath-of-vengeance',
+    shouldShowVowOfEnmity: subclass === 'oath-of-vengeance' && level >= 3
   });
 
   if (!channelDivinity) {
