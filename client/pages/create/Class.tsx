@@ -380,16 +380,15 @@ export default function ClassPick() {
         // 3. Проверяем, правильно ли удаляются особенности при понижении уровня
         const cleanedSpells = { ...draft.chosen.spells };
 
-        // 4. Очищаем ASI выборы для уровней выше нового
-        const cleanedAsi = { ...draft.asi };
-        Object.keys(cleanedAsi).forEach(levelKey => {
-            const level = parseInt(levelKey);
-            if (level > newLevel) {
-                delete cleanedAsi[level];
-            }
+        // 4. Очищаем ASI черты из draft.chosen.feats для уровней выше нового
+        console.log('🧹 Очистка ASI черт:', {
+            currentLevel: draft.basics.level,
+            newLevel,
+            classKey: info.key,
+            allFeats: draft.chosen.feats,
+            willDecrease: draft.basics.level > newLevel
         });
-
-        // 4.1. Очищаем ASI черты из draft.chosen.feats для уровней выше нового
+        
         const cleanedFeats = draft.chosen.feats.filter(featKey => {
             // Проверяем, является ли это ASI чертой для уровня выше нового
             // Формат: paladin-4-0:great-weapon-master
@@ -397,12 +396,30 @@ export default function ClassPick() {
             if (match) {
                 const [, classKey, levelStr, idxStr, featName] = match;
                 const level = parseInt(levelStr);
+                console.log('🔍 Проверяем черту:', {
+                    featKey,
+                    classKey,
+                    level,
+                    featName,
+                    isCurrentClass: classKey === info.key,
+                    isLevelAbove: level > newLevel,
+                    shouldRemove: classKey === info.key && level > newLevel
+                });
                 // Если это черта от ASI особенности класса и уровень выше нового
                 if (classKey === info.key && level > newLevel) {
+                    console.log('❌ Удаляем черту:', featKey);
                     return false; // Удаляем эту черту
                 }
             }
             return true; // Оставляем все остальные черты
+        });
+        
+        console.log('✅ Результат очистки черт:', {
+            originalCount: draft.chosen.feats.length,
+            cleanedCount: cleanedFeats.length,
+            removedCount: draft.chosen.feats.length - cleanedFeats.length,
+            originalFeats: draft.chosen.feats,
+            cleanedFeats
         });
 
         // 5. Очищаем броски HP для уровней выше нового
@@ -414,7 +431,6 @@ export default function ClassPick() {
         // Применяем все изменения через setDraft
         setDraft(d => ({
             ...d,
-            asi: cleanedAsi,
             chosen: {
                 ...d.chosen,
                 abilities: cleanedAbilities,
