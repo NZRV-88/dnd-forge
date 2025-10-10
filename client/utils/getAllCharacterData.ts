@@ -203,6 +203,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
                 }
 
                 // Бонусы скорости, инициативы и прочее можешь тоже здесь учитывать при расширении
+                }
             }
         }
     }
@@ -499,3 +500,4 @@ export function mapKeyToProficiency(key: string): Proficiency | null {
     console.warn("[mapKeyToProficiency] неизвестный ключ:", key);
     return null;
 }
+
