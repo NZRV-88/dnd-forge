@@ -389,6 +389,16 @@ export default function ClassPick() {
             willDecrease: draft.basics.level > newLevel
         });
         
+        // Подробно показываем каждую черту
+        draft.chosen.feats.forEach((feat, index) => {
+            console.log(`📋 Черта ${index}:`, {
+                featKey: feat,
+                length: feat.length,
+                parts: feat.split(':'),
+                matchResult: feat.match(/^(\w+)-(\d+)-(\d+):(.+)$/)
+            });
+        });
+        
         const cleanedFeats = draft.chosen.feats.filter(featKey => {
             // Проверяем, является ли это ASI чертой для уровня выше нового
             // Формат: paladin-4-0:great-weapon-master
