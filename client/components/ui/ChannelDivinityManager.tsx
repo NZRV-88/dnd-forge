@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Eye, RotateCcw, ChevronDown, Loader2, Clock, Moon } from 'lucide-react';
+import { Eye, RotateCcw, ChevronDown, Loader2, Clock, Moon, Zap } from 'lucide-react';
 import { useCharacter } from '@/store/character';
 
 interface ChannelDivinityManagerProps {
@@ -14,6 +14,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6' }
   const [isUsing, setIsUsing] = useState(false);
   const [isShortResting, setIsShortResting] = useState(false);
   const [isLongResting, setIsLongResting] = useState(false);
+  const [selectedEffect, setSelectedEffect] = useState<'divine-sense' | 'turn-undead'>('divine-sense');
 
   // Инициализируем Проведение божественности, если его еще нет
   React.useEffect(() => {
@@ -96,22 +97,83 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6' }
               {/* Эффекты Проведения божественности */}
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-200 mb-2">Доступные эффекты:</h4>
-                <div className="bg-neutral-800 rounded-lg p-3">
-                  <div className="flex items-start gap-2">
-                    <Eye className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h5 className="text-sm font-medium text-white">Божественное чувство</h5>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Бонусным действием вы можете открыть свое сознание для обнаружения Исчадий, Небожителей и Нежити. 
-                        В течение следующих 10 минут или пока вы не получите состояние Недееспособный, вы знаете местоположение 
-                        всех существ перечисленных типов в пределах 60 футов от вас и какие у этих существ типы.
-                      </p>
+                <div className="space-y-3">
+                  {/* Божественное чувство (доступно с 3-го уровня) */}
+                  <div className="bg-neutral-800 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <Eye className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h5 className="text-sm font-medium text-white">Божественное чувство</h5>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Бонусным действием вы можете открыть свое сознание для обнаружения Исчадий, Небожителей и Нежити. 
+                          В течение следующих 10 минут или пока вы не получите состояние Недееспособный, вы знаете местоположение 
+                          всех существ перечисленных типов в пределах 60 футов от вас и какие у этих существ типы.
+                        </p>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Порицание врагов (доступно с 9-го уровня) */}
+                  {level >= 9 && (
+                    <div className="bg-neutral-800 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="text-sm font-medium text-white">Порицание врагов</h5>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Действием Магия вы можете потратить одно использование Проведения божественности этого класса, 
+                            чтобы повергнуть врагов в благоговейный трепет. Продемонстрировав ваш Священный символ или оружие, 
+                            вы можете нацелиться на видимых вами в пределах 60 футов от вас существ количеством не больше 
+                            вашего модификатора Харизмы (минимум одно существо). Каждая цель должна преуспеть в спасброске 
+                            Мудрости, иначе получит состояние Испуганный на 1 минуту или пока не получит урон.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="flex flex-col space-y-3">
+                {/* Выбор эффекта */}
+                {level >= 9 && (
+                  <div className="mb-3">
+                    <h5 className="text-sm font-medium text-gray-200 mb-2">Выберите эффект:</h5>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setSelectedEffect('divine-sense')}
+                        className={`flex-1 text-xs ${
+                          selectedEffect === 'divine-sense' 
+                            ? 'bg-opacity-20' 
+                            : 'bg-transparent hover:bg-opacity-10'
+                        }`}
+                        style={{ 
+                          border: `1px solid ${frameColor}`,
+                          color: frameColor,
+                          backgroundColor: selectedEffect === 'divine-sense' ? `${frameColor}40` : 'transparent'
+                        }}
+                      >
+                        Божественное чувство
+                      </Button>
+                      <Button
+                        onClick={() => setSelectedEffect('turn-undead')}
+                        className={`flex-1 text-xs ${
+                          selectedEffect === 'turn-undead' 
+                            ? 'bg-opacity-20' 
+                            : 'bg-transparent hover:bg-opacity-10'
+                        }`}
+                        style={{ 
+                          border: `1px solid ${frameColor}`,
+                          color: frameColor,
+                          backgroundColor: selectedEffect === 'turn-undead' ? `${frameColor}40` : 'transparent'
+                        }}
+                      >
+                        Порицание врагов
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Кнопка использования */}
                 <Button
                   onClick={handleUseChannelDivinity}
@@ -134,8 +196,12 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6' }
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <Eye className="w-4 h-4 mr-2" />
-                      ИСПОЛЬЗОВАТЬ ПРОВЕДЕНИЕ БОЖЕСТВЕННОСТИ
+                      {selectedEffect === 'divine-sense' ? (
+                        <Eye className="w-4 h-4 mr-2" />
+                      ) : (
+                        <Zap className="w-4 h-4 mr-2" />
+                      )}
+                      {selectedEffect === 'divine-sense' ? 'БОЖЕСТВЕННОЕ ЧУВСТВО' : 'ПОРИЦАНИЕ ВРАГОВ'}
                     </>
                   )}
                 </Button>
