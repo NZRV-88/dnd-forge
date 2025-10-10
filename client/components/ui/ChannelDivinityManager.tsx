@@ -236,6 +236,28 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                       </div>
                     </div>
                   )}
+
+                  {/* Гнев природы (доступно для Клятвы Древних с 3-го уровня) */}
+                  {actualSubclass === 'oath-of-the-ancients' && (
+                    <div className="bg-neutral-800 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="text-sm font-medium text-white">Гнев природы</h5>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Действием Магия вы можете потратить одно использование Проведения божественности этого класса, 
+                            чтобы призвать призрачные лозы, опутывающие врагов. Выберите видимых вами в пределах 15 футов 
+                            от вас существ.
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Выбранные существа должны преуспеть в спасброске Силы, иначе получат состояние Опутанный 
+                            на 1 минуту. Существо с этим состоянием повторяет спасбросок в конце каждого из своих ходов, 
+                            при успехе оканчивая на себе это состояние.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
