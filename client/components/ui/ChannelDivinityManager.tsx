@@ -27,6 +27,14 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
   const channelDivinity = draft.channelDivinity;
   if (!channelDivinity) return null;
 
+  // Отладочная информация
+  console.log('ChannelDivinityManager debug:', {
+    level,
+    subclass,
+    channelDivinity: channelDivinity ? 'exists' : 'null',
+    draftSubclass: draft.basics?.subclass
+  });
+
   const maxUses = level >= 11 ? 3 : 2;
   const currentUses = channelDivinity.currentUses;
   const percentage = (currentUses / maxUses) * 100;
