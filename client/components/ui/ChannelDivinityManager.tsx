@@ -194,6 +194,48 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                       </div>
                     </div>
                   )}
+
+                  {/* Воодушевляющий удар (доступно для Клятвы славы с 3-го уровня) */}
+                  {actualSubclass === 'oath-of-glory' && (
+                    <div className="bg-neutral-800 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="text-sm font-medium text-white">Воодушевляющий удар</h5>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Немедленно после сотворения Божественной кары вы можете потратить одно использование вашего 
+                            Проведения божественности и распределить Временные хиты существам в пределах 30 футов от вас 
+                            на ваш выбор (можно выбрать себя).
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Общее количество Временных хитов равно 2к8 + ваш уровень Паладина; вы распределяете 
+                            Временные хиты на своё усмотрение.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Несравненный атлет (доступно для Клятвы славы с 3-го уровня) */}
+                  {actualSubclass === 'oath-of-glory' && (
+                    <div className="bg-neutral-800 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="text-sm font-medium text-white">Несравненный атлет</h5>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Бонусным действием вы можете потратить одно использование вашего Проведения божественности, 
+                            чтобы усилить свой атлетизм. В течение 1 часа вы совершаете с Преимуществом проверки 
+                            Силы (Атлетика) и Ловкости (Акробатика).
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Дальность ваших Прыжков в длину и в высоту увеличивается на 10 футов (это дополнительное 
+                            расстояние требует траты перемещения, как обычно).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
