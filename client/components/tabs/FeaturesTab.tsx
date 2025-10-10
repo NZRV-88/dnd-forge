@@ -36,49 +36,19 @@ export default function FeaturesTab({
   const getCharacterFeats = () => {
     const allFeats: any[] = [];
     
-    if (!characterData?.chosen?.feats) return allFeats;
+    if (!characterData?.feats) return allFeats;
     
-    // Добавляем черты класса
-    if (characterData.chosen.feats.class) {
-      characterData.chosen.feats.class.forEach((featKey: string) => {
-        const feat = ALL_FEATS.find(f => f.key === featKey);
-        if (feat) {
-          allFeats.push({
-            ...feat,
-            source: 'class',
-            choices: getFeatChoices(featKey)
-          });
-        }
-      });
-    }
-    
-    // Добавляем черты подрасы
-    if (characterData.chosen.feats.subrace) {
-      characterData.chosen.feats.subrace.forEach((featKey: string) => {
-        const feat = ALL_FEATS.find(f => f.key === featKey);
-        if (feat) {
-          allFeats.push({
-            ...feat,
-            source: 'subrace',
-            choices: getFeatChoices(featKey)
-          });
-        }
-      });
-    }
-    
-    // Добавляем черты фона
-    if (characterData.chosen.feats.background) {
-      characterData.chosen.feats.background.forEach((featKey: string) => {
-        const feat = ALL_FEATS.find(f => f.key === featKey);
-        if (feat) {
-          allFeats.push({
-            ...feat,
-            source: 'background',
-            choices: getFeatChoices(featKey)
-          });
-        }
-      });
-    }
+    // Добавляем черты из characterData.feats (массив строк)
+    characterData.feats.forEach((featKey: string) => {
+      const feat = ALL_FEATS.find(f => f.key === featKey);
+      if (feat) {
+        allFeats.push({
+          ...feat,
+          source: 'character',
+          choices: getFeatChoices(featKey)
+        });
+      }
+    });
     
     return allFeats;
   };
@@ -87,7 +57,15 @@ export default function FeaturesTab({
   const getCharacterFightingStyles = () => {
     if (!draft?.chosen?.fightingStyle) return [];
     
-    return draft.chosen.fightingStyle.map((styleKey: string) => {
+    // Собираем все боевые стили из всех источников
+    const allFightingStyles: string[] = [];
+    Object.values(draft.chosen.fightingStyle).forEach(styles => {
+      if (Array.isArray(styles)) {
+        allFightingStyles.push(...styles);
+      }
+    });
+    
+    return allFightingStyles.map(styleKey => {
       const style = FIGHTING_STYLES.find(s => s.key === styleKey);
       return style ? { ...style, source: 'class' } : null;
     }).filter(Boolean);
@@ -116,7 +94,7 @@ export default function FeaturesTab({
       const searchLower = fightingStyleSearch.toLowerCase();
       styles = styles.filter(style => 
         style.name.toLowerCase().includes(searchLower) ||
-        style.description.toLowerCase().includes(searchLower)
+        style.desc.toLowerCase().includes(searchLower)
       );
     }
     
@@ -163,7 +141,7 @@ export default function FeaturesTab({
       {/* Боевые стили */}
       {filteredFightingStyles.length > 0 && (
         <div className="mb-6">
-          <DynamicFrame frameType="actions" className="w-full">
+          <DynamicFrame frameType="action" className="w-full">
             <div className="p-4">
               <h3 className="text-lg font-semibold text-gray-200 mb-3">Боевые стили</h3>
               
@@ -196,10 +174,10 @@ export default function FeaturesTab({
                     </CollapsibleTrigger>
                     <CollapsibleContent className="p-3 bg-gray-700 rounded-lg mt-2">
                       <div className="text-sm text-gray-300">
-                        <p className="mb-2">{style.description}</p>
-                        {style.effects && (
+                        <p className="mb-2">{style.desc}</p>
+                        {style.effect && (
                           <div className="text-xs text-gray-400">
-                            <p><strong>Эффекты:</strong> {style.effects}</p>
+                            <p><strong>Эффекты:</strong> {JSON.stringify(style.effect)}</p>
                           </div>
                         )}
                       </div>
@@ -214,7 +192,7 @@ export default function FeaturesTab({
 
       {/* Черты */}
       <div className="flex-1 overflow-y-auto">
-        <DynamicFrame frameType="actions" className="w-full">
+        <DynamicFrame frameType="action" className="w-full">
           <div className="p-4">
             <h3 className="text-lg font-semibold text-gray-200 mb-3">Черты</h3>
             
