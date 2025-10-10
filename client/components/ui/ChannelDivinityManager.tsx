@@ -8,14 +8,17 @@ interface ChannelDivinityManagerProps {
   level: number;
   frameColor?: string;
   subclass?: string;
+  draft?: any;
 }
 
-export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', subclass }: ChannelDivinityManagerProps) {
+export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', subclass, draft: passedDraft }: ChannelDivinityManagerProps) {
   const characterContext = useCharacter();
   
   console.log('ChannelDivinityManager context check:', {
     hasContext: !!characterContext,
-    contextKeys: characterContext ? Object.keys(characterContext) : 'no context'
+    contextKeys: characterContext ? Object.keys(characterContext) : 'no context',
+    passedDraft: !!passedDraft,
+    passedSubclass: subclass
   });
   
   if (!characterContext) {
@@ -24,6 +27,20 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
   }
   
   const { draft, initializeChannelDivinity, useChannelDivinity, shortRestChannelDivinity, longRestChannelDivinity } = characterContext;
+  
+  // Используем переданный draft или контекстный
+  const currentDraft = passedDraft || draft;
+  
+  // Проверяем подкласс из разных источников
+  const actualSubclass = subclass || currentDraft?.basics?.subclass || currentDraft?.subclass;
+  
+  console.log('ChannelDivinityManager subclass sources:', {
+    propSubclass: subclass,
+    draftBasicsSubclass: currentDraft?.basics?.subclass,
+    draftSubclass: currentDraft?.subclass,
+    actualSubclass,
+    isOathOfVengeance: actualSubclass === 'oath-of-vengeance'
+  });
   const [isUsing, setIsUsing] = useState(false);
   const [isShortResting, setIsShortResting] = useState(false);
   const [isLongResting, setIsLongResting] = useState(false);
@@ -32,28 +49,28 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
   // Инициализируем Проведение божественности, если его еще нет
   React.useEffect(() => {
     console.log('ChannelDivinityManager useEffect:', {
-      hasChannelDivinity: !!draft.channelDivinity,
+      hasChannelDivinity: !!currentDraft.channelDivinity,
       level,
-      shouldInitialize: !draft.channelDivinity && level >= 3
+      shouldInitialize: !currentDraft.channelDivinity && level >= 3
     });
     
-    if (!draft.channelDivinity && level >= 3) {
+    if (!currentDraft.channelDivinity && level >= 3) {
       console.log('Initializing Channel Divinity for level:', level);
       initializeChannelDivinity(level);
     }
-  }, [level, initializeChannelDivinity, draft.channelDivinity]);
+  }, [level, initializeChannelDivinity, currentDraft.channelDivinity]);
 
-  const channelDivinity = draft.channelDivinity;
+  const channelDivinity = currentDraft.channelDivinity;
   
   // Отладочная информация
   console.log('ChannelDivinityManager debug:', {
     level,
-    subclass,
+    actualSubclass,
     channelDivinity: channelDivinity ? 'exists' : 'null',
-    draftSubclass: draft.basics?.subclass,
-    draftClass: draft.basics?.class,
-    isOathOfVengeance: subclass === 'oath-of-vengeance',
-    shouldShowVowOfEnmity: subclass === 'oath-of-vengeance' && level >= 3
+    draftSubclass: currentDraft.basics?.subclass,
+    draftClass: currentDraft.basics?.class,
+    isOathOfVengeance: actualSubclass === 'oath-of-vengeance',
+    shouldShowVowOfEnmity: actualSubclass === 'oath-of-vengeance' && level >= 3
   });
 
   if (!channelDivinity) {
@@ -168,7 +185,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   )}
 
                   {/* Обет вражды (доступно для Клятвы возмездия с 3-го уровня) */}
-                  {subclass === 'oath-of-vengeance' && (
+                  {actualSubclass === 'oath-of-vengeance' && (
                     <div className="bg-neutral-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
                         <Zap className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
@@ -192,7 +209,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
 
               <div className="flex flex-col space-y-3">
                 {/* Выбор эффекта */}
-                {(level >= 9 || subclass === 'oath-of-vengeance') && (
+                {(level >= 9 || actualSubclass === 'oath-of-vengeance') && (
                   <div className="mb-3">
                     <h5 className="text-sm font-medium text-gray-200 mb-2">Выберите эффект:</h5>
                     <div className="flex gap-2">
@@ -228,7 +245,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                           Порицание врагов
                         </Button>
                       )}
-                      {subclass === 'oath-of-vengeance' && (
+                      {actualSubclass === 'oath-of-vengeance' && (
                         <Button
                           onClick={() => setSelectedEffect('vow-of-enmity')}
                           className={`flex-1 text-xs ${

@@ -6199,7 +6199,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         subclass,
                         channelDivinity: channelDivinity ? 'exists' : 'null',
                         shouldShow: level >= 3,
-                        draftClass: draft.basics.class
+                        draftClass: draft.basics.class,
+                        draftBasics: draft.basics,
+                        draftKeys: Object.keys(draft)
                       });
                       
                       return level >= 3 && (
