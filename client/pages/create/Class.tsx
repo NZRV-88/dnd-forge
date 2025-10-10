@@ -73,6 +73,18 @@ function calcMaxHP(
         hp += hpPerLevel * level;
     }
     
+    console.log('🔍 calcMaxHP debug:', {
+        hitDie,
+        level,
+        conMod,
+        hpMode,
+        hpPerLevel,
+        baseHp: hitDie + conMod,
+        additionalHp: level > 1 ? (hpMode === "fixed" ? (level - 1) * (Math.ceil(hitDie / 2) + 1 + conMod) : 'rolled') : 0,
+        raceBonus: hpPerLevel ? hpPerLevel * level : 0,
+        totalHp: hp
+    });
+    
     return hp;
 }
 
@@ -119,6 +131,13 @@ export default function ClassPick() {
 
     // Получаем данные персонажа для hpPerLevel
     const characterData = getAllCharacterData(draft);
+    console.log('🔍 Character data debug:', {
+        race: draft.basics.race,
+        subrace: draft.basics.subrace,
+        hpPerLevel: characterData.hpPerLevel,
+        conScore,
+        conMod
+    });
     const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls, characterData.hpPerLevel);
 
     // Отслеживаем предыдущие значения для определения реальных изменений
