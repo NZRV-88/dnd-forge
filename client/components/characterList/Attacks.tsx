@@ -6189,13 +6189,27 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   </h3>
                   <div className="space-y-3">
                     <LayOnHandsManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
-                    {(draft.basics.level || 1) >= 3 && (
-                      <ChannelDivinityManager 
-                        level={draft.basics.level || 1} 
-                        frameColor={getFrameColor(frameColor)}
-                        subclass={draft.basics.subclass}
-                      />
-                    )}
+                    {(() => {
+                      const level = draft.basics.level || 1;
+                      const subclass = draft.basics.subclass;
+                      const channelDivinity = draft.channelDivinity;
+                      
+                      console.log('Attacks.tsx Channel Divinity check:', {
+                        level,
+                        subclass,
+                        channelDivinity: channelDivinity ? 'exists' : 'null',
+                        shouldShow: level >= 3,
+                        draftClass: draft.basics.class
+                      });
+                      
+                      return level >= 3 && (
+                        <ChannelDivinityManager 
+                          level={level} 
+                          frameColor={getFrameColor(frameColor)}
+                          subclass={subclass}
+                        />
+                      );
+                    })()}
                   </div>
                 </div>
               )}

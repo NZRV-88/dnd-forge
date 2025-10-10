@@ -11,7 +11,19 @@ interface ChannelDivinityManagerProps {
 }
 
 export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', subclass }: ChannelDivinityManagerProps) {
-  const { draft, initializeChannelDivinity, useChannelDivinity, shortRestChannelDivinity, longRestChannelDivinity } = useCharacter();
+  const characterContext = useCharacter();
+  
+  console.log('ChannelDivinityManager context check:', {
+    hasContext: !!characterContext,
+    contextKeys: characterContext ? Object.keys(characterContext) : 'no context'
+  });
+  
+  if (!characterContext) {
+    console.log('ChannelDivinityManager: No character context available');
+    return null;
+  }
+  
+  const { draft, initializeChannelDivinity, useChannelDivinity, shortRestChannelDivinity, longRestChannelDivinity } = characterContext;
   const [isUsing, setIsUsing] = useState(false);
   const [isShortResting, setIsShortResting] = useState(false);
   const [isLongResting, setIsLongResting] = useState(false);
@@ -19,7 +31,14 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
 
   // Инициализируем Проведение божественности, если его еще нет
   React.useEffect(() => {
+    console.log('ChannelDivinityManager useEffect:', {
+      hasChannelDivinity: !!draft.channelDivinity,
+      level,
+      shouldInitialize: !draft.channelDivinity && level >= 3
+    });
+    
     if (!draft.channelDivinity && level >= 3) {
+      console.log('Initializing Channel Divinity for level:', level);
       initializeChannelDivinity(level);
     }
   }, [level, initializeChannelDivinity, draft.channelDivinity]);
