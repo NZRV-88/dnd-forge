@@ -380,22 +380,36 @@ export default function ClassPick() {
         // 3. Очищаем заклинания, полученные через особенности класса
         const cleanedSpells = { ...draft.chosen.spells };
         
+        console.log('🔍 Очистка заклинаний особенностей:', {
+            newLevel,
+            classSpellsFromFeatures,
+            allSpellKeys: Object.keys(cleanedSpells)
+        });
+        
         // Удаляем заклинания из особенностей для уровней выше нового
         Object.keys(cleanedSpells).forEach(spellKey => {
             if (spellKey.startsWith('feature-')) {
+                console.log('🎯 Проверяем ключ заклинаний:', spellKey);
                 // Это заклинания из особенностей класса
                 const featureSpells = cleanedSpells[spellKey] || [];
+                console.log('📜 Заклинания в ключе:', featureSpells);
+                
                 const validFeatureSpells = featureSpells.filter((spell: any) => {
                     const spellName = typeof spell === 'string' ? spell : spell.name;
-                    // Проверяем, должно ли это заклинание быть доступно на новом уровне
-                    return classSpellsFromFeatures.includes(spellName);
+                    const isValid = classSpellsFromFeatures.includes(spellName);
+                    console.log('✨ Проверка заклинания:', { spellName, isValid });
+                    return isValid;
                 });
+                
+                console.log('✅ Валидные заклинания:', validFeatureSpells);
                 
                 if (validFeatureSpells.length === 0) {
                     // Если не осталось валидных заклинаний, удаляем весь ключ
+                    console.log('🗑️ Удаляем ключ:', spellKey);
                     delete cleanedSpells[spellKey];
                 } else {
                     // Иначе оставляем только валидные заклинания
+                    console.log('💾 Сохраняем ключ с заклинаниями:', spellKey, validFeatureSpells);
                     cleanedSpells[spellKey] = validFeatureSpells;
                 }
             }
@@ -443,19 +457,25 @@ export default function ClassPick() {
     const getClassSpellsFromFeatures = (classInfo: ClassInfo, maxLevel: number) => {
         const spells: string[] = [];
         
+        console.log('🔍 getClassSpellsFromFeatures:', { maxLevel, className: classInfo.key });
+        
         // Проходим по всем уровням от 1 до maxLevel
         for (let level = 1; level <= maxLevel; level++) {
             const features = classInfo.features[level as keyof typeof classInfo.features];
             if (features) {
+                console.log(`📋 Уровень ${level}, особенности:`, features.length);
                 features.forEach(feature => {
+                    console.log('🎯 Особенность:', feature.name);
                     // Проверяем, есть ли у особенности поле spells
                     if ((feature as any).spells && Array.isArray((feature as any).spells)) {
+                        console.log('✨ Заклинания в особенности:', (feature as any).spells);
                         spells.push(...(feature as any).spells);
                     }
                 });
             }
         }
         
+        console.log('📜 Итоговые заклинания особенностей:', spells);
         return spells;
     };
 
