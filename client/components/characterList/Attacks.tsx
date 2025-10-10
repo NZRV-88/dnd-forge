@@ -429,21 +429,27 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     
     // Добавляем заклинания, которые дает класс автоматически
     if (characterData?.class?.features) {
-      Object.values(characterData.class.features).flat().forEach((feature: any) => {
-        if (feature.spells && Array.isArray(feature.spells)) {
-          feature.spells.forEach((spellKey: string) => {
-            if (!addedKeys.has(spellKey)) {
-              const spellData = getSpellData(spellKey);
-              if (spellData) {
-                allSpells.push({
-                  ...spellData,
-                  key: spellKey,
-                  level: spellData.level || 1,
-                  isCantrip: spellData.level === 0,
-                  isClassFeature: true // Помечаем как заклинание от особенности класса
-                });
-                addedKeys.add(spellKey);
-              }
+      Object.entries(characterData.class.features).forEach(([level, features]) => {
+        const levelNum = parseInt(level);
+        // Добавляем заклинания только для особенностей текущего уровня и ниже
+        if (levelNum <= characterData.level) {
+          (features as any[]).forEach((feature: any) => {
+            if (feature.spells && Array.isArray(feature.spells)) {
+              feature.spells.forEach((spellKey: string) => {
+                if (!addedKeys.has(spellKey)) {
+                  const spellData = getSpellData(spellKey);
+                  if (spellData) {
+                    allSpells.push({
+                      ...spellData,
+                      key: spellKey,
+                      level: spellData.level || 1,
+                      isCantrip: spellData.level === 0,
+                      isClassFeature: true // Помечаем как заклинание от особенности класса
+                    });
+                    addedKeys.add(spellKey);
+                  }
+                }
+              });
             }
           });
         }

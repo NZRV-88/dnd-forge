@@ -378,19 +378,6 @@ export default function ClassPick() {
         }
 
         // 3. Проверяем, правильно ли удаляются особенности при понижении уровня
-        console.log('🔍 Проверка особенностей:', {
-            newLevel,
-            currentLevel: draft.basics.level,
-            featuresBeforeCleanup: Object.keys(draft.chosen.features || {}),
-            featuresAfterCleanup: Object.keys(cleanedFeatures)
-        });
-        
-        // Ищем особенность "Верный скакун" в удаленных особенностях
-        const removedFeatures = Object.keys(draft.chosen.features || {}).filter(key => 
-            !Object.keys(cleanedFeatures).includes(key)
-        );
-        console.log('🗑️ Удаленные особенности:', removedFeatures);
-        
         const cleanedSpells = { ...draft.chosen.spells };
 
         // 4. Очищаем броски HP для уровней выше нового
