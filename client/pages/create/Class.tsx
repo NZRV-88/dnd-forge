@@ -300,7 +300,7 @@ export default function ClassPick() {
         };
 
         // 1. Очищаем выборы класса по уровням
-        const cleanedAbilities = cleanupChoicesByLevel(draft.chosen.abilities, newLevel);
+        const cleanedAbilitiesBase = cleanupChoicesByLevel(draft.chosen.abilities, newLevel);
         const cleanedSkills = cleanupChoicesByLevel(draft.chosen.skills, newLevel);
         const cleanedTools = cleanupChoicesByLevel(draft.chosen.tools, newLevel);
         const cleanedToolProficiencies = cleanupChoicesByLevel(draft.chosen.toolProficiencies, newLevel);
@@ -388,6 +388,23 @@ export default function ClassPick() {
             allFeats: draft.chosen.feats,
             willDecrease: draft.basics.level > newLevel
         });
+        
+        // Также очищаем выборы характеристик для ASI особенностей уровней выше нового
+        const cleanedAbilitiesForAsi = { ...draft.chosen.abilities };
+        Object.keys(cleanedAbilitiesForAsi).forEach(abilityKey => {
+            // Проверяем, является ли это ASI выбором для уровня выше нового
+            const levelMatch = abilityKey.match(new RegExp(`^${info.key}-(\\d+)-`));
+            if (levelMatch) {
+                const level = parseInt(levelMatch[1]);
+                if (level > newLevel) {
+                    console.log('🗑️ Удаляем выборы характеристик для ASI уровня:', abilityKey, level);
+                    delete cleanedAbilitiesForAsi[abilityKey];
+                }
+            }
+        });
+        
+        // Объединяем очистку обычных выборов характеристик с очисткой ASI выборов
+        const cleanedAbilities = { ...cleanedAbilitiesBase, ...cleanedAbilitiesForAsi };
         
         // Подробно показываем каждую черту
         draft.chosen.feats.forEach((feat, index) => {
