@@ -6348,19 +6348,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               )}
 
               {/* Боевые стили */}
-              {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'fighting-styles') && (
+              {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'fighting-styles') && getCharacterFightingStyles().length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
                     БОЕВЫЕ СТИЛИ
                   </h3>
-                  {getFilteredFightingStyles().length === 0 ? (
-                    <p className="text-gray-400 text-sm py-4">
-                      Боевые стили отсутствуют
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {getFilteredFightingStyles().map((style, index) => (
+                  <div className="space-y-2">
+                    {getFilteredFightingStyles().map((style, index) => (
                         <div key={index} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
                           <Collapsible>
                             <CollapsibleTrigger asChild>
@@ -6381,8 +6376,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           </Collapsible>
                         </div>
                       ))}
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
