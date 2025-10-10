@@ -383,8 +383,12 @@ export default function ClassPick() {
         console.log('🔍 Очистка заклинаний особенностей:', {
             newLevel,
             classSpellsFromFeatures,
-            allSpellKeys: Object.keys(cleanedSpells),
-            allSpellKeysDetails: Object.keys(cleanedSpells).map(key => ({ key, spells: cleanedSpells[key] }))
+            allSpellKeys: Object.keys(cleanedSpells)
+        });
+        
+        // Детальная информация о каждом ключе
+        Object.keys(cleanedSpells).forEach(key => {
+            console.log(`📋 Ключ заклинаний: "${key}"`, cleanedSpells[key]);
         });
         
         // Удаляем заклинания из особенностей для уровней выше нового
