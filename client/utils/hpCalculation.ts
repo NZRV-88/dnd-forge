@@ -28,6 +28,15 @@ export function calculateMaxHP(
         characterData = getAllCharacterData(draft);
     } catch (error) {
         console.warn('Error getting character data, using fallback calculation:', error);
+        console.log('Fallback calculation params:', {
+            classKey: actualClassKey,
+            level: actualLevel,
+            hpMode: actualHpMode,
+            hpRolls: actualHpRolls,
+            conScore: draft.stats?.con || 10,
+            race: race || draft.basics?.race,
+            subrace: subrace || draft.basics?.subrace
+        });
         // Fallback calculation с попыткой получить hpPerLevel из расы
         return calculateMaxHPFallback(actualClassKey, actualLevel, actualHpMode, actualHpRolls, draft.stats?.con || 10, race || draft.basics?.race, subrace || draft.basics?.subrace);
     }
@@ -76,8 +85,10 @@ export function calculateMaxHP(
     // Добавляем бонус хитов за уровень от расы/подрасы
     if (characterData.hpPerLevel) {
         hp += characterData.hpPerLevel * actualLevel;
+        console.log('Main calculation - hpPerLevel applied:', characterData.hpPerLevel * actualLevel);
     }
     
+    console.log('Main calculation - Final HP:', hp);
     return Math.max(0, hp);
 }
 
@@ -130,13 +141,25 @@ function calculateMaxHPFallback(
     
     // Добавляем бонус хитов за уровень от расы/подрасы
     let hpPerLevel = 0;
+    console.log('Fallback HP calculation:', {
+        race,
+        subrace,
+        level,
+        baseHp: hp,
+        conScore,
+        conMod
+    });
+    
     if (race === 'dwarf' && subrace === 'hill-dwarf') {
         hpPerLevel = 1; // Дварфийская выдержка
+        console.log('Hill Dwarf bonus applied:', hpPerLevel * level);
     }
     
     if (hpPerLevel > 0) {
         hp += hpPerLevel * level;
     }
+    
+    console.log('Final HP:', hp);
     
     return Math.max(0, hp);
 }
