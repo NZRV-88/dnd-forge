@@ -237,8 +237,8 @@ export default function Characters() {
                         
                         const hpMax = calculateMaxHP(char.data, b.class, b.level, b.hpMode, char.data.hpRolls);
                         
-                        // Если hpCurrent равен null, используем hpMax
-                        const currentHp = b.hpCurrent ?? hpMax;
+                        // Если hpCurrent равен null или больше hpMax, используем hpMax
+                        const currentHp = b.hpCurrent === null || b.hpCurrent > hpMax ? hpMax : b.hpCurrent;
 
                         // Используем мемоизированные каталоги для быстрого поиска
                         const classInfo = classCatalogMap.get((b.class || '').toLowerCase());

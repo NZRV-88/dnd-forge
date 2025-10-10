@@ -26,8 +26,8 @@ export function calculateMaxHP(
         characterData = getAllCharacterData(draft);
     } catch (error) {
         console.warn('Error getting character data, using fallback calculation:', error);
-        // Fallback calculation без бонусов от расы
-        return calculateMaxHPFallback(actualClassKey, actualLevel, actualHpMode, actualHpRolls, draft.stats?.con || 10);
+        // Fallback calculation с попыткой получить hpPerLevel из расы
+        return calculateMaxHPFallback(actualClassKey, actualLevel, actualHpMode, actualHpRolls, draft.stats?.con || 10, draft.basics?.race, draft.basics?.subrace);
     }
     
     // Получаем информацию о классе
@@ -80,14 +80,16 @@ export function calculateMaxHP(
 }
 
 /**
- * Fallback функция для расчета HP без бонусов от расы
+ * Fallback функция для расчета HP с учетом бонусов от расы
  */
 function calculateMaxHPFallback(
     classKey: string,
     level: number,
     hpMode: "fixed" | "roll",
     hpRolls: number[],
-    conScore: number
+    conScore: number,
+    race?: string,
+    subrace?: string
 ): number {
     const hitDieMap: Record<string, number> = {
         barbarian: 12,
@@ -122,6 +124,16 @@ function calculateMaxHPFallback(
                 hp += dieValue + conMod;
             }
         }
+    }
+    
+    // Добавляем бонус хитов за уровень от расы/подрасы
+    let hpPerLevel = 0;
+    if (race === 'dwarf' && subrace === 'hill-dwarf') {
+        hpPerLevel = 1; // Дварфийская выдержка
+    }
+    
+    if (hpPerLevel > 0) {
+        hp += hpPerLevel * level;
     }
     
     return Math.max(0, hp);
