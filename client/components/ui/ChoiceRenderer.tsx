@@ -976,11 +976,23 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                             // Определяем, является ли это ASI (Ability Score Improvement)
                             // ASI может быть либо с источником "asi", либо с особенностью "Увеличение характеристик"
                             const isAsi = source === "asi" || 
-                                (source.startsWith('fighter-') && source.includes('-') && 
-                                 draft.basics.class && source.startsWith(draft.basics.class + '-'));
+                                (source.startsWith('class-') && source.includes('-') && 
+                                 draft.basics.class);
+                            
+                            // Дополнительная проверка для ASI уровней (4, 6, 8, 12, 14, 16, 19)
+                            let isAsiLevel = false;
+                            if (source.startsWith('class-')) {
+                                const levelMatch = source.match(/^class-(\d+)-/);
+                                if (levelMatch) {
+                                    const level = parseInt(levelMatch[1]);
+                                    isAsiLevel = [4, 6, 8, 12, 14, 16, 19].includes(level);
+                                }
+                            }
+                            
+                            const finalIsAsi = isAsi || isAsiLevel;
                             
                             // Если это не ASI, исключаем уже выбранные фиты
-                            if (!isAsi) {
+                            if (!finalIsAsi) {
                                 // Получаем все уже выбранные фиты (кроме текущего)
                                 const allSelectedFeats = draft.chosen.feats
                                     .filter(f => !f.startsWith(featKey + ':'))
