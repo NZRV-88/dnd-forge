@@ -391,6 +391,14 @@ export default function ClassPick() {
             console.log(`📋 Ключ заклинаний: "${key}"`, cleanedSpells[key]);
         });
         
+        // Проверяем, есть ли ключи с "feature-"
+        const featureKeys = Object.keys(cleanedSpells).filter(key => key.startsWith('feature-'));
+        console.log('🔍 Ключи с "feature-":', featureKeys);
+        
+        // Проверяем, есть ли ключи с "blessed-warrior"
+        const blessedWarriorKeys = Object.keys(cleanedSpells).filter(key => key.includes('blessed-warrior'));
+        console.log('🔍 Ключи с "blessed-warrior":', blessedWarriorKeys);
+        
         // Удаляем заклинания из особенностей для уровней выше нового
         Object.keys(cleanedSpells).forEach(spellKey => {
             if (spellKey.startsWith('feature-')) {
