@@ -392,9 +392,10 @@ export default function ClassPick() {
         // 4.1. Очищаем ASI черты из draft.chosen.feats для уровней выше нового
         const cleanedFeats = draft.chosen.feats.filter(featKey => {
             // Проверяем, является ли это ASI чертой для уровня выше нового
-            const match = featKey.match(/^(\w+)-(\d+)-0:(.+)$/);
+            // Формат: paladin-4-0:great-weapon-master
+            const match = featKey.match(/^(\w+)-(\d+)-(\d+):(.+)$/);
             if (match) {
-                const [, classKey, levelStr, featName] = match;
+                const [, classKey, levelStr, idxStr, featName] = match;
                 const level = parseInt(levelStr);
                 // Если это черта от ASI особенности класса и уровень выше нового
                 if (classKey === info.key && level > newLevel) {
