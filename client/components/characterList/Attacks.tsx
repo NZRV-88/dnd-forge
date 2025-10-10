@@ -16,6 +16,7 @@ import { SKILLS } from "@/data/skills";
 import { LANGUAGES } from "@/data/languages/languages";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import LayOnHandsManager from "@/components/ui/LayOnHandsManager";
+import ChannelDivinityManager from "@/components/ui/ChannelDivinityManager";
 import { ItemDetailsSidebar } from "@/components/characterList/ItemDetailsSidebar";
 import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X, Zap, Wand, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -6186,7 +6187,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
                     ОСОБЕННОСТИ КЛАССА
                   </h3>
-                  <LayOnHandsManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                  <div className="space-y-3">
+                    <LayOnHandsManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                    {(draft.basics.level || 1) >= 3 && (
+                      <ChannelDivinityManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                    )}
+                  </div>
                 </div>
               )}
 
