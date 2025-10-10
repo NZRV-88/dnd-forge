@@ -378,10 +378,20 @@ export default function ClassPick() {
         }
 
         // 3. Очищаем заклинания, полученные через особенности класса
-        // Заклинания особенностей не сохраняются в draft.chosen.spells,
-        // они добавляются динамически при отображении персонажа.
-        // Поэтому нам не нужно их очищать здесь - они будут автоматически
-        // недоступны при понижении уровня, так как особенность будет удалена.
+        const cleanedSpells = { ...draft.chosen.spells };
+        
+        console.log('🔍 ПОИСК find-steed в заклинаниях:', {
+            allSpellKeys: Object.keys(cleanedSpells),
+            allSpells: cleanedSpells
+        });
+        
+        // Ищем find-steed во всех ключах заклинаний
+        Object.keys(cleanedSpells).forEach(key => {
+            const spells = cleanedSpells[key];
+            if (Array.isArray(spells) && spells.includes('find-steed')) {
+                console.log('🎯 НАЙДЕН find-steed в ключе:', key, spells);
+            }
+        });
 
         // 4. Очищаем броски HP для уровней выше нового
         let validHpRolls: number[] = [];
@@ -403,7 +413,7 @@ export default function ClassPick() {
                 fightingStyle: cleanedFightingStyle,
                 weaponMastery: cleanedWeaponMastery,
                 spells: {
-                    ...draft.chosen.spells,
+                    ...cleanedSpells,
                     [info.key]: validSpells
                 }
             },
