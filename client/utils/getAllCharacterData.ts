@@ -105,18 +105,25 @@ export function getAllCharacterData(draft: CharacterDraft) {
     classFixed.proficiencies.savingThrows.forEach(s => savingThrows.add(s));
 
     /* -----------------------------
+       Background bonuses
+    ----------------------------- */
+    const backgroundFixed = getFixedBackgroundData(draft.basics.background);
+    const backgroundName = getBackgroundByKey(draft.basics.background)?.name || "Предыстория";
+
+    /* -----------------------------
        Feats (fixed)
     ----------------------------- */
-    for (const featKey of draft.chosen.feats) {
-        feats.add(featKey);
-        const feat = getFeatByKey(featKey);
-        if (!feat) continue;
-        const featName = feat.name;
+    if (draft.chosen?.feats) {
+        for (const featKey of draft.chosen.feats) {
+            feats.add(featKey);
+            const feat = getFeatByKey(featKey);
+            if (!feat) continue;
+            const featName = feat.name;
 
-        if (feat.effect) {
-            for (const bonus of feat.effect) {
-                // Бонусы к характеристикам
-                if (bonus.abilities) {
+            if (feat.effect) {
+                for (const bonus of feat.effect) {
+                    // Бонусы к характеристикам
+                    if (bonus.abilities) {
                     for (const [k, v] of Object.entries(bonus.abilities)) {
                         abilityBonuses[k as keyof Abilities] =
                             (abilityBonuses[k as keyof Abilities] || 0) + v;
@@ -356,24 +363,30 @@ export function getAllCharacterData(draft: CharacterDraft) {
             }
         });
     });
-    const allSpells = Object.values(draft.chosen.spells).flat();
-    allSpells.forEach(sp => {
-        spells.add(sp);
-    });
-    draft.chosen.feats.forEach(f => feats.add(f));
+    if (draft.chosen?.spells) {
+        const allSpells = Object.values(draft.chosen.spells).flat();
+        allSpells.forEach(sp => {
+            spells.add(sp);
+        });
+    }
+    if (draft.chosen?.feats) {
+        draft.chosen.feats.forEach(f => feats.add(f));
+    }
 
     // Обрабатываем ВСЕ выбранные характеристики из всех источников
     // Сначала собираем все уникальные источники (убираем дублирование)
     const uniqueSources = new Set<string>();
     const sourceMap = new Map<string, (keyof Abilities)[]>();
     
-    for (const [source, abilities] of Object.entries(draft.chosen.abilities)) {
+    if (draft.chosen?.abilities) {
+        for (const [source, abilities] of Object.entries(draft.chosen.abilities)) {
         // Нормализуем источник, убирая -base- для дедупликации
         const normalizedSource = source.replace(/-base-/, '-');
         
         if (!uniqueSources.has(normalizedSource)) {
             uniqueSources.add(normalizedSource);
             sourceMap.set(normalizedSource, abilities);
+        }
         }
     }
     
@@ -387,11 +400,17 @@ export function getAllCharacterData(draft: CharacterDraft) {
     }
 
     /* -----------------------------
-       Background bonuses
+       ASI
     ----------------------------- */
-    const backgroundFixed = getFixedBackgroundData(draft.basics.background);
-    const backgroundName = getBackgroundByKey(draft.basics.background)?.name || "Предыстория";
-    
+    if (draft.asi) {
+        for (const entry of Object.values(draft.asi)) {
+            if (entry.mode === "asi") {
+                if (entry.s1) abilityBonuses[entry.s1] = (abilityBonuses[entry.s1] || 0) + 1;
+                if (entry.s2) abilityBonuses[entry.s2] = (abilityBonuses[entry.s2] || 0) + 1;
+            }
+        }
+    }
+
     // Обрабатываем владения из предыстории
     if (backgroundFixed.proficiencies) {
         backgroundFixed.proficiencies.skills?.forEach(s => {
@@ -419,16 +438,6 @@ export function getAllCharacterData(draft: CharacterDraft) {
                 feats.add(feature.feat);
             }
         });
-    }
-
-    /* -----------------------------
-       ASI
-    ----------------------------- */
-    for (const entry of Object.values(draft.asi)) {
-        if (entry.mode === "asi") {
-            if (entry.s1) abilityBonuses[entry.s1] = (abilityBonuses[entry.s1] || 0) + 1;
-            if (entry.s2) abilityBonuses[entry.s2] = (abilityBonuses[entry.s2] || 0) + 1;
-        }
     }
 
     // Отладочная информация о итоговых характеристиках
