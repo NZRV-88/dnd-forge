@@ -392,14 +392,38 @@ export default function ClassPick() {
         // Также очищаем выборы характеристик для ASI особенностей уровней выше нового
         const cleanedAbilitiesForAsi = { ...draft.chosen.abilities };
         Object.keys(cleanedAbilitiesForAsi).forEach(abilityKey => {
-            // Проверяем, является ли это ASI выбором для уровня выше нового
+            let shouldDelete = false;
+            
+            // Проверяем формат class-level-index- (например, paladin-4-0-)
             const levelMatch = abilityKey.match(new RegExp(`^${info.key}-(\\d+)-`));
             if (levelMatch) {
                 const level = parseInt(levelMatch[1]);
                 if (level > newLevel) {
-                    console.log('🗑️ Удаляем выборы характеристик для ASI уровня:', abilityKey, level);
-                    delete cleanedAbilitiesForAsi[abilityKey];
+                    console.log('🗑️ Удаляем выборы характеристик для ASI уровня (формат class-level):', abilityKey, level);
+                    shouldDelete = true;
                 }
+            }
+            
+            // Проверяем формат feat:ability-score-improvement:effect-* для ASI уровней
+            if (abilityKey.startsWith('feat:ability-score-improvement:effect-')) {
+                // Проверяем, есть ли соответствующая ASI черта для уровня выше нового
+                const hasAsiFeatAboveLevel = draft.chosen.feats.some(featKey => {
+                    const match = featKey.match(new RegExp(`^${info.key}-(\\d+)-\\d+--\\d+:ability-score-improvement$`));
+                    if (match) {
+                        const level = parseInt(match[1]);
+                        return level > newLevel;
+                    }
+                    return false;
+                });
+                
+                if (hasAsiFeatAboveLevel) {
+                    console.log('🗑️ Удаляем выборы характеристик для ASI черты (формат feat:):', abilityKey);
+                    shouldDelete = true;
+                }
+            }
+            
+            if (shouldDelete) {
+                delete cleanedAbilitiesForAsi[abilityKey];
             }
         });
         
