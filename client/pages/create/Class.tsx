@@ -126,17 +126,23 @@ export default function ClassPick() {
         () => CLASS_CATALOG.find((c) => c.key === draft.basics.class),
         [draft.basics.class],
     );
-    const conScore = Number(draft.stats?.con) || 10;
-    const conMod = Math.floor((conScore - 10) / 2);
-
-    // Получаем данные персонажа для hpPerLevel
+    // Получаем данные персонажа для hpPerLevel и финальных характеристик
     const characterData = getAllCharacterData(draft);
+    
+    // Используем финальное значение Телосложения с учетом бонусов от расы
+    const baseConScore = Number(draft.stats?.con) || 10;
+    const conBonus = characterData.abilityBonuses.con || 0;
+    const conScore = baseConScore + conBonus;
+    const conMod = Math.floor((conScore - 10) / 2);
     console.log('🔍 Character data debug:', {
         race: draft.basics.race,
         subrace: draft.basics.subrace,
         hpPerLevel: characterData.hpPerLevel,
+        baseConScore,
+        conBonus,
         conScore,
-        conMod
+        conMod,
+        abilityBonuses: characterData.abilityBonuses
     });
     const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls, characterData.hpPerLevel);
 
