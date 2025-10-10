@@ -6190,7 +6190,11 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   <div className="space-y-3">
                     <LayOnHandsManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
                     {(draft.basics.level || 1) >= 3 && (
-                      <ChannelDivinityManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                      <ChannelDivinityManager 
+                        level={draft.basics.level || 1} 
+                        frameColor={getFrameColor(frameColor)}
+                        subclass={draft.basics.subclass}
+                      />
                     )}
                   </div>
                 </div>

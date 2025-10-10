@@ -7,14 +7,15 @@ import { useCharacter } from '@/store/character';
 interface ChannelDivinityManagerProps {
   level: number;
   frameColor?: string;
+  subclass?: string;
 }
 
-export default function ChannelDivinityManager({ level, frameColor = '#3B82F6' }: ChannelDivinityManagerProps) {
+export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', subclass }: ChannelDivinityManagerProps) {
   const { draft, initializeChannelDivinity, useChannelDivinity, shortRestChannelDivinity, longRestChannelDivinity } = useCharacter();
   const [isUsing, setIsUsing] = useState(false);
   const [isShortResting, setIsShortResting] = useState(false);
   const [isLongResting, setIsLongResting] = useState(false);
-  const [selectedEffect, setSelectedEffect] = useState<'divine-sense' | 'turn-undead'>('divine-sense');
+  const [selectedEffect, setSelectedEffect] = useState<'divine-sense' | 'turn-undead' | 'vow-of-enmity'>('divine-sense');
 
   // Инициализируем Проведение божественности, если его еще нет
   React.useEffect(() => {
@@ -131,12 +132,33 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6' }
                       </div>
                     </div>
                   )}
+
+                  {/* Обет вражды (доступно для Клятвы возмездия с 3-го уровня) */}
+                  {subclass === 'oath-of-vengeance' && (
+                    <div className="bg-neutral-800 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="text-sm font-medium text-white">Обет вражды</h5>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Когда вы совершаете действие Атака, можете потратить одно использование вашего Проведения божественности, 
+                            чтобы дать Обет вражды видимому вами в пределах 30 футов от вас существу. Вы совершаете с Преимуществом 
+                            броски атаки по этому существу в течение 1 минуты или пока снова не используете это умение.
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Если Хиты этого существа опускаются до 0 до окончания обета, вы можете перенести обет на другое 
+                            существо в пределах 30 футов от вас (действий не требуется).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="flex flex-col space-y-3">
                 {/* Выбор эффекта */}
-                {level >= 9 && (
+                {(level >= 9 || subclass === 'oath-of-vengeance') && (
                   <div className="mb-3">
                     <h5 className="text-sm font-medium text-gray-200 mb-2">Выберите эффект:</h5>
                     <div className="flex gap-2">
@@ -155,21 +177,40 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6' }
                       >
                         Божественное чувство
                       </Button>
-                      <Button
-                        onClick={() => setSelectedEffect('turn-undead')}
-                        className={`flex-1 text-xs ${
-                          selectedEffect === 'turn-undead' 
-                            ? 'bg-opacity-20' 
-                            : 'bg-transparent hover:bg-opacity-10'
-                        }`}
-                        style={{ 
-                          border: `1px solid ${frameColor}`,
-                          color: frameColor,
-                          backgroundColor: selectedEffect === 'turn-undead' ? `${frameColor}40` : 'transparent'
-                        }}
-                      >
-                        Порицание врагов
-                      </Button>
+                      {level >= 9 && (
+                        <Button
+                          onClick={() => setSelectedEffect('turn-undead')}
+                          className={`flex-1 text-xs ${
+                            selectedEffect === 'turn-undead' 
+                              ? 'bg-opacity-20' 
+                              : 'bg-transparent hover:bg-opacity-10'
+                          }`}
+                          style={{ 
+                            border: `1px solid ${frameColor}`,
+                            color: frameColor,
+                            backgroundColor: selectedEffect === 'turn-undead' ? `${frameColor}40` : 'transparent'
+                          }}
+                        >
+                          Порицание врагов
+                        </Button>
+                      )}
+                      {subclass === 'oath-of-vengeance' && (
+                        <Button
+                          onClick={() => setSelectedEffect('vow-of-enmity')}
+                          className={`flex-1 text-xs ${
+                            selectedEffect === 'vow-of-enmity' 
+                              ? 'bg-opacity-20' 
+                              : 'bg-transparent hover:bg-opacity-10'
+                          }`}
+                          style={{ 
+                            border: `1px solid ${frameColor}`,
+                            color: frameColor,
+                            backgroundColor: selectedEffect === 'vow-of-enmity' ? `${frameColor}40` : 'transparent'
+                          }}
+                        >
+                          Обет вражды
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -201,7 +242,9 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6' }
                       ) : (
                         <Zap className="w-4 h-4 mr-2" />
                       )}
-                      {selectedEffect === 'divine-sense' ? 'БОЖЕСТВЕННОЕ ЧУВСТВО' : 'ПОРИЦАНИЕ ВРАГОВ'}
+                      {selectedEffect === 'divine-sense' ? 'БОЖЕСТВЕННОЕ ЧУВСТВО' : 
+                       selectedEffect === 'turn-undead' ? 'ПОРИЦАНИЕ ВРАГОВ' : 
+                       'ОБЕТ ВРАЖДЫ'}
                     </>
                   )}
                 </Button>
