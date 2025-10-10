@@ -120,7 +120,14 @@ function calculateMaxHPFallback(
     };
     
     const hitDie = hitDieMap[classKey] || 8;
-    const conMod = Math.floor((conScore - 10) / 2);
+    
+    // Добавляем бонусы от расы к телосложению
+    let finalConScore = conScore;
+    if (race === 'dwarf') {
+        finalConScore += 2; // Бонус телосложения от расы Дварф
+    }
+    
+    const conMod = Math.floor((finalConScore - 10) / 2);
     
     // 1-й уровень: максимум кости хитов + модификатор Телосложения
     let hp = hitDie + conMod;
@@ -147,6 +154,7 @@ function calculateMaxHPFallback(
         level,
         baseHp: hp,
         conScore,
+        finalConScore,
         conMod
     });
     
