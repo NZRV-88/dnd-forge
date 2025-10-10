@@ -52,6 +52,13 @@ export default function CharacterList() {
         console.log(`setCharWithLog #${setCharCallCounter} newChar.basics.currency keys:`, Object.keys(newChar?.basics?.currency || {}));
         console.log(`setCharWithLog #${setCharCallCounter} newChar.basics.currency values:`, Object.values(newChar?.basics?.currency || {}));
         console.trace(`setCharWithLog #${setCharCallCounter} call stack`);
+        
+        // Инициализируем Сияющие удары для паладина 11+ уровня
+        if (newChar && newChar.basics?.class === 'paladin' && (newChar.basics?.level || 1) >= 11 && !newChar.radiantStrikes) {
+            newChar.radiantStrikes = true;
+            console.log(`setCharWithLog #${setCharCallCounter}: Initialized radiantStrikes for paladin level`, newChar.basics.level);
+        }
+        
         setChar(newChar);
     };
     const [curHp, setCurHp] = useState<number>(0);
@@ -80,7 +87,8 @@ export default function CharacterList() {
     });
     
     // Используем хук для бросков кубиков
-    const { draft } = useCharacter();
+    const { draft, setDraft } = useCharacter();
+    console.log('DEBUG: CharacterList draft:', { draft: draft?.basics, radiantStrikes: draft?.radiantStrikes });
     const {
         rollLog,
         setRollLog,
@@ -90,7 +98,7 @@ export default function CharacterList() {
         addRoll
     } = useDiceRolls({ 
         characterName: char?.basics.name,
-        characterData: draft, // Передаем draft вместо char для доступа к radiantStrikes
+        characterData: char, // Передаем char вместо draft для доступа к radiantStrikes
         onRollAdded: (logEntry) => {
             // Автоматически отправляем в Telegram если включено
             if (autoShare && telegramEnabled && telegramChatId && logEntry.rollData) {
@@ -205,6 +213,26 @@ export default function CharacterList() {
             }
         })();
     }, [id]);
+
+    // Инициализируем Сияющие удары для паладина 11+ уровня после загрузки
+    useEffect(() => {
+        console.log('DEBUG: useEffect for radiantStrikes initialization:', {
+            char: char?.basics,
+            hasChar: !!char,
+            class: char?.basics?.class,
+            level: char?.basics?.level,
+            radiantStrikes: char?.radiantStrikes,
+            shouldInitialize: char?.basics?.class === 'paladin' && (char?.basics?.level || 1) >= 11 && !char?.radiantStrikes
+        });
+        
+        if (char && char.basics?.class === 'paladin' && (char.basics?.level || 1) >= 11 && !char.radiantStrikes) {
+            console.log('Initializing radiantStrikes for paladin level', char.basics.level);
+            setDraft(prevDraft => ({
+                ...prevDraft,
+                radiantStrikes: true
+            }));
+        }
+    }, [char, setDraft]);
 
     // final stats calculation using getAllCharacterData
     const finalStats = useMemo(() => {

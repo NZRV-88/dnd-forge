@@ -50,7 +50,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
 
   // Функция для броска кубика урона с учетом особенностей персонажа
   const rollDamageDiceWithFeatures = (diceString: string, isMeleeWeapon: boolean = false) => {
-    console.log('DEBUG: rollDamageDiceWithFeatures called with:', { diceString, isMeleeWeapon, characterData: characterData?.basics });
+        console.log('DEBUG: rollDamageDiceWithFeatures called with:', { diceString, isMeleeWeapon, characterData: characterData?.basics });
+        console.log('DEBUG: characterData.radiantStrikes:', characterData?.radiantStrikes);
     const { diceRoll: baseDiceRoll, finalResult: baseResult, individualRolls: baseIndividualRolls, dice: baseDice, modifier: baseModifier } = rollDamageDice(diceString);
     console.log('DEBUG: rollDamageDice result:', { baseDiceRoll, baseResult, baseIndividualRolls, baseDice, baseModifier });
     
@@ -71,7 +72,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
         characterData?.radiantStrikes && 
         isMeleeWeapon) {
       hasRadiantStrikes = true;
-      radiantRolls = [Math.floor(Math.random() * 8) + 1]; // 1d8 излучения
+      // Бросаем отдельный кубик 1d8 для излучения
+      radiantRolls = [Math.floor(Math.random() * 8) + 1];
       radiantDamage = radiantRolls[0];
       console.log('DEBUG: Radiant strikes activated!', { radiantDamage, radiantRolls });
     }
@@ -181,11 +183,62 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
         individualRolls = damageIndividualRolls;
         
         if (hasRadiantStrikes) {
-          // Показываем комбинированный урон: базовый + излучение
+          // Создаем отдельные записи для базового урона и излучения
           const baseRollsStr = damageIndividualRolls.slice(0, -radiantRolls.length).join('+');
           const radiantRollsStr = radiantRolls.join('+');
           const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
-          entry = `${desc.toUpperCase()}: УРОН: ${baseDamage} (оружие) + ${radiantDamage} (излучение) = ${baseRollsStr}${modStr} + ${radiantRollsStr} = ${finalResult}`;
+          
+          // Запись для базового урона
+          const baseEntry = `${desc.toUpperCase()}: УРОН (оружие): ${dice}${modStr} = ${baseRollsStr}${modStr} = ${baseDamage}`;
+          
+          // Запись для излучения
+          const radiantEntry = `${desc.toUpperCase()}: УРОН (излучение): 1d8 = ${radiantRollsStr} = ${radiantDamage}`;
+          
+          // Создаем данные для модального окна - массив из 2 бросков
+          const baseRollData: DiceRollData = {
+            characterName: characterName || 'Персонаж',
+            dice: dice,
+            modifier: modifier,
+            result: baseDamage,
+            individualRolls: damageIndividualRolls.slice(0, -radiantRolls.length),
+            description: `${desc} (оружие)`,
+            timestamp: new Date().toISOString()
+          };
+          
+          const radiantRollData: DiceRollData = {
+            characterName: characterName || 'Персонаж',
+            dice: '1d8',
+            modifier: 0,
+            result: radiantDamage,
+            individualRolls: radiantRolls,
+            description: `${desc} (излучение)`,
+            timestamp: new Date().toISOString()
+          };
+          
+          // Добавляем обе записи в лог
+          setRollLog(prev => [...prev, { entry: baseEntry, rollData: baseRollData }]);
+          setRollLog(prev => [...prev, { entry: radiantEntry, rollData: radiantRollData }]);
+          
+          // Вызываем callback для обеих записей
+          onRollAdded?.({ entry: baseEntry, rollData: baseRollData });
+          onRollAdded?.({ entry: radiantEntry, rollData: radiantRollData });
+          
+          // Передаем комбинированный объект в модальное окно
+          const combinedRollData: DiceRollData = {
+            characterName: characterName || 'Персонаж',
+            dice: `${dice} + 1d8`, // Комбинированные кубики
+            modifier: modifier,
+            result: finalResult, // Общий результат
+            individualRolls: damageIndividualRolls, // Все броски
+            description: `${desc}`, // Только название оружия
+            type: "Урон", // Указываем тип как урон
+            timestamp: new Date().toISOString()
+          };
+          
+          setDiceRollData(combinedRollData);
+          setDiceModalOpen(true);
+          
+          return; // Выходим из функции, так как уже обработали все
         } else {
           // Обычный урон без особенностей
           if (modifier !== 0) {
