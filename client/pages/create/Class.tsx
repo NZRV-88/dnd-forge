@@ -395,16 +395,16 @@ export default function ClassPick() {
                 featKey: feat,
                 length: feat.length,
                 parts: feat.split(':'),
-                matchResult: feat.match(/^(\w+)-(\d+)-(\d+):(.+)$/)
+                matchResult: feat.match(/^(\w+)-(\d+)-(\d+)--(\d+):(.+)$/)
             });
         });
         
         const cleanedFeats = draft.chosen.feats.filter(featKey => {
             // Проверяем, является ли это ASI чертой для уровня выше нового
-            // Формат: paladin-4-0:great-weapon-master
-            const match = featKey.match(/^(\w+)-(\d+)-(\d+):(.+)$/);
+            // Формат: paladin-4-0--0:great-weapon-master (с двойным дефисом)
+            const match = featKey.match(/^(\w+)-(\d+)-(\d+)--(\d+):(.+)$/);
             if (match) {
-                const [, classKey, levelStr, idxStr, featName] = match;
+                const [, classKey, levelStr, idxStr1, idxStr2, featName] = match;
                 const level = parseInt(levelStr);
                 console.log('🔍 Проверяем черту:', {
                     featKey,
