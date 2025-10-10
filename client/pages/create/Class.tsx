@@ -15,6 +15,7 @@ import ClassRemoveModal from "@/components/ui/ClassRemoveModal";
 import HealthSettingsModal from "@/components/ui/HealthSettingsModal";
 import { Spells } from "@/data/spells";
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
+import { calculateMaxHP } from "@/utils/hpCalculation";
 
 const ALL_CLASSES = [
     "fighter",
@@ -35,47 +36,8 @@ const ALL_CLASSES = [
  * Рассчитывает максимальные хиты согласно правилам D&D
  * @param info - информация о классе
  * @param level - уровень персонажа
- * @param conMod - модификатор Телосложения
  * @param hpMode - режим расчета хитов ("fixed" = среднее значение, "roll" = минимум)
  */
-function calcMaxHP(
-    info: ClassInfo | undefined,
-    level: number,
-    conMod: number,
-    hpMode: "fixed" | "roll",
-    hpRolls?: number[],
-    hpPerLevel?: number,
-) {
-    if (!info || level < 1) return 0;
-    
-    const hitDie = info.hitDice;
-    
-    // 1-й уровень: максимум кости хитов + модификатор Телосложения
-    let hp = hitDie + conMod;
-    
-    // 2+ уровни: добавляем хиты за каждый уровень
-    if (level > 1) {
-        if (hpMode === "fixed") {
-            const averageHitDie = Math.ceil(hitDie / 2) + 1;
-            hp += (level - 1) * (averageHitDie + conMod);
-        } else {
-            const rolls = hpRolls || [];
-            for (let lvl = 2; lvl <= level; lvl++) {
-                const idx = lvl - 2;
-                const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
-                hp += dieValue + conMod;
-            }
-        }
-    }
-    
-    // Добавляем бонус хитов за уровень от расы/подрасы
-    if (hpPerLevel) {
-        hp += hpPerLevel * level;
-    }
-    
-    
-    return hp;
-}
 
 export default function ClassPick() {
     const { id } = useParams<{ id: string }>();
@@ -118,12 +80,7 @@ export default function ClassPick() {
     // Получаем данные персонажа для hpPerLevel и финальных характеристик
     const characterData = getAllCharacterData(draft);
     
-    // Используем финальное значение Телосложения с учетом бонусов от расы
-    const baseConScore = Number(draft.stats?.con) || 10;
-    const conBonus = characterData.abilityBonuses.con || 0;
-    const conScore = baseConScore + conBonus;
-        const conMod = Math.floor((conScore - 10) / 2);
-        const maxHP = calcMaxHP(info, draft.basics.level, conMod, draft.basics.hpMode || "fixed", draft.hpRolls, characterData.hpPerLevel);
+    const maxHP = calculateMaxHP(draft);
 
     // Отслеживаем предыдущие значения для определения реальных изменений
     const [prevLevel, setPrevLevel] = useState(draft.basics.level);
@@ -1309,7 +1266,7 @@ export default function ClassPick() {
                 isOpen={showHealthSettings}
                 classInfo={info}
                 level={draft.basics.level}
-                conMod={conMod}
+                draft={draft}
                 maxHP={maxHP}
                 hpMode={draft.basics.hpMode || "fixed"}
                 hpRolls={draft.hpRolls || []}

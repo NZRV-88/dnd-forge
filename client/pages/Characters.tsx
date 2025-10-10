@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { CLASS_CATALOG } from "@/data/classes";
 import { RACE_CATALOG } from "@/data/races";
 import { getClassByKey } from "@/data/classes";
+import { calculateMaxHP } from "@/utils/hpCalculation";
 
 type Basics = {
     name: string;
@@ -234,7 +235,7 @@ export default function Characters() {
                         // Используем "Безымянный" если имя не задано
                         const displayName = b.name || "Безымянный";
                         
-                        const hpMax = calcMaxHPForCard(b, char.data.stats, char.data.hpRolls);
+                        const hpMax = calculateMaxHP(char.data, b.class, b.level, b.hpMode, char.data.hpRolls);
                         
                         // Если hpCurrent равен null, используем hpMax
                         const currentHp = b.hpCurrent ?? hpMax;
@@ -420,38 +421,3 @@ const CharacterCard = memo(({
     );
 });
 
-function calcMaxHPForCard(basics: Basics, stats?: Record<string, number>, hpRolls?: number[]) {
-    const die: Record<string, number> = {
-        barbarian: 12,
-        bard: 8,
-        fighter: 10,
-        wizard: 6,
-        druid: 8,
-        cleric: 8,
-        warlock: 8,
-        monk: 8,
-        paladin: 10,
-        rogue: 8,
-        ranger: 10,
-        sorcerer: 6,
-    };
-    const d = die[basics.class as keyof typeof die] || 8;
-    const con = stats?.con ?? 0;
-    const conMod = Math.floor((con - 10) / 2);
-    const level = basics.level || 1;
-    const hpMode = basics.hpMode || "fixed";
-    let hp = d + conMod;
-    if (level > 1) {
-        if (hpMode === "fixed") {
-            hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
-        } else {
-            const rolls = hpRolls || [];
-            for (let lvl = 2; lvl <= level; lvl++) {
-                const idx = lvl - 2;
-                const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
-                hp += dieValue + conMod;
-            }
-        }
-    }
-    return Math.max(0, hp);
-}

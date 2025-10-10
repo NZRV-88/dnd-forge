@@ -3,12 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import * as Icons from "@/components/refs/icons";
 import type { ClassInfo } from "@/data/classes/types";
+import { calculateMaxHP } from "@/utils/hpCalculation";
 
 interface HealthSettingsModalProps {
     isOpen: boolean;
     classInfo: ClassInfo | undefined;
     level: number;
-    conMod: number;
+    draft: any;
     maxHP: number;
     hpMode: "fixed" | "roll";
     hpRolls: number[];
@@ -22,7 +23,7 @@ export default function HealthSettingsModal({
     isOpen,
     classInfo,
     level,
-    conMod,
+    draft,
     maxHP,
     hpMode,
     hpRolls,
@@ -39,28 +40,16 @@ export default function HealthSettingsModal({
     }, [hpRolls]);
 
 
-    const calculateMaxHP = () => {
-        if (!classInfo) return 0;
-        
-        let hp = classInfo.hitDice + conMod;
-        
-        if (level > 1) {
-            if (hpMode === "fixed") {
-                const averageHitDie = Math.ceil(classInfo.hitDice / 2) + 1;
-                hp += (level - 1) * (averageHitDie + conMod);
-            } else {
-                for (let lvl = 2; lvl <= level; lvl++) {
-                    const idx = lvl - 2;
-                    const dieValue = localHpRolls[idx] && localHpRolls[idx]! > 0 ? localHpRolls[idx]! : 1;
-                    hp += dieValue + conMod;
-                }
-            }
-        }
-        
-        return hp;
+    const calculateCurrentMaxHP = () => {
+        // Создаем временный драфт с локальными бросками HP
+        const tempDraft = {
+            ...draft,
+            hpRolls: localHpRolls
+        };
+        return calculateMaxHP(tempDraft);
     };
 
-    const currentMaxHP = calculateMaxHP();
+    const currentMaxHP = calculateCurrentMaxHP();
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -83,12 +72,6 @@ export default function HealthSettingsModal({
                     <div className="space-y-3">
                         <h3 className="text-lg font-semibold border-l-2 border-primary pl-2">Бонусы здоровья</h3>
                         <div className="space-y-2 text-sm">
-                            <div className="flex justify-between items-center p-2 rounded border">
-                                <span>Телосложение (модификатор):</span>
-                                <span className={`font-semibold ${conMod >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                    {conMod >= 0 ? "+" : ""}{conMod}
-                                </span>
-                            </div>
                             <div className="flex justify-between items-center p-2 rounded border">
                                 <span>Кость хитов класса:</span>
                                 <span className="font-semibold">d{classInfo?.hitDice}</span>

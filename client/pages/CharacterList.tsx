@@ -26,6 +26,7 @@ import { getEffectiveSpeed } from "@/data/races/types";
 import { supabase } from "@/lib/supabaseClient";
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
 import { Armors } from "@/data/items/armors";
+import { calculateMaxHP } from "@/utils/hpCalculation";
 
 const LIST_KEY = "dnd-ru-characters";
 
@@ -173,34 +174,7 @@ export default function CharacterList() {
                 
                 // Вычисляем максимальные хиты для установки curHp
                 const calculateHpMax = () => {
-                    const b = draft.basics;
-                    if (!b) return 0;
-                    
-                    const die: Record<string, number> = {
-                        barbarian: 12, bard: 8, fighter: 10, wizard: 6, druid: 8,
-                        cleric: 8, warlock: 8, monk: 8, paladin: 10, rogue: 8,
-                        ranger: 10, sorcerer: 6,
-                    };
-                    const d = die[b.class as keyof typeof die] || 8;
-                    const con = (finalStats as any).con ?? 0;
-                    const conMod = Math.floor((con - 10) / 2);
-                    const level = b.level || 1;
-                    const hpMode = b.hpMode || "fixed";
-                    let hp = d + conMod;
-                    if (level > 1) {
-                        if (hpMode === "fixed") {
-                            hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
-                        } else {
-                            const rolls: number[] = Array.isArray(draft.hpRolls) ? draft.hpRolls : [];
-                            for (let lvl = 2; lvl <= level; lvl++) {
-                                const idx = lvl - 2;
-                                const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
-                                hp += dieValue + conMod;
-                            }
-                        }
-                    }
-                    const extra = ((finalStats as any)._extraHp || 0) * level;
-                    return Math.max(0, hp + extra);
+                    return calculateMaxHP(draft);
                 };
                 
                 const hpMax = calculateHpMax();
@@ -265,39 +239,9 @@ export default function CharacterList() {
     // Обновляем curHp при изменении hpMax (например, при повышении уровня)
     useEffect(() => {
         if (char && char.basics) {
-            // Вычисляем hpMax здесь, чтобы избежать проблем с порядком хуков
-            const b = char.basics;
-            const level = b.level || 1;
-            const conValue = (finalStats as any).con || 10;
-            const conMod = Math.floor((conValue - 10) / 2);
+            const calculatedHpMax = calculateMaxHP(char);
             
-            let hp = 0;
-            if (b.class === 'barbarian') {
-                hp = 12 + conMod;
-                for (let i = 2; i <= level; i++) {
-                    hp += 7 + conMod; // 1d12 = 7 в среднем
-                }
-            } else if (b.class === 'fighter' || b.class === 'paladin' || b.class === 'ranger') {
-                hp = 10 + conMod;
-                for (let i = 2; i <= level; i++) {
-                    hp += 6 + conMod; // 1d10 = 6 в среднем
-                }
-            } else if (b.class === 'bard' || b.class === 'cleric' || b.class === 'druid' || b.class === 'monk' || b.class === 'rogue' || b.class === 'warlock') {
-                hp = 8 + conMod;
-                for (let i = 2; i <= level; i++) {
-                    hp += 5 + conMod; // 1d8 = 5 в среднем
-                }
-            } else if (b.class === 'sorcerer' || b.class === 'wizard') {
-                hp = 6 + conMod;
-                for (let i = 2; i <= level; i++) {
-                    hp += 4 + conMod; // 1d6 = 4 в среднем
-                }
-            }
-            
-            const extra = ((finalStats as any)._extraHp || 0) * level;
-            const calculatedHpMax = Math.max(0, hp + extra);
-            
-            const currentHp = b.hpCurrent;
+            const currentHp = char.basics.hpCurrent;
             // Если hpCurrent равен null, обновляем его до hpMax
             // Если hpCurrent не null, но больше hpMax (например, при понижении уровня), обновляем его
             if (currentHp === null || (currentHp !== null && currentHp > calculatedHpMax)) {
@@ -384,31 +328,7 @@ export default function CharacterList() {
         ((finalStats as any)._extraInitiative || 0);
 
     const hpMax = (() => {
-        const die: Record<string, number> = {
-            barbarian: 12, bard: 8, fighter: 10, wizard: 6, druid: 8,
-            cleric: 8, warlock: 8, monk: 8, paladin: 10, rogue: 8,
-            ranger: 10, sorcerer: 6,
-        };
-        const d = die[b.class as keyof typeof die] || 8;
-        const con = (finalStats as any).con ?? 0;
-        const conMod = Math.floor((con - 10) / 2);
-        const level = b.level || 1;
-        const hpMode = b.hpMode || "fixed";
-        let hp = d + conMod;
-        if (level > 1) {
-            if (hpMode === "fixed") {
-                hp += (level - 1) * (Math.floor(d / 2) + 1 + conMod);
-            } else {
-                const rolls: number[] = Array.isArray(char.hpRolls) ? char.hpRolls : [];
-                for (let lvl = 2; lvl <= level; lvl++) {
-                    const idx = lvl - 2;
-                    const dieValue = rolls[idx] && rolls[idx]! > 0 ? rolls[idx]! : 1;
-                    hp += dieValue + conMod;
-                }
-            }
-        }
-        const extra = ((finalStats as any)._extraHp || 0) * level;
-        return Math.max(0, hp + extra);
+        return calculateMaxHP(char);
     })();
 
     const proficiencyBonus = (() => {
