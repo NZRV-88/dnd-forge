@@ -434,16 +434,29 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             }));
         }
         
-        // Обновляем Проведение божественности при изменении уровня
-        if (draft.basics.class === 'paladin' && draft.channelDivinity) {
-            setDraft(d => ({
-                ...d,
-                channelDivinity: {
-                    ...d.channelDivinity!,
-                    maxUses: level >= 11 ? 3 : 2,
-                    currentUses: Math.min(d.channelDivinity!.currentUses, level >= 11 ? 3 : 2)
-                }
-            }));
+        // Инициализируем или обновляем Проведение божественности при изменении уровня
+        if (draft.basics.class === 'paladin') {
+            if (level >= 3 && !draft.channelDivinity) {
+                // Инициализируем Проведение божественности для паладина 3+ уровня
+                setDraft(d => ({
+                    ...d,
+                    channelDivinity: {
+                        maxUses: level >= 11 ? 3 : 2,
+                        currentUses: level >= 11 ? 3 : 2,
+                        shortRestUses: 0
+                    }
+                }));
+            } else if (draft.channelDivinity) {
+                // Обновляем существующее Проведение божественности
+                setDraft(d => ({
+                    ...d,
+                    channelDivinity: {
+                        ...d.channelDivinity!,
+                        maxUses: level >= 11 ? 3 : 2,
+                        currentUses: Math.min(d.channelDivinity!.currentUses, level >= 11 ? 3 : 2)
+                    }
+                }));
+            }
         }
     };
 

@@ -6196,12 +6196,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         subclass={draft.basics.subclass}
                       />
                     )}
-                    {/* Отладочная информация */}
-                    {console.log('Attacks.tsx debug:', {
-                      level: draft.basics.level,
-                      subclass: draft.basics.subclass,
-                      class: draft.basics.class
-                    })}
                   </div>
                 </div>
               )}

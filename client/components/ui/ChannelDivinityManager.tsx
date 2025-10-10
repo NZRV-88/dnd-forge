@@ -25,15 +25,20 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
   }, [level, initializeChannelDivinity, draft.channelDivinity]);
 
   const channelDivinity = draft.channelDivinity;
-  if (!channelDivinity) return null;
-
+  
   // Отладочная информация
   console.log('ChannelDivinityManager debug:', {
     level,
     subclass,
     channelDivinity: channelDivinity ? 'exists' : 'null',
-    draftSubclass: draft.basics?.subclass
+    draftSubclass: draft.basics?.subclass,
+    draftClass: draft.basics?.class
   });
+
+  if (!channelDivinity) {
+    console.log('ChannelDivinity not initialized, returning null');
+    return null;
+  }
 
   const maxUses = level >= 11 ? 3 : 2;
   const currentUses = channelDivinity.currentUses;
