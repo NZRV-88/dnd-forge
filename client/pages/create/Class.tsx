@@ -377,21 +377,21 @@ export default function ClassPick() {
             validSpells = [...featureSpells, ...regularSpells];
         }
 
-        // 3. Очищаем заклинания, полученные через особенности класса
+        // 3. Проверяем, правильно ли удаляются особенности при понижении уровня
+        console.log('🔍 Проверка особенностей:', {
+            newLevel,
+            currentLevel: draft.basics.level,
+            featuresBeforeCleanup: Object.keys(draft.chosen.features || {}),
+            featuresAfterCleanup: Object.keys(cleanedFeatures)
+        });
+        
+        // Ищем особенность "Верный скакун" в удаленных особенностях
+        const removedFeatures = Object.keys(draft.chosen.features || {}).filter(key => 
+            !Object.keys(cleanedFeatures).includes(key)
+        );
+        console.log('🗑️ Удаленные особенности:', removedFeatures);
+        
         const cleanedSpells = { ...draft.chosen.spells };
-        
-        console.log('🔍 ПОИСК find-steed в заклинаниях:', {
-            allSpellKeys: Object.keys(cleanedSpells),
-            allSpells: cleanedSpells
-        });
-        
-        // Ищем find-steed во всех ключах заклинаний
-        Object.keys(cleanedSpells).forEach(key => {
-            const spells = cleanedSpells[key];
-            if (Array.isArray(spells) && spells.includes('find-steed')) {
-                console.log('🎯 НАЙДЕН find-steed в ключе:', key, spells);
-            }
-        });
 
         // 4. Очищаем броски HP для уровней выше нового
         let validHpRolls: number[] = [];
