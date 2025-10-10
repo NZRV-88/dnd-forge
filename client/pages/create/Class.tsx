@@ -389,6 +389,21 @@ export default function ClassPick() {
             }
         });
 
+        // 4.1. Очищаем ASI черты из draft.chosen.feats для уровней выше нового
+        const cleanedFeats = draft.chosen.feats.filter(featKey => {
+            // Проверяем, является ли это ASI чертой для уровня выше нового
+            const match = featKey.match(/^(\w+)-(\d+)-0:(.+)$/);
+            if (match) {
+                const [, classKey, levelStr, featName] = match;
+                const level = parseInt(levelStr);
+                // Если это черта от ASI особенности класса и уровень выше нового
+                if (classKey === info.key && level > newLevel) {
+                    return false; // Удаляем эту черту
+                }
+            }
+            return true; // Оставляем все остальные черты
+        });
+
         // 5. Очищаем броски HP для уровней выше нового
         let validHpRolls: number[] = [];
         if (draft.hpRolls && draft.hpRolls.length > newLevel - 1) {
@@ -409,6 +424,7 @@ export default function ClassPick() {
                 features: cleanedFeatures,
                 fightingStyle: cleanedFightingStyle,
                 weaponMastery: cleanedWeaponMastery,
+                feats: cleanedFeats,
                 spells: {
                     ...cleanedSpells,
                     [info.key]: validSpells
