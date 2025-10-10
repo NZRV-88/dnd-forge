@@ -6204,7 +6204,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         />
                       );
                     })()}
-                    <AuraManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                    <AuraManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} subclass={draft.basics.subclass} />
                   </div>
                 </div>
               )}

@@ -7,9 +7,10 @@ import { useCharacter } from '@/store/character';
 interface AuraManagerProps {
   level: number;
   frameColor?: string;
+  subclass?: string;
 }
 
-export default function AuraManager({ level, frameColor = '#3B82F6' }: AuraManagerProps) {
+export default function AuraManager({ level, frameColor = '#3B82F6', subclass }: AuraManagerProps) {
   const characterContext = useCharacter();
   
   if (!characterContext) {
@@ -20,16 +21,18 @@ export default function AuraManager({ level, frameColor = '#3B82F6' }: AuraManag
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [isActivating, setIsActivating] = React.useState(false);
 
-  // Определяем доступные ауры в зависимости от уровня
+  // Определяем доступные ауры в зависимости от уровня и подкласса
   const availableAuras = [];
   
+  // Базовые ауры для всех паладинов
   if (level >= 6) {
     availableAuras.push({
       name: 'Аура защиты',
       level: 6,
       radius: level >= 18 ? 30 : 10,
       description: 'Вы и ваши союзники в области действия ауры получаете бонус к спасброскам, равный вашему модификатору Харизмы (минимальный бонус +1).',
-      icon: '🛡️'
+      icon: '🛡️',
+      type: 'base'
     });
   }
   
@@ -39,8 +42,40 @@ export default function AuraManager({ level, frameColor = '#3B82F6' }: AuraManag
       level: 10,
       radius: level >= 18 ? 30 : 10,
       description: 'Вы и ваши союзники в вашей Ауре Защиты обладаете Иммунитетом к состоянию Испуганный. Если союзник с состоянием Испуганный входит в ауру, то это состояние не имеет на него эффекта, пока он там находится.',
-      icon: '💪'
+      icon: '💪',
+      type: 'base'
     });
+  }
+
+  // Уникальные ауры для подклассов
+  if (subclass === 'oath-of-the-ancients') {
+    if (level >= 7) {
+      availableAuras.push({
+        name: 'Аура опеки',
+        level: 7,
+        radius: level >= 18 ? 30 : 10,
+        description: 'Древняя магия пронизывает вас, образуя мистическую защиту и ослабляя энергию извне Материального плана; вы и ваши союзники в вашей Ауре защиты обладаете Сопротивлением Некротическому и Психическому урону и урону Излучением.',
+        icon: '🌿',
+        type: 'subclass'
+      });
+    }
+    
+    if (level >= 20) {
+      availableAuras.push({
+        name: 'Древний чемпион',
+        level: 20,
+        radius: 30,
+        description: 'Бонусным действием вы можете усилить свою Ауру защиты первобытной силой, дарующей описанные ниже преимущества на 1 минуту или пока вы не окончите их (действий не требуется).',
+        icon: '👑',
+        type: 'subclass',
+        special: true,
+        effects: [
+          'Насадить повиновение: Враги в вашей ауре совершают с Помехой спасброски против ваших заклинаний и эффектов Проведения божественности.',
+          'Регенерация: В начале каждого вашего хода вы восстанавливаете 10 Хитов.',
+          'Быстрые заклинания: Каждый раз, когда вы сотворяете заклинание со временем сотворения в действие, можете сотворить его не действием, а Бонусным действием.'
+        ]
+      });
+    }
   }
 
   const handleActivateAura = () => {
@@ -101,7 +136,9 @@ export default function AuraManager({ level, frameColor = '#3B82F6' }: AuraManag
             {/* Доступные ауры */}
             <div className="space-y-3">
               {availableAuras.map((aura, index) => (
-                <div key={index} className="bg-neutral-700 rounded-lg p-3">
+                <div key={index} className={`rounded-lg p-3 ${
+                  aura.type === 'subclass' ? 'bg-emerald-900/30 border border-emerald-700/50' : 'bg-neutral-700'
+                }`}>
                   <div className="flex items-start gap-3">
                     <div className="text-2xl">{aura.icon}</div>
                     <div className="flex-1">
@@ -109,8 +146,26 @@ export default function AuraManager({ level, frameColor = '#3B82F6' }: AuraManag
                         <h6 className="text-sm font-medium text-white">{aura.name}</h6>
                         <span className="text-xs text-gray-500">(Уровень {aura.level})</span>
                         <span className="text-xs text-blue-400">Радиус {aura.radius} футов</span>
+                        {aura.type === 'subclass' && (
+                          <span className="text-xs text-emerald-400 font-medium">Подкласс</span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-400">{aura.description}</p>
+                      
+                      {/* Специальные эффекты для Древнего чемпиона */}
+                      {aura.special && aura.effects && (
+                        <div className="mt-2">
+                          <h7 className="text-xs font-medium text-yellow-400 mb-1 block">Особые эффекты:</h7>
+                          <ul className="text-xs text-gray-400 space-y-1">
+                            {aura.effects.map((effect, effectIndex) => (
+                              <li key={effectIndex} className="flex items-start gap-1">
+                                <span className="text-yellow-400 mt-0.5">•</span>
+                                <span>{effect}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
