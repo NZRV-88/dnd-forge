@@ -18,6 +18,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import LayOnHandsManager from "@/components/ui/LayOnHandsManager";
 import ChannelDivinityManager from "@/components/ui/ChannelDivinityManager";
 import AuraManager from "@/components/ui/AuraManager";
+import RadiantStrikesManager from "@/components/ui/RadiantStrikesManager";
 import { ItemDetailsSidebar } from "@/components/characterList/ItemDetailsSidebar";
 import { ChevronDown, ChevronUp, Settings, Coins, Plus, Loader2, X, Zap, Wand, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -43,7 +44,7 @@ type Props = {
   proficiencyBonus?: number;
   classKey?: string;
   level?: number;
-  onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number) => void;
+  onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number, isMeleeWeapon?: boolean) => void;
   onSwitchWeaponSlot?: (slot: number) => void;
   onUpdateEquipped?: (newEquipped: any) => void;
   onUpdateEquipment?: (newEquipment: any[]) => void;
@@ -2917,6 +2918,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     
     if (!stats) return "1d4";
     
+    console.log('DEBUG: getDamage called for weapon:', { 
+      name: weapon.name, 
+      magicItem: weapon.magicItem, 
+      damageSources: weapon.damageSources,
+      damageBonus: weapon.damageBonus 
+    });
+    
     // Для магических предметов используем их собственные источники урона
     if (weapon.magicItem && weapon.damageSources && weapon.damageSources.length > 0) {
       
@@ -2965,9 +2973,22 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     let baseDamage = weaponData?.damage || "1d4";
     const weaponType = weaponData?.type || 'melee';
     
+    console.log('DEBUG: Regular weapon processing:', {
+      name: weapon.name,
+      weaponData: weaponData,
+      baseDamage: baseDamage,
+      weaponType: weaponType
+    });
+    
     // Проверяем, является ли оружие универсальным и используется ли в двуручном режиме
     const isVersatile = weaponData?.properties?.includes('versatile') || false;
     const isTwoHanded = weapon.slots === 2; // Если занимает 2 слота, значит двуручный режим
+    
+    console.log('DEBUG: Versatile check:', {
+      isVersatile: isVersatile,
+      isTwoHanded: isTwoHanded,
+      slots: weapon.slots
+    });
     
     if (isVersatile && isTwoHanded) {
       // Увеличиваем урон на одну ступень для двуручного режима
@@ -2986,6 +3007,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       });
     }
     
+    console.log('DEBUG: After versatile check, baseDamage:', baseDamage);
+    
     const abilityModifier = weaponType === 'ranged' ? 
       Math.floor((stats.dex - 10) / 2) : 
       Math.floor((stats.str - 10) / 2);
@@ -2993,6 +3016,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     // Добавляем бонус к урону из данных оружия
     const weaponDamageBonus = weaponData?.bonusDamage || 0;
     const totalModifier = abilityModifier + weaponDamageBonus;
+    
+    console.log('DEBUG: Modifier calculation:', {
+      abilityModifier: abilityModifier,
+      weaponDamageBonus: weaponDamageBonus,
+      totalModifier: totalModifier,
+      stats: stats
+    });
     
     const modifierStr = totalModifier >= 0 ? `+${totalModifier}` : totalModifier.toString();
     
@@ -3005,10 +3035,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       const doubledDamage = baseDamage.replace(/(\d+)d(\d+)/g, (match, num, size) => {
         return `${parseInt(num) * 2}d${size}`;
       });
-      return `${doubledDamage}${modifierStr}`;
+      const result = `${doubledDamage}${modifierStr}`;
+      console.log('DEBUG: getDamage final result (critical):', result);
+      return result;
     }
     
-    return `${baseDamage}${modifierStr}`;
+    const result = `${baseDamage}${modifierStr}`;
+    console.log('DEBUG: getDamage final result:', result);
+    return result;
   };
 
   const allWeapons = getAllWeapons();
@@ -3059,7 +3093,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     // Вызываем оригинальную функцию onRoll с результатом броска
     if (onRoll) {
       // Передаем результат броска через параметры
-      onRoll(isSpell ? weapon : weapon.name, ability, bonus, "Атака", undefined, attackRoll);
+      // Определяем, является ли оружие рукопашным (не дальнобойным)
+      const isMeleeWeapon = !isSpell && weapon && !weapon.isRanged;
+      onRoll(isSpell ? weapon : weapon.name, ability, bonus, "Атака", undefined, attackRoll, isMeleeWeapon);
     }
     
     // Задержка 1 секунда перед сбросом состояния загрузки
@@ -3088,7 +3124,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     }
     
     // Вызываем оригинальную функцию onRoll с правильным типом
-    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, damageType, damage);
+    // Определяем, является ли оружие рукопашным (не дальнобойным)
+    const isMeleeWeapon = !isSpell && weapon && !weapon.isRanged;
+    console.log('DEBUG: handleDamage called with:', { weapon: weapon.name, damage, damageType, isMeleeWeapon });
+    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, damageType, damage, undefined, isMeleeWeapon);
     
     // Задержка 1 секунда перед сбросом состояния загрузки
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -4631,19 +4670,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                     // Для магического оружия используем результат getDamage, который уже учитывает критический урон
                                     const damageString = getDamage(weapon);
                                     
-                                    // Извлекаем только кости урона (без модификатора) для передачи в onRoll
-                                    const damageDice = weapon.damageSources ? 
-                                      weapon.damageSources.map(source => {
-                                        const diceCount = source.diceCount || 1;
-                                        const weaponKey = `${weapon.name}-${weapon.slot}`;
-                                        const isCritical = criticalHits[weaponKey];
-                                        const finalDiceCount = isCritical ? parseInt(diceCount.toString()) * 2 : parseInt(diceCount.toString());
-                                        return `${finalDiceCount}${source.diceType}`;
-                                      }).join(' + ') : 
-                                      damage;
-                                    
-                                    // Добавляем модификатор к костям для правильного расчета
-                                    const damageWithModifier = `${damageDice}${totalModifier >= 0 ? '+' : ''}${totalModifier}`;
+                                    // Для обычного оружия используем результат getDamage напрямую
+                                    const damageWithModifier = damageString;
                                     
                                     
                                     handleDamage(weapon, weaponType === 'ranged' ? 'dex' : 'str', totalModifier, damageWithModifier);
@@ -6205,6 +6233,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       );
                     })()}
                     <AuraManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} subclass={draft.basics.subclass} />
+                    <RadiantStrikesManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
                   </div>
                 </div>
               )}

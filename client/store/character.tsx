@@ -110,6 +110,9 @@ export type CharacterDraft = {
         currentUses: number;       // Текущие использования
         shortRestUses: number;    // Использования, восстановленные коротким отдыхом
     };
+    
+    // Сияющие удары (только для Паладина 11+ уровня)
+    radiantStrikes?: boolean;     // Активны ли сияющие удары
 };
 
 // Тип контекста (API для использования в приложении)
@@ -410,6 +413,11 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 };
             }
             
+            // Автоматически инициализируем Сияющие удары для Паладина 11+ уровня
+            if (updates.class === 'paladin' && (newDraft.basics.level || 1) >= 11 && !newDraft.radiantStrikes) {
+                newDraft.radiantStrikes = true;
+            }
+            
             return newDraft;
         });
         
@@ -455,6 +463,20 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                         maxUses: level >= 11 ? 3 : 2,
                         currentUses: Math.min(d.channelDivinity!.currentUses, level >= 11 ? 3 : 2)
                     }
+                }));
+            }
+            
+            // Инициализируем Сияющие удары для паладина 11+ уровня
+            if (level >= 11 && !draft.radiantStrikes) {
+                setDraft(d => ({
+                    ...d,
+                    radiantStrikes: true
+                }));
+            } else if (level < 11 && draft.radiantStrikes) {
+                // Убираем Сияющие удары при понижении уровня ниже 11
+                setDraft(d => ({
+                    ...d,
+                    radiantStrikes: false
                 }));
             }
         }

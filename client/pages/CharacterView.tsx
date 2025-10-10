@@ -16,7 +16,9 @@ import { ALL_FEATS } from "@/data/feats/feats";
 import { Button } from "@/components/ui/button";
 import { RACE_CATALOG } from "@/data/races";
 import { CLASS_CATALOG } from "@/data/classes";
-import { getEffectiveSpeed } from "@/data/races/types"; 
+import { getEffectiveSpeed } from "@/data/races/types";
+import { useCharacter } from "@/store/character";
+import { useFrameColor } from "@/contexts/FrameColorContext"; 
 import { supabase } from "@/lib/supabaseClient";
 import AvatarUpload from "@/components/ui/AvatarUpload";
 
@@ -46,6 +48,7 @@ export default function CharacterView() {
     const [showLog, setShowLog] = useState(false);
     
     // Используем хук для бросков кубиков
+    const { draft } = useCharacter();
     const {
         rollLog,
         setRollLog,
@@ -55,6 +58,7 @@ export default function CharacterView() {
         addRoll
     } = useDiceRolls({ 
         characterName: char?.basics.name,
+        characterData: draft, // Передаем draft вместо char для доступа к radiantStrikes
         onRollAdded: (logEntry) => {
             // Дополнительная логика при добавлении броска, если нужна
         }

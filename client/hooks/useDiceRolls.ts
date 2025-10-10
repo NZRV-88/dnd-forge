@@ -18,26 +18,78 @@ export interface RollLogEntry {
 
 export interface UseDiceRollsProps {
   characterName?: string;
+  characterData?: any; // Добавляем данные персонажа для проверки особенностей
   onRollAdded?: (entry: RollLogEntry) => void;
 }
 
-export function useDiceRolls({ characterName, onRollAdded }: UseDiceRollsProps = {}) {
+export function useDiceRolls({ characterName, characterData, onRollAdded }: UseDiceRollsProps = {}) {
   const [rollLog, setRollLog] = useState<string[]>([]);
   const [diceModalOpen, setDiceModalOpen] = useState(false);
   const [diceRollData, setDiceRollData] = useState<DiceRollData | null>(null);
 
-  // Функция для парсинга строки урона (например, "1d8+3")
+  // Функция для парсинга строки урона (например, "1d8+3" или "1d8+5+5")
   const parseDamageDice = (diceString: string) => {
-    const match = diceString.match(/^(\d+)d(\d+)([+-]\d+)?$/);
-    if (!match) {
+    // Сначала извлекаем кубики (например, "1d8")
+    const diceMatch = diceString.match(/^(\d+)d(\d+)/);
+    if (!diceMatch) {
       return { dice: "d20", modifier: 0 }; // По умолчанию
     }
     
-    const [, numDice, diceSize, modifierStr] = match;
-    const modifier = modifierStr ? parseInt(modifierStr) : 0;
+    const [, numDice, diceSize] = diceMatch;
     const dice = `${numDice}d${diceSize}`;
     
+    // Затем извлекаем все модификаторы (например, "+5+5" или "+3" или "-2")
+    const modifierMatch = diceString.match(/[+-]\d+/g);
+    let modifier = 0;
+    if (modifierMatch) {
+      modifier = modifierMatch.reduce((sum, mod) => sum + parseInt(mod), 0);
+    }
+    
     return { dice, modifier };
+  };
+
+  // Функция для броска кубика урона с учетом особенностей персонажа
+  const rollDamageDiceWithFeatures = (diceString: string, isMeleeWeapon: boolean = false) => {
+    console.log('DEBUG: rollDamageDiceWithFeatures called with:', { diceString, isMeleeWeapon, characterData: characterData?.basics });
+    const { diceRoll: baseDiceRoll, finalResult: baseResult, individualRolls: baseIndividualRolls, dice: baseDice, modifier: baseModifier } = rollDamageDice(diceString);
+    console.log('DEBUG: rollDamageDice result:', { baseDiceRoll, baseResult, baseIndividualRolls, baseDice, baseModifier });
+    
+    // Проверяем Сияющие удары для паладина
+    let radiantDamage = 0;
+    let radiantRolls: number[] = [];
+    let hasRadiantStrikes = false;
+    
+    console.log('DEBUG: Checking radiant strikes conditions:', {
+      class: characterData?.basics?.class,
+      level: characterData?.basics?.level,
+      radiantStrikes: characterData?.radiantStrikes,
+      isMeleeWeapon
+    });
+    
+    if (characterData?.basics?.class === 'paladin' && 
+        characterData?.basics?.level >= 11 && 
+        characterData?.radiantStrikes && 
+        isMeleeWeapon) {
+      hasRadiantStrikes = true;
+      radiantRolls = [Math.floor(Math.random() * 8) + 1]; // 1d8 излучения
+      radiantDamage = radiantRolls[0];
+      console.log('DEBUG: Radiant strikes activated!', { radiantDamage, radiantRolls });
+    }
+    
+    const totalDamage = baseResult + radiantDamage;
+    const allIndividualRolls = [...baseIndividualRolls, ...radiantRolls];
+    
+    return {
+      diceRoll: baseDiceRoll,
+      finalResult: totalDamage,
+      individualRolls: allIndividualRolls,
+      dice: baseDice,
+      modifier: baseModifier,
+      baseDamage: baseResult,
+      radiantDamage: radiantDamage,
+      hasRadiantStrikes: hasRadiantStrikes,
+      radiantRolls: radiantRolls
+    };
   };
 
   // Функция для броска кубика урона
@@ -95,7 +147,8 @@ export function useDiceRolls({ characterName, onRollAdded }: UseDiceRollsProps =
     bonus: number, 
     type: string = "", 
     damageString?: string, 
-    attackRoll?: number
+    attackRoll?: number,
+    isMeleeWeapon: boolean = false
   ) => {
     const d20 = attackRoll !== undefined ? attackRoll : Math.floor(Math.random() * 20) + 1;
     const total = d20 + bonus;
@@ -117,22 +170,32 @@ export function useDiceRolls({ characterName, onRollAdded }: UseDiceRollsProps =
       // Для атак: название оружия uppercase: ПОПАДАНИЕ: бросок
       entry = `${desc.toUpperCase()}: ПОПАДАНИЕ: ${d20} ${bonus >= 0 ? `+ ${bonus}` : bonus} = ${total}`;
     } else if (type === "Урон") {
-      // Для урона: используем правильный кубик урона
+      // Для урона: используем правильный кубик урона с учетом особенностей
+      console.log('DEBUG: addRoll called for damage with:', { desc, damageString, isMeleeWeapon, characterData: characterData?.basics });
       if (damageString) {
-        const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier } = rollDamageDice(damageString);
+        const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier, baseDamage, radiantDamage, hasRadiantStrikes, radiantRolls } = rollDamageDiceWithFeatures(damageString, isMeleeWeapon);
         dice = damageDice;
         diceRoll = damageDiceRoll;
         modifier = damageModifier;
         result = finalResult;
         individualRolls = damageIndividualRolls;
         
-        if (modifier !== 0) {
-          const individualRollsStr = individualRolls.join('+');
+        if (hasRadiantStrikes) {
+          // Показываем комбинированный урон: базовый + излучение
+          const baseRollsStr = damageIndividualRolls.slice(0, -radiantRolls.length).join('+');
+          const radiantRollsStr = radiantRolls.join('+');
           const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
-          entry = `${desc.toUpperCase()}: УРОН: ${dice}${modStr} = ${individualRollsStr}${modStr} = ${finalResult}`;
+          entry = `${desc.toUpperCase()}: УРОН: ${baseDamage} (оружие) + ${radiantDamage} (излучение) = ${baseRollsStr}${modStr} + ${radiantRollsStr} = ${finalResult}`;
         } else {
-          const individualRollsStr = individualRolls.join('+');
-          entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${individualRollsStr} = ${finalResult}`;
+          // Обычный урон без особенностей
+          if (modifier !== 0) {
+            const individualRollsStr = individualRolls.join('+');
+            const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+            entry = `${desc.toUpperCase()}: УРОН: ${dice}${modStr} = ${individualRollsStr}${modStr} = ${finalResult}`;
+          } else {
+            const individualRollsStr = individualRolls.join('+');
+            entry = `${desc.toUpperCase()}: УРОН: ${dice} = ${individualRollsStr} = ${finalResult}`;
+          }
         }
       } else {
         // Fallback на d20 если нет строки урона
@@ -183,6 +246,7 @@ export function useDiceRolls({ characterName, onRollAdded }: UseDiceRollsProps =
     setDiceRollData,
     addRoll,
     rollDamageDice,
+    rollDamageDiceWithFeatures,
     parseDamageDice
   };
 }

@@ -5,6 +5,7 @@ import AbilityScoresEditable from "@/components/characterList/AbilityScoresEdita
 import FrameSettingsButton from "@/components/ui/FrameSettingsButton";
 import SettingsSidebar from "@/components/ui/SettingsSidebar";
 import AvatarFrameWithImage from "@/components/ui/AvatarFrameWithImage";
+import { useCharacter } from "@/store/character";
 import { useFrameColor } from "@/contexts/FrameColorContext";
 import ProficiencySpeed from "@/components/characterList/ProficiencySpeed";
 import HealthBlock from "@/components/characterList/HealthBlock";
@@ -79,6 +80,7 @@ export default function CharacterList() {
     });
     
     // Используем хук для бросков кубиков
+    const { draft } = useCharacter();
     const {
         rollLog,
         setRollLog,
@@ -88,6 +90,7 @@ export default function CharacterList() {
         addRoll
     } = useDiceRolls({ 
         characterName: char?.basics.name,
+        characterData: draft, // Передаем draft вместо char для доступа к radiantStrikes
         onRollAdded: (logEntry) => {
             // Автоматически отправляем в Telegram если включено
             if (autoShare && telegramEnabled && telegramChatId && logEntry.rollData) {
@@ -168,6 +171,19 @@ export default function CharacterList() {
                         shield1: null,
                         shield2: null
                     };
+                }
+                
+                // Инициализируем Сияющие удары для паладина 11+ уровня при загрузке
+                console.log('DEBUG: Checking radiantStrikes initialization:', {
+                    class: draft.basics?.class,
+                    level: draft.basics?.level,
+                    radiantStrikes: draft.radiantStrikes,
+                    shouldInitialize: draft.basics?.class === 'paladin' && (draft.basics?.level || 1) >= 11 && !draft.radiantStrikes
+                });
+                
+                if (draft.basics?.class === 'paladin' && (draft.basics?.level || 1) >= 11 && !draft.radiantStrikes) {
+                    draft.radiantStrikes = true;
+                    console.log('Initialized radiantStrikes on load for paladin level', draft.basics.level);
                 }
                 
                 setCharWithLog(draft);
@@ -816,6 +832,13 @@ export default function CharacterList() {
                                     console.log('setDraft called with char:', char);
                                     const updated = updater(char);
                                     console.log('setDraft updated char:', updated);
+                                    
+                                    // Инициализируем Сияющие удары для паладина 11+ уровня
+                                    if (updated.basics?.class === 'paladin' && (updated.basics?.level || 1) >= 11 && !updated.radiantStrikes) {
+                                        updated.radiantStrikes = true;
+                                        console.log('Initialized radiantStrikes for paladin level', updated.basics.level);
+                                    }
+                                    
                                     // Автоматически сохраняем изменения в БД
                                     setTimeout(() => {
                                         saveAllWithData(updated);
