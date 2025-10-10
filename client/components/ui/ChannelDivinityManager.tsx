@@ -14,15 +14,7 @@ interface ChannelDivinityManagerProps {
 export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', subclass, draft: passedDraft }: ChannelDivinityManagerProps) {
   const characterContext = useCharacter();
   
-  console.log('ChannelDivinityManager context check:', {
-    hasContext: !!characterContext,
-    contextKeys: characterContext ? Object.keys(characterContext) : 'no context',
-    passedDraft: !!passedDraft,
-    passedSubclass: subclass
-  });
-  
   if (!characterContext) {
-    console.log('ChannelDivinityManager: No character context available');
     return null;
   }
   
@@ -33,48 +25,20 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
   
   // Проверяем подкласс из разных источников
   const actualSubclass = subclass || currentDraft?.basics?.subclass || currentDraft?.subclass;
-  
-  console.log('ChannelDivinityManager subclass sources:', {
-    propSubclass: subclass,
-    draftBasicsSubclass: currentDraft?.basics?.subclass,
-    draftSubclass: currentDraft?.subclass,
-    actualSubclass,
-    isOathOfVengeance: actualSubclass === 'oath-of-vengeance'
-  });
   const [isUsing, setIsUsing] = useState(false);
   const [isShortResting, setIsShortResting] = useState(false);
   const [isLongResting, setIsLongResting] = useState(false);
-  const [selectedEffect, setSelectedEffect] = useState<'divine-sense' | 'turn-undead' | 'vow-of-enmity'>('divine-sense');
 
   // Инициализируем Проведение божественности, если его еще нет
   React.useEffect(() => {
-    console.log('ChannelDivinityManager useEffect:', {
-      hasChannelDivinity: !!currentDraft.channelDivinity,
-      level,
-      shouldInitialize: !currentDraft.channelDivinity && level >= 3
-    });
-    
     if (!currentDraft.channelDivinity && level >= 3) {
-      console.log('Initializing Channel Divinity for level:', level);
       initializeChannelDivinity(level);
     }
   }, [level, initializeChannelDivinity, currentDraft.channelDivinity]);
 
   const channelDivinity = currentDraft.channelDivinity;
-  
-  // Отладочная информация
-  console.log('ChannelDivinityManager debug:', {
-    level,
-    actualSubclass,
-    channelDivinity: channelDivinity ? 'exists' : 'null',
-    draftSubclass: currentDraft.basics?.subclass,
-    draftClass: currentDraft.basics?.class,
-    isOathOfVengeance: actualSubclass === 'oath-of-vengeance',
-    shouldShowVowOfEnmity: actualSubclass === 'oath-of-vengeance' && level >= 3
-  });
 
   if (!channelDivinity) {
-    console.log('ChannelDivinity not initialized, returning null');
     return null;
   }
 
@@ -208,63 +172,6 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
               </div>
 
               <div className="flex flex-col space-y-3">
-                {/* Выбор эффекта */}
-                {(level >= 9 || actualSubclass === 'oath-of-vengeance') && (
-                  <div className="mb-3">
-                    <h5 className="text-sm font-medium text-gray-200 mb-2">Выберите эффект:</h5>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setSelectedEffect('divine-sense')}
-                        className={`flex-1 text-xs ${
-                          selectedEffect === 'divine-sense' 
-                            ? 'bg-opacity-20' 
-                            : 'bg-transparent hover:bg-opacity-10'
-                        }`}
-                        style={{ 
-                          border: `1px solid ${frameColor}`,
-                          color: frameColor,
-                          backgroundColor: selectedEffect === 'divine-sense' ? `${frameColor}40` : 'transparent'
-                        }}
-                      >
-                        Божественное чувство
-                      </Button>
-                      {level >= 9 && (
-                        <Button
-                          onClick={() => setSelectedEffect('turn-undead')}
-                          className={`flex-1 text-xs ${
-                            selectedEffect === 'turn-undead' 
-                              ? 'bg-opacity-20' 
-                              : 'bg-transparent hover:bg-opacity-10'
-                          }`}
-                          style={{ 
-                            border: `1px solid ${frameColor}`,
-                            color: frameColor,
-                            backgroundColor: selectedEffect === 'turn-undead' ? `${frameColor}40` : 'transparent'
-                          }}
-                        >
-                          Порицание врагов
-                        </Button>
-                      )}
-                      {actualSubclass === 'oath-of-vengeance' && (
-                        <Button
-                          onClick={() => setSelectedEffect('vow-of-enmity')}
-                          className={`flex-1 text-xs ${
-                            selectedEffect === 'vow-of-enmity' 
-                              ? 'bg-opacity-20' 
-                              : 'bg-transparent hover:bg-opacity-10'
-                          }`}
-                          style={{ 
-                            border: `1px solid ${frameColor}`,
-                            color: frameColor,
-                            backgroundColor: selectedEffect === 'vow-of-enmity' ? `${frameColor}40` : 'transparent'
-                          }}
-                        >
-                          Обет вражды
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Кнопка использования */}
                 <Button
@@ -285,19 +192,11 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   }}
                 >
                   {isUsing ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : (
-                    <>
-                      {selectedEffect === 'divine-sense' ? (
-                        <Eye className="w-4 h-4 mr-2" />
-                      ) : (
-                        <Zap className="w-4 h-4 mr-2" />
-                      )}
-                      {selectedEffect === 'divine-sense' ? 'БОЖЕСТВЕННОЕ ЧУВСТВО' : 
-                       selectedEffect === 'turn-undead' ? 'ПОРИЦАНИЕ ВРАГОВ' : 
-                       'ОБЕТ ВРАЖДЫ'}
-                    </>
+                    <Eye className="w-4 h-4 mr-2" />
                   )}
+                  {isUsing ? 'Используется...' : 'Использовать Проведение божественности'}
                 </Button>
 
                 {/* Кнопки отдыха */}

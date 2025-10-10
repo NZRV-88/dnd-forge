@@ -6194,15 +6194,6 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       const subclass = draft.basics.subclass;
                       const channelDivinity = draft.channelDivinity;
                       
-                      console.log('Attacks.tsx Channel Divinity check:', {
-                        level,
-                        subclass,
-                        channelDivinity: channelDivinity ? 'exists' : 'null',
-                        shouldShow: level >= 3,
-                        draftClass: draft.basics.class,
-                        draftBasics: draft.basics,
-                        draftKeys: Object.keys(draft)
-                      });
                       
                       return level >= 3 && (
                         <ChannelDivinityManager 
