@@ -360,7 +360,6 @@ export default function ClassPick() {
         // Рассчитываем лимит для текущего уровня персонажа
         const currentPreparedLimit = getPreparedSpellsLimit(info, draft.basics.level, draft.stats?.cha || 10);
         
-        
         let validSpells: string[] = [];
         
         // Убираем заклинания ТОЛЬКО если лимит уменьшился
@@ -372,14 +371,37 @@ export default function ClassPick() {
             const spellsToRemove = limitDifference;
             const validRegularSpells = regularSpells.slice(0, regularSpells.length - spellsToRemove);
             
-            
             validSpells = [...featureSpells, ...validRegularSpells];
         } else {
             // Если лимит не изменился или увеличился - оставляем все заклинания
             validSpells = [...featureSpells, ...regularSpells];
         }
 
-        // 3. Очищаем броски HP для уровней выше нового
+        // 3. Очищаем заклинания, полученные через особенности класса
+        const cleanedSpells = { ...draft.chosen.spells };
+        
+        // Удаляем заклинания из особенностей для уровней выше нового
+        Object.keys(cleanedSpells).forEach(spellKey => {
+            if (spellKey.startsWith('feature-')) {
+                // Это заклинания из особенностей класса
+                const featureSpells = cleanedSpells[spellKey] || [];
+                const validFeatureSpells = featureSpells.filter((spell: any) => {
+                    const spellName = typeof spell === 'string' ? spell : spell.name;
+                    // Проверяем, должно ли это заклинание быть доступно на новом уровне
+                    return classSpellsFromFeatures.includes(spellName);
+                });
+                
+                if (validFeatureSpells.length === 0) {
+                    // Если не осталось валидных заклинаний, удаляем весь ключ
+                    delete cleanedSpells[spellKey];
+                } else {
+                    // Иначе оставляем только валидные заклинания
+                    cleanedSpells[spellKey] = validFeatureSpells;
+                }
+            }
+        });
+
+        // 4. Очищаем броски HP для уровней выше нового
         let validHpRolls: number[] = [];
         if (draft.hpRolls && draft.hpRolls.length > newLevel - 1) {
             validHpRolls = draft.hpRolls.slice(0, newLevel - 1);
@@ -399,7 +421,7 @@ export default function ClassPick() {
                 fightingStyle: cleanedFightingStyle,
                 weaponMastery: cleanedWeaponMastery,
                 spells: {
-                    ...d.chosen.spells,
+                    ...cleanedSpells,
                     [info.key]: validSpells
                 }
             },
