@@ -92,7 +92,7 @@ export const DamageTypes: DamageType[] = [
         key: "Силовой",
         nameEn: "Force",
         description: "Чистая магическая энергия",
-        icon: Zap,
+        icon: Bolt,
         color: "text-blue-400"
     },
     { 
@@ -106,7 +106,7 @@ export const DamageTypes: DamageType[] = [
         key: "Электричество",
         nameEn: "Lightning",
         description: "Молния, электричество",
-        icon: Bolt,
+        icon: Zap,
         color: "text-yellow-300"
     },
     { 
