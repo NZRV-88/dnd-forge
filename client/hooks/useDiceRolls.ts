@@ -168,9 +168,13 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
       console.log('DEBUG: Multiple damage sources processed:', damageSources);
       console.log('DEBUG: damageSources length:', damageSources.length);
       console.log('DEBUG: damageSources details:', damageSources.map(ds => ({
+        name: ds.name,
         dice: ds.dice,
+        diceRoll: ds.diceRoll,
+        modifier: ds.modifier,
         result: ds.result,
-        damageType: ds.damageType
+        damageType: ds.damageType,
+        individualRolls: ds.individualRolls
       })));
     }
 
@@ -291,11 +295,12 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           
           // Создаем массив всех бросков: источники урона + сияющие удары (если есть)
           let allSeparateRolls = [...damageSources];
+          console.log('DEBUG: allSeparateRolls after copying damageSources:', allSeparateRolls);
           
           // Добавляем сияющие удары, если они есть
           if (hasRadiantStrikes) {
             console.log('DEBUG: Adding radiant strikes to multiple damage sources');
-            allSeparateRolls.push({
+            const radiantStrike = {
               name: "Сияющие удары",
               dice: isCritical ? "2d8" : "1d8",
               diceRoll: radiantDamage,
@@ -303,8 +308,12 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
               result: radiantDamage,
               individualRolls: radiantRolls,
               damageType: "Излучение"
-            });
+            };
+            allSeparateRolls.push(radiantStrike);
+            console.log('DEBUG: Added radiant strike:', radiantStrike);
           }
+          
+          console.log('DEBUG: Final allSeparateRolls:', allSeparateRolls);
           
           const combinedRollData: DiceRollData = {
             characterName: characterName || 'Персонаж',
