@@ -44,7 +44,7 @@ type Props = {
   proficiencyBonus?: number;
   classKey?: string;
   level?: number;
-  onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number, isMeleeWeapon?: boolean, weaponDamageType?: string) => void;
+  onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number, isMeleeWeapon?: boolean, weaponDamageType?: string, isCritical?: boolean) => void;
   onSwitchWeaponSlot?: (slot: number) => void;
   onUpdateEquipped?: (newEquipped: any) => void;
   onUpdateEquipment?: (newEquipment: any[]) => void;
@@ -3172,9 +3172,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       damageType, 
       isMeleeWeapon, 
       weaponDamageType,
-      isSpell 
+      isSpell,
+      isCritical
     });
-    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, damageType, damage, undefined, isMeleeWeapon, weaponDamageType);
+    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, damageType, damage, undefined, isMeleeWeapon, weaponDamageType, isCritical);
     
     // Задержка 1 секунда перед сбросом состояния загрузки
     await new Promise(resolve => setTimeout(resolve, 1000));

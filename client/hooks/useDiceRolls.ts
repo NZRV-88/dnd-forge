@@ -64,7 +64,7 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
   };
 
   // Функция для броска кубика урона с учетом особенностей персонажа
-  const rollDamageDiceWithFeatures = (diceString: string, isMeleeWeapon: boolean = false) => {
+  const rollDamageDiceWithFeatures = (diceString: string, isMeleeWeapon: boolean = false, isCritical: boolean = false) => {
         console.log('DEBUG: rollDamageDiceWithFeatures called with:', { diceString, isMeleeWeapon, characterData: characterData?.basics });
         console.log('DEBUG: characterData.radiantStrikes:', characterData?.radiantStrikes);
     const { diceRoll: baseDiceRoll, finalResult: baseResult, individualRolls: baseIndividualRolls, dice: baseDice, modifier: baseModifier } = rollDamageDice(diceString);
@@ -87,10 +87,21 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
         characterData?.radiantStrikes && 
         isMeleeWeapon) {
       hasRadiantStrikes = true;
-      // Бросаем отдельный кубик 1d8 для излучения
-      radiantRolls = [Math.floor(Math.random() * 8) + 1];
-      radiantDamage = radiantRolls[0];
-      console.log('DEBUG: Radiant strikes activated!', { radiantDamage, radiantRolls });
+      
+      if (isCritical) {
+        // При критическом попадании бросаем 2d8 для излучения
+        radiantRolls = [
+          Math.floor(Math.random() * 8) + 1,
+          Math.floor(Math.random() * 8) + 1
+        ];
+        radiantDamage = radiantRolls[0] + radiantRolls[1];
+        console.log('DEBUG: Radiant strikes CRITICAL!', { radiantDamage, radiantRolls });
+      } else {
+        // Обычный бросок 1d8 для излучения
+        radiantRolls = [Math.floor(Math.random() * 8) + 1];
+        radiantDamage = radiantRolls[0];
+        console.log('DEBUG: Radiant strikes normal!', { radiantDamage, radiantRolls });
+      }
     }
     
     const totalDamage = baseResult + radiantDamage;
@@ -166,7 +177,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
     damageString?: string, 
     attackRoll?: number,
     isMeleeWeapon: boolean = false,
-    weaponDamageType?: string // Тип урона оружия для отображения иконки
+    weaponDamageType?: string, // Тип урона оружия для отображения иконки
+    isCritical: boolean = false // Критическое попадание
   ) => {
     const d20 = attackRoll !== undefined ? attackRoll : Math.floor(Math.random() * 20) + 1;
     const total = d20 + bonus;
@@ -191,7 +203,7 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
       // Для урона: используем правильный кубик урона с учетом особенностей
       console.log('DEBUG: addRoll called for damage with:', { desc, damageString, isMeleeWeapon, characterData: characterData?.basics });
       if (damageString) {
-        const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier, baseDamage, radiantDamage, hasRadiantStrikes, radiantRolls } = rollDamageDiceWithFeatures(damageString, isMeleeWeapon);
+        const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier, baseDamage, radiantDamage, hasRadiantStrikes, radiantRolls } = rollDamageDiceWithFeatures(damageString, isMeleeWeapon, isCritical);
         dice = damageDice;
         diceRoll = damageDiceRoll;
         modifier = damageModifier;
@@ -262,7 +274,7 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
               },
               {
                 name: "Сияющие удары",
-                dice: "1d8",
+                dice: isCritical ? "2d8" : "1d8",
                 diceRoll: radiantDamage,
                 modifier: 0,
                 result: radiantDamage,
