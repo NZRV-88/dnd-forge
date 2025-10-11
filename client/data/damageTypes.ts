@@ -14,7 +14,7 @@ import {
   Skull as PoisonSkull 
 } from 'lucide-react';
 
-export type DamageTypes = "Дробящий" | "Колющий" | "Рубящий" | "Звук" | "Излучение" | "Кислота" | "Некротический" | "Огонь" | "Психический" | "Силовой" | "Холод" | "Электричество" | "Яд" | "Лед" | "Гром";
+export type DamageTypes = "Дробящий" | "Колющий" | "Рубящий" | "Звук" | "Излучение" | "Кислота" | "Некротический" | "Огонь" | "Психический" | "Силовой" | "Холод" | "Электричество" | "Яд";
 
 export interface DamageType {
     key: DamageTypes;
@@ -115,20 +115,6 @@ export const DamageTypes: DamageType[] = [
         description: "Токсичный газ, яды",
         icon: PoisonSkull,
         color: "text-purple-400"
-    },
-    { 
-        key: "Лед",
-        nameEn: "Ice",
-        description: "Ледяная вода, ледяные порывы",
-        icon: Snowflake,
-        color: "text-blue-300"
-    },
-    { 
-        key: "Гром",
-        nameEn: "Thunder",
-        description: "Оглушительный звук",
-        icon: Volume2,
-        color: "text-yellow-300"
     },
 ];
 

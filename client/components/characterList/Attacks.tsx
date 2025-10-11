@@ -3197,6 +3197,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       case "Огонь":
         return "🔥";
       case "Лед":
+      case "Холод":
         return "❄️";
       case "Электричество":
         return "⚡";
@@ -3213,6 +3214,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       case "Силовой":
         return "✨";
       case "Гром":
+      case "Звук":
         return "💥";
       default:
         return "🔮";
@@ -3225,6 +3227,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       case "Огонь":
         return { border: "#EF4444", bg: "#EF444420", text: "#FCA5A5" }; // Красный
       case "Лед":
+      case "Холод":
         return { border: "#3B82F6", bg: "#3B82F620", text: "#93C5FD" }; // Синий
       case "Электричество":
         return { border: "#60A5FA", bg: "#60A5FA20", text: "#93C5FD" }; // Голубой
@@ -3241,6 +3244,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       case "Силовой":
         return { border: "#F59E0B", bg: "#F59E0B20", text: "#FCD34D" }; // Золотой
       case "Гром":
+      case "Звук":
         return { border: "#F59E0B", bg: "#F59E0B20", text: "#FCD34D" }; // Желтый
       default:
         return { border: "#A855F7", bg: "#A855F720", text: "#C4B5FD" }; // Фиолетовый по умолчанию
