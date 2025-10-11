@@ -130,8 +130,17 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
         const diceType = source.diceType;
         const damageType = source.damageType;
         
+        console.log(`DEBUG: Processing damage source ${index}:`, {
+          diceCount,
+          diceType,
+          damageType,
+          source
+        });
+        
         // Конвертируем тип урона в русский
-        let translatedDamageType = "Рубящий";
+        let translatedDamageType = damageType; // По умолчанию используем как есть
+        
+        // Если тип на английском, переводим на русский
         switch (damageType) {
           case "bludgeoning": translatedDamageType = "Дробящий"; break;
           case "slashing": translatedDamageType = "Рубящий"; break;
@@ -146,7 +155,11 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           case "psychic": translatedDamageType = "Психический"; break;
           case "force": translatedDamageType = "Силовой"; break;
           case "thunder": translatedDamageType = "Звук"; break;
+          // Если уже на русском, оставляем как есть
+          default: translatedDamageType = damageType; break;
         }
+        
+        console.log(`DEBUG: Translated damage type: ${damageType} -> ${translatedDamageType}`);
         
         const finalDiceCount = isCritical ? diceCount * 2 : diceCount;
         const diceString = `${finalDiceCount}${diceType}`;

@@ -78,60 +78,51 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
           <div className="space-y-3">
             {/* Заголовок */}
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-gray-300 text-sm font-semibold uppercase">
+              <span className="text-gray-300 text-base font-semibold uppercase">
                 {description}:
               </span>
-              <span className={`text-sm font-semibold uppercase ${actionType.color}`}>
+              <span className={`text-base font-semibold uppercase ${actionType.color}`}>
                 {actionType.text}
               </span>
             </div>
 
-            {/* Отдельные броски */}
-            <div className="space-y-2">
+            {/* Все броски в одной строке */}
+            <div className="flex items-center gap-3">
               {separateRolls.map((roll, index) => {
                 const { icon: IconComponent, color } = roll.damageType ? getIconByType(roll.damageType as any) : { icon: null, color: "text-gray-400" };
                 
                 return (
-                  <div key={index} className="flex items-center justify-between">
-                    {/* Левая часть: иконка типа урона и кубик */}
-                    <div className="flex items-center gap-2">
-                      {IconComponent && (
-                        <IconComponent className={`w-4 h-4 ${color}`} />
-                      )}
-                      <div className={`w-6 h-6 bg-gray-700 rounded flex items-center justify-center text-xs font-bold text-gray-300 transition-all duration-300 ${
-                        isAnimating ? 'animate-spin' : ''
-                      }`}>
-                        {isAnimating ? '🎲' : roll.dice}
-                      </div>
-                      <span className="text-white text-sm font-bold">
-                        {roll.individualRolls && roll.individualRolls.length > 0 
-                          ? `${roll.individualRolls.join('+')}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`
-                          : `${roll.diceRoll}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`
-                        }
-                      </span>
+                  <div key={index} className="flex items-center gap-2">
+                    {IconComponent && (
+                      <IconComponent className={`w-6 h-6 ${color}`} />
+                    )}
+                    <div className={`w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs text-gray-300 transition-all duration-300 ${
+                      isAnimating ? 'animate-spin' : ''
+                    }`}>
+                      {isAnimating ? '🎲' : roll.dice}
                     </div>
-                    
-                    {/* Правая часть: результат */}
-                    <div className="flex items-center gap-2">
-                      <div className="w-px h-4 bg-gray-500"></div>
-                      <span className="text-gray-400 text-sm">=</span>
-                      <span className="text-white text-lg font-bold">
-                        {roll.result}
-                      </span>
-                    </div>
+                    <span className="text-white text-base font-bold">
+                      {roll.individualRolls && roll.individualRolls.length > 0 
+                        ? `${roll.individualRolls.join('+')}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`
+                        : `${roll.diceRoll}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`
+                      }
+                    </span>
+                    {/* Разделитель между источниками урона */}
+                    {index < separateRolls.length - 1 && (
+                      <div className="w-px h-6 bg-gray-500 mx-2"></div>
+                    )}
                   </div>
                 );
               })}
-            </div>
-
-            {/* Общий результат */}
-            <div className="flex items-center justify-between pt-2 border-t border-gray-600">
-              <span className="text-gray-300 text-sm font-semibold">
-                ИТОГО:
-              </span>
-              <span className="text-white text-xl font-bold">
-                {result}
-              </span>
+              
+              {/* Единая вертикальная черта и общий результат */}
+              <div className="flex items-center gap-3">
+                <div className="w-px h-8 bg-gray-500"></div>
+                <span className="text-gray-400 text-lg">=</span>
+                <span className="text-white text-2xl font-bold">
+                  {result}
+                </span>
+              </div>
             </div>
           </div>
         ) : (
@@ -139,10 +130,10 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
           <div>
             {/* Заголовок */}
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-gray-300 text-sm font-semibold uppercase">
+              <span className="text-gray-300 text-base font-semibold uppercase">
                 {description}:
               </span>
-              <span className={`text-sm font-semibold uppercase ${actionType.color}`}>
+              <span className={`text-base font-semibold uppercase ${actionType.color}`}>
                 {actionType.text}
               </span>
             </div>
@@ -154,7 +145,7 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
                 {dice.includes(' + ') ? (
                   // Для нескольких кубиков показываем отдельные квадратики
                   dice.split(' + ').map((dicePart, index) => (
-                    <div key={index} className={`w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs font-bold text-gray-300 transition-all duration-300 ${
+                    <div key={index} className={`w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-base font-bold text-gray-300 transition-all duration-300 ${
                       isAnimating ? 'animate-spin' : ''
                     }`}>
                       {isAnimating ? '🎲' : dicePart.trim()}
@@ -162,7 +153,7 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
                   ))
                 ) : (
                   // Для одного кубика показываем как раньше
-                  <div className={`w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs font-bold text-gray-300 transition-all duration-300 ${
+                  <div className={`w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-base font-bold text-gray-300 transition-all duration-300 ${
                     isAnimating ? 'animate-spin' : ''
                   }`}>
                     {isAnimating ? '🎲' : dice}
