@@ -161,7 +161,11 @@ export default function FeaturesTab({
     if (!characterData?.class) return [];
 
     const classInfo = characterData.class;
-    const currentLevel = draft.basics.level || 1;
+    const currentLevel = Number(characterData.level) || Number(draft.basics.level) || 1;
+    console.log('=== DEBUG: getClassFeaturesByLevel ===');
+    console.log('draft.basics.level:', draft.basics.level);
+    console.log('characterData.level:', characterData.level);
+    console.log('currentLevel (after conversion):', currentLevel);
     const classFeats: { 
       name: string; 
       desc: string; 
@@ -199,20 +203,24 @@ export default function FeaturesTab({
       Object.entries(subclass.features || {}).forEach(([lvl, featsArr]) => {
         const level = Number(lvl);
         if (level <= currentLevel && Array.isArray(featsArr)) {
-          featsArr.forEach((f, featIdx) => classFeats.push({ 
-            ...f, 
-            featureLevel: level,
-            originalIndex: featIdx,
-            originalLevel: level,
-            isSubclass: true,
-            uniqueId: `${classInfo.key}-subclass-${subclass.key}-${lvl}-${featIdx}-${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`
-          }));
+          featsArr.forEach((f, featIdx) => {
+            classFeats.push({ 
+              ...f, 
+              featureLevel: level,
+              originalIndex: featIdx,
+              originalLevel: level,
+              isSubclass: true,
+              uniqueId: `${classInfo.key}-subclass-${subclass.key}-${lvl}-${featIdx}-${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+            });
+          });
         }
       });
     }
 
     // Сортируем по уровню
     classFeats.sort((a, b) => a.featureLevel - b.featureLevel);
+    console.log('Total features after filtering:', classFeats.length);
+    console.log('Features:', classFeats.map(f => `${f.name} (lvl ${f.featureLevel})`));
 
     return classFeats;
   };
