@@ -338,25 +338,33 @@ export default function FeaturesTab({
   return (
     <div className="h-full flex flex-col">
       {/* Заголовки подвкладок */}
-      <div className="flex items-center gap-6 mb-3">
+      <div className="flex items-center gap-6 mb-3 pl-3">
         <button
           onClick={() => setActiveSubTab('features')}
-          className={`flex items-center gap-2 text-base font-bold uppercase tracking-wider border-l-2 pl-2 transition-colors ${
+          className={`flex items-center gap-2 text-xs font-semibold uppercase transition-all duration-200 relative ${
             activeSubTab === 'features'
-              ? 'text-foreground border-primary'
-              : 'text-muted-foreground border-transparent hover:text-foreground'
+              ? 'border-b-2'
+              : 'border-b-0'
           }`}
+          style={{
+            color: activeSubTab === 'features' ? getFrameColor(frameColor) : '#9CA3AF',
+            borderBottomColor: activeSubTab === 'features' ? getFrameColor(frameColor) : 'transparent'
+          }}
         >
           <span>Особенности</span>
         </button>
         
         <button
           onClick={() => setActiveSubTab('progression')}
-          className={`flex items-center gap-2 text-base font-bold uppercase tracking-wider border-l-2 pl-2 transition-colors ${
+          className={`flex items-center gap-2 text-xs font-semibold uppercase transition-all duration-200 relative ${
             activeSubTab === 'progression'
-              ? 'text-foreground border-primary'
-              : 'text-muted-foreground border-transparent hover:text-foreground'
+              ? 'border-b-2'
+              : 'border-b-0'
           }`}
+          style={{
+            color: activeSubTab === 'progression' ? getFrameColor(frameColor) : '#9CA3AF',
+            borderBottomColor: activeSubTab === 'progression' ? getFrameColor(frameColor) : 'transparent'
+          }}
         >
           <span>Развитие</span>
         </button>
