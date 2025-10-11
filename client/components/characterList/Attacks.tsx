@@ -4946,17 +4946,41 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     const bonusActions = [];
                     
                     // Добавляем заклинания, которые являются бонусными действиями
-                    if (characterData?.spells?.length > 0) {
-                      console.log('Attacks: checking bonus actions, characterData.spells:', characterData.spells);
-                      characterData.spells.forEach((spell: string, i: number) => {
+                    // Получаем все заклинания персонажа из всех источников
+                    const allSpells: string[] = [];
+                    
+                    // Заклинания класса
+                    if (characterData?.chosen?.spells?.class) {
+                      allSpells.push(...characterData.chosen.spells.class);
+                    }
+                    
+                    // Заклинания подрасы
+                    if (characterData?.chosen?.spells?.subrace) {
+                      allSpells.push(...characterData.chosen.spells.subrace);
+                    }
+                    
+                    // Заклинания черт
+                    if (characterData?.chosen?.spells?.features) {
+                      Object.values(characterData.chosen.spells.features).forEach((spellList: string[]) => {
+                        allSpells.push(...spellList);
+                      });
+                    }
+                    
+                    // Выученные заклинания
+                    if (characterData?.chosen?.learnedSpells) {
+                      Object.values(characterData.chosen.learnedSpells).forEach((spellList: string[]) => {
+                        allSpells.push(...spellList);
+                      });
+                    }
+                    
+                    if (allSpells.length > 0) {
+                      allSpells.forEach((spell: string, i: number) => {
                         const spellData = getSpellData(spell);
-                        console.log(`Attacks: bonus spell ${spell}:`, spellData);
                         // Проверяем, является ли заклинание бонусным действием
                         const castingTime = spellData?.castingTime;
                         const isBonusAction = Array.isArray(castingTime) 
                             ? castingTime.includes("Бонусное действие")
                             : castingTime === "Бонусное действие";
-                        console.log(`Attacks: bonus spell ${spell} castingTime:`, castingTime, 'isBonusAction:', isBonusAction, 'isCombat:', spellData?.isCombat);
                         if (isBonusAction && spellData?.isCombat) {
                           bonusActions.push({ type: 'spell', data: spell, index: i });
                         }

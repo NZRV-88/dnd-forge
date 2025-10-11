@@ -94,7 +94,7 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
                 return (
                   <div key={index} className="flex items-center gap-2">
                     {IconComponent && (
-                      <IconComponent className={`w-6 h-6 ${color}`} />
+                      <IconComponent className={`w-4 h-4 ${color}`} />
                     )}
                     <div className={`w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs text-gray-300 transition-all duration-300 ${
                       isAnimating ? 'animate-spin' : ''
