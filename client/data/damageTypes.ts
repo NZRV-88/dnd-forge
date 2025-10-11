@@ -14,7 +14,7 @@ import {
   Skull as PoisonSkull 
 } from 'lucide-react';
 
-export type DamageTypes = "Дробящий" | "Колющий" | "Рубящий" | "Звук" | "Излучение" | "Кислота" | "Некротический" | "Огонь" | "Психический" | "Силовой" | "Холод" | "Электричество" | "Яд";
+export type DamageTypes = "Дробящий" | "Колющий" | "Рубящий" | "Звук" | "Излучение" | "Кислота" | "Некротический" | "Огонь" | "Психический" | "Силовой" | "Холод" | "Электричество" | "Яд" | "Лед" | "Гром";
 
 export interface DamageType {
     key: DamageTypes;
@@ -58,49 +58,49 @@ export const DamageTypes: DamageType[] = [
         nameEn: "Radiant",
         description: "Священная энергия, палящая радиация",
         icon: Sun,
-        color: "text-yellow-400"
+        color: "text-orange-300"
     },
     { 
         key: "Кислота",
         nameEn: "Acid",
         description: "Едкие жидкости, пищеварительные ферменты",
         icon: Droplets,
-        color: "text-green-400"
+        color: "text-green-300"
     },
     { 
         key: "Некротический",
         nameEn: "Necrotic",
         description: "Энергия, высасывающая жизнь",
         icon: Skull,
-        color: "text-purple-600"
+        color: "text-gray-300"
     },
     { 
         key: "Огонь",
         nameEn: "Fire",
         description: "Пламя, невыносимый жар",
         icon: Flame,
-        color: "text-red-400"
+        color: "text-red-300"
     },
     { 
         key: "Психический",
         nameEn: "Psychic",
         description: "Энергия, разрывающая разум",
         icon: Brain,
-        color: "text-pink-400"
+        color: "text-pink-300"
     },
     { 
         key: "Силовой",
         nameEn: "Force",
         description: "Чистая магическая энергия",
         icon: Bolt,
-        color: "text-blue-400"
+        color: "text-yellow-300"
     },
     { 
         key: "Холод",
         nameEn: "Cold",
         description: "Ледяная вода, ледяные порывы",
         icon: Snowflake,
-        color: "text-cyan-400"
+        color: "text-blue-300"
     },
     { 
         key: "Электричество",
@@ -114,7 +114,21 @@ export const DamageTypes: DamageType[] = [
         nameEn: "Poison",
         description: "Токсичный газ, яды",
         icon: PoisonSkull,
-        color: "text-green-600"
+        color: "text-purple-400"
+    },
+    { 
+        key: "Лед",
+        nameEn: "Ice",
+        description: "Ледяная вода, ледяные порывы",
+        icon: Snowflake,
+        color: "text-blue-300"
+    },
+    { 
+        key: "Гром",
+        nameEn: "Thunder",
+        description: "Оглушительный звук",
+        icon: Volume2,
+        color: "text-yellow-300"
     },
 ];
 
