@@ -118,15 +118,14 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
 
     console.log('DEBUG: weaponData:', weaponData);
     console.log('DEBUG: weaponData.magicItem:', weaponData?.magicItem);
-    console.log('DEBUG: weaponData.weapon:', weaponData?.weapon);
-    console.log('DEBUG: weaponData.weapon.damageSources:', weaponData?.weapon?.damageSources);
+    console.log('DEBUG: weaponData.damageSources:', weaponData?.damageSources);
     
-    if (weaponData?.magicItem && weaponData?.weapon?.damageSources && weaponData.weapon.damageSources.length > 1) {
+    if (weaponData?.magicItem && weaponData?.damageSources && weaponData.damageSources.length > 1) {
       hasMultipleDamageSources = true;
       console.log('DEBUG: Multiple damage sources detected!');
       
       // Создаем отдельные броски для каждого источника урона
-      damageSources = weaponData.weapon.damageSources.map((source: any, index: number) => {
+      damageSources = weaponData.damageSources.map((source: any, index: number) => {
         const diceCount = source.diceCount || 1;
         const diceType = source.diceType;
         const damageType = source.damageType;
