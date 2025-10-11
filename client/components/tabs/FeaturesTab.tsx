@@ -100,7 +100,7 @@ export default function FeaturesTab({
           const [source, featKey] = featEntry.split(':');
           console.log('Debug - Черта:', featEntry, 'Источник:', source, 'Ключ:', featKey);
           // Ищем черты, связанные с уровнем паладина
-          if (source && featKey && source.includes('paladin') && source.includes('level-' + featureLevel)) {
+          if (source && featKey && source.includes('paladin') && source.includes('-' + featureLevel + '-')) {
             console.log('Debug - Найдена подходящая черта:', featKey);
             choices.push(`feat:${featKey}`);
           }
