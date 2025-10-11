@@ -510,10 +510,8 @@ export default function CharacterList() {
                     parseInt(item.item.itemBonusValue) || 0
                 ));
                 
-                // Если бонус от предмета больше текущего КБ, используем его
-                if (maxACBonus > totalAC) {
-                    totalAC = maxACBonus;
-                }
+                // Добавляем бонус к КБ (не заменяем)
+                totalAC += maxACBonus;
             }
         }
         
