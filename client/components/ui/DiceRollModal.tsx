@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getIconByType } from '@/data/damageTypes';
 
 interface DiceRollModalProps {
   isOpen: boolean;
@@ -87,36 +88,40 @@ export default function DiceRollModal({ isOpen, onClose, rollData }: DiceRollMod
 
             {/* Отдельные броски */}
             <div className="space-y-2">
-              {separateRolls.map((roll, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  {/* Левая часть: название и кубик */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-300 text-xs font-medium">
-                      {roll.name}:
-                    </span>
-                    <div className={`w-6 h-6 bg-gray-700 rounded flex items-center justify-center text-xs font-bold text-gray-300 transition-all duration-300 ${
-                      isAnimating ? 'animate-spin' : ''
-                    }`}>
-                      {isAnimating ? '🎲' : roll.dice}
+              {separateRolls.map((roll, index) => {
+                const { icon: IconComponent, color } = roll.damageType ? getIconByType(roll.damageType as any) : { icon: null, color: "text-gray-400" };
+                
+                return (
+                  <div key={index} className="flex items-center justify-between">
+                    {/* Левая часть: иконка типа урона и кубик */}
+                    <div className="flex items-center gap-2">
+                      {IconComponent && (
+                        <IconComponent className={`w-4 h-4 ${color}`} />
+                      )}
+                      <div className={`w-6 h-6 bg-gray-700 rounded flex items-center justify-center text-xs font-bold text-gray-300 transition-all duration-300 ${
+                        isAnimating ? 'animate-spin' : ''
+                      }`}>
+                        {isAnimating ? '🎲' : roll.dice}
+                      </div>
+                      <span className="text-white text-sm font-bold">
+                        {roll.individualRolls && roll.individualRolls.length > 0 
+                          ? `${roll.individualRolls.join('+')}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`
+                          : `${roll.diceRoll}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`
+                        }
+                      </span>
                     </div>
-                    <span className="text-white text-sm font-bold">
-                      {roll.individualRolls && roll.individualRolls.length > 0 
-                        ? `${roll.individualRolls.join('+')}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`
-                        : `${roll.diceRoll}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`
-                      }
-                    </span>
+                    
+                    {/* Правая часть: результат */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-px h-4 bg-gray-500"></div>
+                      <span className="text-gray-400 text-sm">=</span>
+                      <span className="text-white text-lg font-bold">
+                        {roll.result}
+                      </span>
+                    </div>
                   </div>
-                  
-                  {/* Правая часть: результат */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-px h-4 bg-gray-500"></div>
-                    <span className="text-gray-400 text-sm">=</span>
-                    <span className="text-white text-lg font-bold">
-                      {roll.result}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Общий результат */}

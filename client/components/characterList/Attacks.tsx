@@ -44,7 +44,7 @@ type Props = {
   proficiencyBonus?: number;
   classKey?: string;
   level?: number;
-  onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number, isMeleeWeapon?: boolean) => void;
+  onRoll?: (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number, isMeleeWeapon?: boolean, weaponDamageType?: string) => void;
   onSwitchWeaponSlot?: (slot: number) => void;
   onUpdateEquipped?: (newEquipped: any) => void;
   onUpdateEquipment?: (newEquipment: any[]) => void;
@@ -2913,6 +2913,34 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     return abilityModifier + proficiencyBonus + weaponBonus;
   };
 
+  // Получаем тип урона оружия
+  const getWeaponDamageType = (weapon: any): string => {
+    // Для магических предметов используем тип урона из источников
+    if (weapon.magicItem && weapon.damageSources && weapon.damageSources.length > 0) {
+      const damageType = weapon.damageSources[0].damageType;
+      // Конвертируем английский тип в русский
+      switch (damageType) {
+        case "bludgeoning": return "Дробящий";
+        case "slashing": return "Рубящий";
+        case "piercing": return "Колющий";
+        default: return "Рубящий";
+      }
+    }
+    
+    // Для обычного оружия ищем в базе данных
+    const weaponData = Weapons.find(w => w.name === weapon.name);
+    if (weaponData) {
+      switch (weaponData.damageType) {
+        case "bludgeoning": return "Дробящий";
+        case "slashing": return "Рубящий";
+        case "piercing": return "Колющий";
+        default: return "Рубящий";
+      }
+    }
+    
+    return "Рубящий"; // По умолчанию
+  };
+
   // Получаем урон для оружия
   const getDamage = (weapon: any) => {
     
@@ -3126,8 +3154,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     // Вызываем оригинальную функцию onRoll с правильным типом
     // Определяем, является ли оружие рукопашным (не дальнобойным)
     const isMeleeWeapon = !isSpell && weapon && !weapon.isRanged;
-    console.log('DEBUG: handleDamage called with:', { weapon: weapon.name, damage, damageType, isMeleeWeapon });
-    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, damageType, damage, undefined, isMeleeWeapon);
+    const weaponDamageType = !isSpell && weapon ? getWeaponDamageType(weapon) : undefined;
+    console.log('DEBUG: handleDamage called with:', { weapon: weapon.name, damage, damageType, isMeleeWeapon, weaponDamageType });
+    onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, damageType, damage, undefined, isMeleeWeapon, weaponDamageType);
     
     // Задержка 1 секунда перед сбросом состояния загрузки
     await new Promise(resolve => setTimeout(resolve, 1000));

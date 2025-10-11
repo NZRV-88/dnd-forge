@@ -17,6 +17,7 @@ export interface DiceRollData {
     modifier: number;
     result: number;
     individualRolls?: number[];
+    damageType?: string; // Тип урона для отображения иконки
   }>;
 }
 
@@ -29,6 +30,11 @@ export interface UseDiceRollsProps {
   characterName?: string;
   characterData?: any; // Добавляем данные персонажа для проверки особенностей
   onRollAdded?: (entry: RollLogEntry) => void;
+}
+
+// Интерфейс для функции onRoll
+export interface OnRollFunction {
+  (desc: string, ability: string, bonus: number, type: string, damageString?: string, attackRoll?: number, isMeleeWeapon?: boolean, weaponDamageType?: string): void;
 }
 
 export function useDiceRolls({ characterName, characterData, onRollAdded }: UseDiceRollsProps = {}) {
@@ -159,7 +165,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
     type: string = "", 
     damageString?: string, 
     attackRoll?: number,
-    isMeleeWeapon: boolean = false
+    isMeleeWeapon: boolean = false,
+    weaponDamageType?: string // Тип урона оружия для отображения иконки
   ) => {
     const d20 = attackRoll !== undefined ? attackRoll : Math.floor(Math.random() * 20) + 1;
     const total = d20 + bonus;
@@ -250,7 +257,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
                 diceRoll: damageIndividualRolls.slice(0, -radiantRolls.length).reduce((sum, roll) => sum + roll, 0),
                 modifier: modifier,
                 result: baseDamage,
-                individualRolls: damageIndividualRolls.slice(0, -radiantRolls.length)
+                individualRolls: damageIndividualRolls.slice(0, -radiantRolls.length),
+                damageType: weaponDamageType || "Рубящий" // По умолчанию рубящий урон
               },
               {
                 name: "Сияющие удары",
@@ -258,7 +266,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
                 diceRoll: radiantDamage,
                 modifier: 0,
                 result: radiantDamage,
-                individualRolls: radiantRolls
+                individualRolls: radiantRolls,
+                damageType: "Излучение"
               }
             ]
           };
