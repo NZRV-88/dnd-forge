@@ -166,6 +166,12 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
       });
       
       console.log('DEBUG: Multiple damage sources processed:', damageSources);
+      console.log('DEBUG: damageSources length:', damageSources.length);
+      console.log('DEBUG: damageSources details:', damageSources.map(ds => ({
+        dice: ds.dice,
+        result: ds.result,
+        damageType: ds.damageType
+      })));
     }
 
     const totalDamage = baseResult + radiantDamage;
@@ -357,6 +363,10 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           return; // Выходим из функции, так как уже обработали все
         } else if (hasMultipleDamageSources) {
           // Для магического оружия с несколькими источниками урона
+          console.log('DEBUG: Creating combinedRollData for multiple damage sources');
+          console.log('DEBUG: damageSources for separateRolls:', damageSources);
+          console.log('DEBUG: damageSources length:', damageSources.length);
+          
           const combinedRollData: DiceRollData = {
             characterName: characterName || 'Персонаж',
             dice: dice,
