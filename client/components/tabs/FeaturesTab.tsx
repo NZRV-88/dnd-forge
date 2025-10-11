@@ -90,6 +90,20 @@ export default function FeaturesTab({
       choices.push(`subclass:${draft.basics.subclass}`);
     }
     
+    // Специальная обработка для "Увеличение характеристик" - ищем черты по уровню
+    if (featureName === 'Увеличение характеристик') {
+      Object.entries(draft.chosen.feats || {}).forEach(([source, selectedFeats]) => {
+        // Ищем черты, связанные с уровнем паладина
+        if (source.includes('paladin') && source.includes('level-' + featureLevel)) {
+          if (Array.isArray(selectedFeats)) {
+            selectedFeats.forEach(feat => {
+              choices.push(`feat:${feat}`);
+            });
+          }
+        }
+      });
+    }
+    
     // Создаем маппинг особенностей к их типам выборов
     const featureChoiceMapping: { [key: string]: string[] } = {
       'Основные особенности класса': ['skills'],
@@ -665,6 +679,10 @@ export default function FeaturesTab({
                                           'archery': 'Стрельба из лука'
                                         };
                                         displayName = fightingStyleNames[choiceValue] || choiceValue;
+                                      } else if (choiceType === 'feat') {
+                                        // Для черт ищем название в ALL_FEATS
+                                        const feat = ALL_FEATS.find(f => f.key === choiceValue);
+                                        displayName = feat?.name || choiceValue;
                                       }
                                       
                                       return (
