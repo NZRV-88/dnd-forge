@@ -84,10 +84,15 @@ export default function FeaturesTab({
     
     const choices: string[] = [];
     
+    // Специальная обработка для "Клятва Паладина" - подкласс хранится в draft.basics.subclass
+    if (featureName === 'Клятва Паладина' && draft.basics.subclass) {
+      choices.push(`subclass:${draft.basics.subclass}`);
+    }
+    
     // Создаем маппинг особенностей к их типам выборов
     const featureChoiceMapping: { [key: string]: string[] } = {
       'Основные особенности класса': ['skills'],
-      'Боевой стиль': ['fightingStyle'],
+      'Боевой стиль': ['features', 'fightingStyle', 'blessedWarrior'],
       'Оружейное мастерство': ['weaponMastery'],
       'Увеличение характеристик': ['feats'],
       'Клятва Паладина': ['subclass'],
@@ -114,11 +119,33 @@ export default function FeaturesTab({
           const isLevelRelated = source.includes('level-' + featureLevel) || source.includes('-' + featureLevel + '-');
           const isCategoryMatch = expectedChoices.includes(category);
           
-          if ((isClassRelated || isLevelRelated) && (expectedChoices.length === 0 || isCategoryMatch)) {
+          // Для боевого стиля также проверяем источник feature-fighting-style
+          const isFightingStyle = featureName === 'Боевой стиль' && source.includes('fighting-style');
+          
+          // Для боевого стиля также проверяем выборы типа feature
+          const isFeatureChoice = featureName === 'Боевой стиль' && category === 'features' && 
+            Array.isArray(selectedItems) && selectedItems.some(item => 
+              item === 'fighting-style' || item === 'blessed-warrior'
+            );
+          
+          if ((isClassRelated || isLevelRelated || isFightingStyle || isFeatureChoice) && (expectedChoices.length === 0 || isCategoryMatch)) {
             if (Array.isArray(selectedItems)) {
               selectedItems.forEach(item => {
                 if (typeof item === 'string') {
-                  choices.push(`${category}:${item}`);
+                  // Для боевого стиля переводим ключи в читаемые названия
+                  if (featureName === 'Боевой стиль' && item === 'fighting-style') {
+                    // Если выбран боевой стиль, ищем конкретный стиль в fightingStyle
+                    const fightingStyleChoices = draft.chosen.fightingStyle?.['feature-fighting-style'];
+                    if (Array.isArray(fightingStyleChoices)) {
+                      fightingStyleChoices.forEach(style => {
+                        choices.push(`${category}:${style}`);
+                      });
+                    }
+                  } else if (featureName === 'Боевой стиль' && item === 'blessed-warrior') {
+                    choices.push(`${category}:Благословенный воин`);
+                  } else {
+                    choices.push(`${category}:${item}`);
+                  }
                 }
               });
             }
@@ -580,47 +607,60 @@ export default function FeaturesTab({
                           <div className="space-y-2">
                             <h4 className="text-sm font-semibold text-gray-200">Выборы:</h4>
                             <div className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
-                              <div className="text-xs text-gray-300 leading-relaxed space-y-1">
-                                {f.choices.map((choice, choiceIndex) => (
-                                  <div key={choiceIndex}>
-                                    {typeof choice === 'string' ? choice : (choice.name || JSON.stringify(choice))}
-                                  </div>
-                                ))}
-                              </div>
-                              
                               {/* Отображение выбранных опций для выборов */}
                               {(() => {
                                 const choices = getClassFeatureChoices(f.name, f.featureLevel);
-                                return choices.length > 0 && (
-                                  <div className="mt-3 pt-3 border-t border-gray-600">
-                                    <h6 className="text-sm font-semibold text-gray-200 mb-2">Выбранные опции:</h6>
-                                    <div className="space-y-1">
-                                      {choices.map((choice, choiceIndex) => {
-                                        const [choiceType, choiceValue] = choice.split(':');
-                                        let displayName = choiceValue;
-                                        
-                                        // Переводим ключи в читаемые названия
-                                        if (choiceType === 'skill') {
-                                          const skill = SKILLS.find(s => s.key === choiceValue);
-                                          displayName = skill?.name || choiceValue;
-                                        } else if (choiceType === 'tool') {
-                                          const tool = Tools.find(t => t.key === choiceValue);
-                                          displayName = tool?.name || choiceValue;
-                                        } else if (choiceType === 'language') {
-                                          const language = LANGUAGES.find(l => l.key === choiceValue);
-                                          displayName = language?.name || choiceValue;
-                                        } else if (choiceType === 'ability') {
-                                          const ability = ABILITIES.find(a => a.key === choiceValue);
-                                          displayName = ability?.label || choiceValue;
-                                        }
-                                        
-                                        return (
-                                          <div key={choiceIndex} className="text-xs text-gray-300">
-                                            • {displayName}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
+                                return choices.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {choices.map((choice, choiceIndex) => {
+                                      const [choiceType, choiceValue] = choice.split(':');
+                                      let displayName = choiceValue;
+                                      
+                                      // Переводим ключи в читаемые названия
+                                      if (choiceType === 'skill') {
+                                        const skill = SKILLS.find(s => s.key === choiceValue);
+                                        displayName = skill?.name || choiceValue;
+                                      } else if (choiceType === 'tool') {
+                                        const tool = Tools.find(t => t.key === choiceValue);
+                                        displayName = tool?.name || choiceValue;
+                                      } else if (choiceType === 'language') {
+                                        const language = LANGUAGES.find(l => l.key === choiceValue);
+                                        displayName = language?.name || choiceValue;
+                                      } else if (choiceType === 'ability') {
+                                        const ability = ABILITIES.find(a => a.key === choiceValue);
+                                        displayName = ability?.label || choiceValue;
+                                      } else if (choiceType === 'subclass') {
+                                        // Для подкласса переводим ключ в название
+                                        const subclassNames: { [key: string]: string } = {
+                                          'oath-of-devotion': 'Клятва преданности',
+                                          'oath-of-the-ancients': 'Клятва древних',
+                                          'oath-of-glory': 'Клятва славы',
+                                          'oath-of-vengeance': 'Клятва возмездия'
+                                        };
+                                        displayName = subclassNames[choiceValue] || choiceValue;
+                                      } else if (choiceType === 'features') {
+                                        // Для боевых стилей переводим ключи
+                                        const fightingStyleNames: { [key: string]: string } = {
+                                          'great_weapon_fighting': 'Бой большим оружием',
+                                          'defense': 'Защита',
+                                          'dueling': 'Дуэль',
+                                          'protection': 'Защита',
+                                          'two_weapon_fighting': 'Бой двумя оружиями',
+                                          'archery': 'Стрельба из лука'
+                                        };
+                                        displayName = fightingStyleNames[choiceValue] || choiceValue;
+                                      }
+                                      
+                                      return (
+                                        <div key={choiceIndex} className="text-xs text-gray-300">
+                                          • {displayName}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-gray-400 italic">
+                                    Выбор не сделан
                                   </div>
                                 );
                               })()}
