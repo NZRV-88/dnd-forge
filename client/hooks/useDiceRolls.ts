@@ -64,8 +64,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
   };
 
   // Функция для броска кубика урона с учетом особенностей персонажа
-  const rollDamageDiceWithFeatures = (diceString: string, isMeleeWeapon: boolean = false, isCritical: boolean = false) => {
-        console.log('DEBUG: rollDamageDiceWithFeatures called with:', { diceString, isMeleeWeapon, characterData: characterData?.basics });
+  const rollDamageDiceWithFeatures = (diceString: string, isMeleeWeapon: boolean = false, isCritical: boolean = false, weaponData?: any) => {
+        console.log('DEBUG: rollDamageDiceWithFeatures called with:', { diceString, isMeleeWeapon, characterData: characterData?.basics, weaponData });
         console.log('DEBUG: characterData.radiantStrikes:', characterData?.radiantStrikes);
     const { diceRoll: baseDiceRoll, finalResult: baseResult, individualRolls: baseIndividualRolls, dice: baseDice, modifier: baseModifier } = rollDamageDice(diceString);
     console.log('DEBUG: rollDamageDice result:', { baseDiceRoll, baseResult, baseIndividualRolls, baseDice, baseModifier });
@@ -104,6 +104,65 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
       }
     }
     
+    // Проверяем, есть ли магическое оружие с несколькими источниками урона
+    let hasMultipleDamageSources = false;
+    let damageSources: Array<{
+      name: string;
+      dice: string;
+      diceRoll: number;
+      modifier: number;
+      result: number;
+      individualRolls: number[];
+      damageType: string;
+    }> = [];
+
+    if (weaponData?.magicItem && weaponData?.damageSources && weaponData.damageSources.length > 1) {
+      hasMultipleDamageSources = true;
+      
+      // Создаем отдельные броски для каждого источника урона
+      damageSources = weaponData.damageSources.map((source: any, index: number) => {
+        const diceCount = source.diceCount || 1;
+        const diceType = source.diceType;
+        const damageType = source.damageType;
+        
+        // Конвертируем тип урона в русский
+        let translatedDamageType = "Рубящий";
+        switch (damageType) {
+          case "bludgeoning": translatedDamageType = "Дробящий"; break;
+          case "slashing": translatedDamageType = "Рубящий"; break;
+          case "piercing": translatedDamageType = "Колющий"; break;
+          case "fire": translatedDamageType = "Огонь"; break;
+          case "cold": translatedDamageType = "Холод"; break;
+          case "lightning": translatedDamageType = "Электричество"; break;
+          case "acid": translatedDamageType = "Кислота"; break;
+          case "poison": translatedDamageType = "Яд"; break;
+          case "necrotic": translatedDamageType = "Некротический"; break;
+          case "radiant": translatedDamageType = "Излучение"; break;
+          case "psychic": translatedDamageType = "Психический"; break;
+          case "force": translatedDamageType = "Силовой"; break;
+          case "thunder": translatedDamageType = "Звук"; break;
+        }
+        
+        const finalDiceCount = isCritical ? diceCount * 2 : diceCount;
+        const diceString = `${finalDiceCount}${diceType}`;
+        
+        // Бросаем кубики для этого источника
+        const { diceRoll, finalResult, individualRolls } = rollDamageDice(diceString);
+        
+        return {
+          name: `${weaponData.name} (${translatedDamageType})`,
+          dice: diceString,
+          diceRoll: diceRoll,
+          modifier: 0, // Модификатор добавляется только к основному урону
+          result: finalResult,
+          individualRolls: individualRolls,
+          damageType: translatedDamageType
+        };
+      });
+      
+      console.log('DEBUG: Multiple damage sources processed:', damageSources);
+    }
+
     const totalDamage = baseResult + radiantDamage;
     const allIndividualRolls = [...baseIndividualRolls, ...radiantRolls];
     
@@ -116,7 +175,9 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
       baseDamage: baseResult,
       radiantDamage: radiantDamage,
       hasRadiantStrikes: hasRadiantStrikes,
-      radiantRolls: radiantRolls
+      radiantRolls: radiantRolls,
+      hasMultipleDamageSources: hasMultipleDamageSources,
+      damageSources: damageSources
     };
   };
 
@@ -178,7 +239,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
     attackRoll?: number,
     isMeleeWeapon: boolean = false,
     weaponDamageType?: string, // Тип урона оружия для отображения иконки
-    isCritical: boolean = false // Критическое попадание
+    isCritical: boolean = false, // Критическое попадание
+    weaponData?: any // Данные оружия для магических предметов
   ) => {
     const d20 = attackRoll !== undefined ? attackRoll : Math.floor(Math.random() * 20) + 1;
     const total = d20 + bonus;
@@ -203,7 +265,7 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
       // Для урона: используем правильный кубик урона с учетом особенностей
       console.log('DEBUG: addRoll called for damage with:', { desc, damageString, isMeleeWeapon, characterData: characterData?.basics });
       if (damageString) {
-        const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier, baseDamage, radiantDamage, hasRadiantStrikes, radiantRolls } = rollDamageDiceWithFeatures(damageString, isMeleeWeapon, isCritical);
+        const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier, baseDamage, radiantDamage, hasRadiantStrikes, radiantRolls, hasMultipleDamageSources, damageSources } = rollDamageDiceWithFeatures(damageString, isMeleeWeapon, isCritical, weaponData);
         dice = damageDice;
         diceRoll = damageDiceRoll;
         modifier = damageModifier;
@@ -288,6 +350,23 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           setDiceModalOpen(true);
           
           return; // Выходим из функции, так как уже обработали все
+        } else if (hasMultipleDamageSources) {
+          // Для магического оружия с несколькими источниками урона
+          const combinedRollData: DiceRollData = {
+            characterName: characterName || 'Персонаж',
+            dice: dice,
+            modifier: modifier,
+            result: finalResult,
+            individualRolls: damageIndividualRolls,
+            description: `${desc}`,
+            type: "Урон",
+            timestamp: new Date().toISOString(),
+            separateRolls: damageSources
+          };
+          
+          setDiceRollData(combinedRollData);
+          setDiceModalOpen(true);
+          return;
         } else if (weaponDamageType) {
           // Для заклинаний или оружия с известным типом урона создаем отдельный бросок
           const combinedRollData: DiceRollData = {
