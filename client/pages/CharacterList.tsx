@@ -330,7 +330,7 @@ export default function CharacterList() {
         const result = getAllCharacterData(char);
         console.log('CharacterList: characterData result:', result);
         return result;
-    }, [char]);
+    }, [char, char?.chosen?.spells]);
 
     // skill profs set (normalized)
     const skillProfs: string[] = Array.isArray(char?.skills) ? char.skills : [];
