@@ -107,7 +107,7 @@ export const DamageTypes: DamageType[] = [
         nameEn: "Lightning",
         description: "Молния, электричество",
         icon: Zap,
-        color: "text-yellow-300"
+        color: "text-blue-300"
     },
     { 
         key: "Яд",
