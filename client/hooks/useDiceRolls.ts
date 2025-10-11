@@ -276,6 +276,33 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           setDiceModalOpen(true);
           
           return; // Выходим из функции, так как уже обработали все
+        } else if (weaponDamageType) {
+          // Для заклинаний или оружия с известным типом урона создаем отдельный бросок
+          const combinedRollData: DiceRollData = {
+            characterName: characterName || 'Персонаж',
+            dice: dice,
+            modifier: modifier,
+            result: finalResult,
+            individualRolls: damageIndividualRolls,
+            description: `${desc}`,
+            type: "Урон",
+            timestamp: new Date().toISOString(),
+            separateRolls: [
+              {
+                name: desc,
+                dice: dice,
+                diceRoll: damageIndividualRolls.reduce((sum, roll) => sum + roll, 0),
+                modifier: modifier,
+                result: finalResult,
+                individualRolls: damageIndividualRolls,
+                damageType: weaponDamageType
+              }
+            ]
+          };
+          
+          setDiceRollData(combinedRollData);
+          setDiceModalOpen(true);
+          return;
         } else {
           // Обычный урон без особенностей
           if (modifier !== 0) {

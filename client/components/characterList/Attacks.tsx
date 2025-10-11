@@ -3154,8 +3154,26 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     // Вызываем оригинальную функцию onRoll с правильным типом
     // Определяем, является ли оружие рукопашным (не дальнобойным)
     const isMeleeWeapon = !isSpell && weapon && !weapon.isRanged;
-    const weaponDamageType = !isSpell && weapon ? getWeaponDamageType(weapon) : undefined;
-    console.log('DEBUG: handleDamage called with:', { weapon: weapon.name, damage, damageType, isMeleeWeapon, weaponDamageType });
+    
+    // Получаем тип урона в зависимости от типа действия
+    let weaponDamageType: string | undefined;
+    if (isSpell && weapon) {
+      // Для заклинаний ищем тип урона в данных заклинания
+      const spellData = Spells.find(s => s.name === weapon || s.key === weapon);
+      weaponDamageType = spellData?.damage?.type;
+    } else if (!isSpell && weapon) {
+      // Для оружия используем существующую функцию
+      weaponDamageType = getWeaponDamageType(weapon);
+    }
+    
+    console.log('DEBUG: handleDamage called with:', { 
+      weapon: isSpell ? weapon : weapon.name, 
+      damage, 
+      damageType, 
+      isMeleeWeapon, 
+      weaponDamageType,
+      isSpell 
+    });
     onRoll?.(isSpell ? weapon : weapon.name, ability, modifier, damageType, damage, undefined, isMeleeWeapon, weaponDamageType);
     
     // Задержка 1 секунда перед сбросом состояния загрузки
