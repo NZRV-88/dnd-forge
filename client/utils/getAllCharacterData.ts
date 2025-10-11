@@ -104,6 +104,23 @@ export function getAllCharacterData(draft: CharacterDraft) {
     });
     classFixed.proficiencies.savingThrows.forEach(s => savingThrows.add(s));
 
+    // Обрабатываем заклинания из особенностей класса
+    const classData = getClassByKey(draft.basics.class);
+    if (classData?.features) {
+        Object.entries(classData.features).forEach(([levelStr, features]) => {
+            const level = parseInt(levelStr);
+            if (level <= draft.basics.level) {
+                features.forEach(feature => {
+                    if (feature.spells) {
+                        feature.spells.forEach(spell => {
+                            spells.add(spell);
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     /* -----------------------------
        Background bonuses
     ----------------------------- */
