@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ALL_FEATS } from "@/data/feats/feats";
 import DynamicFrame from "@/components/ui/DynamicFrame";
-import { Star, Search, ChevronDown } from "lucide-react";
+import { Star, ChevronDown } from "lucide-react";
+import * as Icons from "@/components/refs/icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SKILLS } from "@/data/skills";
 import { Tools } from "@/data/items/tools";
@@ -28,8 +29,8 @@ export default function FeaturesTab({
 }: FeaturesTabProps) {
   
   const [expandedFeats, setExpandedFeats] = useState<Set<number>>(new Set());
-  const [featuresSearchFilter, setFeaturesSearchFilter] = useState('');
-  const [featuresCategoryFilter, setFeaturesCategoryFilter] = useState<'all' | 'feats' | 'fighting-styles'>('all');
+  const [expandedProgression, setExpandedProgression] = useState<Set<number>>(new Set());
+  const [activeSubTab, setActiveSubTab] = useState<'features' | 'progression'>('features');
 
   // Получаем выбранные опции черты
   const getFeatChoices = (featKey: string) => {
@@ -99,21 +100,6 @@ export default function FeaturesTab({
   };
 
 
-  // Фильтруем черты
-  const getFilteredFeats = () => {
-    let feats = getCharacterFeats();
-    
-    // Применяем общий поиск
-    if (featuresSearchFilter.trim()) {
-      const searchLower = featuresSearchFilter.toLowerCase();
-      feats = feats.filter(feat => 
-        feat.name.toLowerCase().includes(searchLower) ||
-        feat.description.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    return feats;
-  };
 
 
   // Переключаем состояние карточки черты
@@ -129,259 +115,393 @@ export default function FeaturesTab({
     });
   };
 
+  // Переключаем состояние карточки в развитии
+  const toggleProgressionExpansion = (index: number) => {
+    setExpandedProgression(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
 
-  const filteredFeats = getFilteredFeats();
+  // Функция для форматирования текста с поддержкой markdown
+  const formatText = (text: string) => {
+    if (!text) return '';
+    
+    // Заменяем \n\n на параграфы
+    const paragraphs = text.split('\n\n').map((paragraph, index) => {
+      if (!paragraph.trim()) return null;
+      
+      // Обрабатываем жирный текст **текст**
+      let formattedParagraph = paragraph.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold">$1</strong>');
+      
+      // Обрабатываем курсив *текст*
+      formattedParagraph = formattedParagraph.replace(/\*([^*]+)\*/g, '<em class="italic">$1</em>');
+      
+      // Обрабатываем отступы (начинающиеся с пробелов)
+      const isIndented = paragraph.startsWith('  ') || paragraph.startsWith('\t');
+      const indentClass = isIndented ? 'ml-4' : '';
+      
+      return (
+        <p key={index} className={`mb-2 last:mb-0 ${indentClass}`}>
+          <span dangerouslySetInnerHTML={{ __html: formattedParagraph }} />
+        </p>
+      );
+    }).filter(Boolean);
+    
+    return paragraphs;
+  };
+
+  // Получаем особенности класса по уровням (аналогично Class.tsx)
+  const getClassFeaturesByLevel = () => {
+    if (!characterData?.class) return [];
+
+    const classInfo = characterData.class;
+    const classFeats: { 
+      name: string; 
+      desc: string; 
+      choices?: any[]; 
+      effect?: any[];
+      featureLevel: number;
+      originalIndex: number;
+      originalLevel: number;
+      isSubclass?: boolean;
+      uniqueId: string;
+    }[] = [];
+
+    // Фичи класса
+    Object.entries(classInfo.features).forEach(([lvl, featsArr]) => {
+      if (Array.isArray(featsArr)) {
+        featsArr.forEach((f, featIdx) => {
+          // Исключаем "Основные особенности класса"
+          if (f.name !== "Основные особенности класса") {
+            classFeats.push({ 
+              ...f, 
+              featureLevel: Number(lvl),
+              originalIndex: featIdx,
+              originalLevel: Number(lvl),
+              uniqueId: `${classInfo.key}-${lvl}-${featIdx}-${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+            });
+          }
+        });
+      }
+    });
+
+    // Фичи подклассов, если выбрана
+    const subclass = classInfo.subclasses?.find((sc: any) => sc.key === draft.basics.subclass);
+    if (subclass) {
+      Object.entries(subclass.features || {}).forEach(([lvl, featsArr]) => {
+        if (Array.isArray(featsArr)) {
+          featsArr.forEach((f, featIdx) => classFeats.push({ 
+            ...f, 
+            featureLevel: Number(lvl),
+            originalIndex: featIdx,
+            originalLevel: Number(lvl),
+            isSubclass: true,
+            uniqueId: `${classInfo.key}-subclass-${subclass.key}-${lvl}-${featIdx}-${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+          }));
+        }
+      });
+    }
+
+    // Сортируем по уровню
+    classFeats.sort((a, b) => a.featureLevel - b.featureLevel);
+
+    return classFeats;
+  };
+
 
   return (
     <div className="h-full flex flex-col">
-      {/* Поиск и фильтры */}
-      <div className="space-y-4 mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Поиск особенностей..."
-            value={featuresSearchFilter}
-            onChange={(e) => setFeaturesSearchFilter(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-0"
-            style={{
-              borderColor: getFrameColor(frameColor)
-            }}
-          />
-        </div>
+      {/* Заголовки подвкладок */}
+      <div className="flex items-center gap-6 mb-3">
+        <button
+          onClick={() => setActiveSubTab('features')}
+          className={`flex items-center gap-2 text-base font-bold uppercase tracking-wider border-l-2 pl-2 transition-colors ${
+            activeSubTab === 'features'
+              ? 'text-foreground border-primary'
+              : 'text-muted-foreground border-transparent hover:text-foreground'
+          }`}
+        >
+          <span>Особенности</span>
+        </button>
         
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setFeaturesCategoryFilter('all')}
-            className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
-            style={{
-              backgroundColor: featuresCategoryFilter === 'all' ? getFrameColor(frameColor) : 'transparent',
-              borderColor: getFrameColor(frameColor),
-              color: featuresCategoryFilter === 'all' ? '#FFFFFF' : getFrameColor(frameColor)
-            }}
-            onMouseEnter={(e) => {
-              if (featuresCategoryFilter !== 'all') {
-                e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (featuresCategoryFilter !== 'all') {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            ВСЕ
-          </button>
-          <button
-            onClick={() => setFeaturesCategoryFilter('feats')}
-            className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
-            style={{
-              backgroundColor: featuresCategoryFilter === 'feats' ? getFrameColor(frameColor) : 'transparent',
-              borderColor: getFrameColor(frameColor),
-              color: featuresCategoryFilter === 'feats' ? '#FFFFFF' : getFrameColor(frameColor)
-            }}
-            onMouseEnter={(e) => {
-              if (featuresCategoryFilter !== 'feats') {
-                e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (featuresCategoryFilter !== 'feats') {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            ЧЕРТЫ
-          </button>
-          <button
-            onClick={() => setFeaturesCategoryFilter('fighting-styles')}
-            className="px-1 py-0.5 rounded text-xs font-medium transition-colors border"
-            style={{
-              backgroundColor: featuresCategoryFilter === 'fighting-styles' ? getFrameColor(frameColor) : 'transparent',
-              borderColor: getFrameColor(frameColor),
-              color: featuresCategoryFilter === 'fighting-styles' ? '#FFFFFF' : getFrameColor(frameColor)
-            }}
-            onMouseEnter={(e) => {
-              if (featuresCategoryFilter !== 'fighting-styles') {
-                e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}20`;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (featuresCategoryFilter !== 'fighting-styles') {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
-            }}
-          >
-            БОЕВЫЕ СТИЛИ
-          </button>
-        </div>
+        <button
+          onClick={() => setActiveSubTab('progression')}
+          className={`flex items-center gap-2 text-base font-bold uppercase tracking-wider border-l-2 pl-2 transition-colors ${
+            activeSubTab === 'progression'
+              ? 'text-foreground border-primary'
+              : 'text-muted-foreground border-transparent hover:text-foreground'
+          }`}
+        >
+          <span>Развитие</span>
+        </button>
       </div>
 
       {/* Контент */}
       <div className="flex-1 overflow-y-auto space-y-6">
-        {/* Особенности класса */}
-        {characterData?.class?.key === 'paladin' && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
-              ОСОБЕННОСТИ КЛАССА
-            </h3>
-            <div className="space-y-3">
-              <LayOnHandsManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
-              {(() => {
-                const level = draft.basics.level || 1;
-                const subclass = draft.basics.subclass;
-                
-                return level >= 3 && (
-                  <ChannelDivinityManager 
-                    level={level} 
-                    frameColor={getFrameColor(frameColor)}
-                    subclass={subclass}
-                  />
-                );
-              })()}
-              <AuraManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} subclass={draft.basics.subclass} />
-              <RadiantStrikesManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
-            </div>
-          </div>
-        )}
-
-        {/* Выученные черты */}
-        {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'feats') && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
-              ЧЕРТЫ
-            </h3>
-            {filteredFeats.length === 0 ? (
-              <p className="text-gray-400 text-sm py-4">
-                Черты отсутствуют
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {filteredFeats.map((feat, index) => (
-                  <div key={index} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <div className="w-full p-3 bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer">
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-col items-start">
-                              <span className="text-white font-medium">{feat.name}</span>
-                              {feat.isLegacy && (
-                                <span 
-                                  className="text-xs font-medium mt-1"
-                                  style={{ color: getFrameColor(frameColor) }}
-                                >
-                                  Legacy
-                                </span>
-                              )}
-                            </div>
-                            <ChevronDown className="w-4 h-4 text-gray-400" />
-                          </div>
-                        </div>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="p-4 bg-neutral-900">
-                          <div className="space-y-3">
-                            <p className="text-gray-300 text-sm leading-relaxed">{feat.desc}</p>
-                            
-                            {feat.effect && feat.effect.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="text-sm font-semibold text-gray-200">Эффекты:</h4>
-                                {feat.effect.map((effect, effectIndex) => {
-                                  const choices = getFeatChoices(feat.key);
-                                  console.log('Displaying feat choices for:', feat.key, 'choices:', choices);
-                                  
-                                  return (
-                                    <div key={effectIndex} className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
-                                      {effect.name && (
-                                        <h5 className="text-sm font-medium text-gray-200 mb-1">{effect.name}</h5>
-                                      )}
-                                      {effect.desc && (
-                                        <p className="text-xs text-gray-300 leading-relaxed">{effect.desc}</p>
-                                      )}
-                                      
-                                      {/* Отображение выбранных опций внутри эффекта */}
-                                      {choices.length > 0 && (
-                                        <div>
-                                          <h6 className="text-sm font-semibold text-gray-200 mb-2">Выбранные опции:</h6>
-                                          <div className="space-y-1">
-                                            {choices.map((choice, choiceIndex) => {
-                                              const [choiceType, choiceValue] = choice.split(':');
-                                              let displayName = choiceValue;
-                                              
-                                              // Переводим ключи в читаемые названия
-                                              if (choiceType === 'skill') {
-                                                const skill = SKILLS.find(s => s.key === choiceValue);
-                                                displayName = skill?.name || choiceValue;
-                                              } else if (choiceType === 'tool') {
-                                                const tool = Tools.find(t => t.key === choiceValue);
-                                                displayName = tool?.name || choiceValue;
-                                              } else if (choiceType === 'language') {
-                                                const language = LANGUAGES.find(l => l.key === choiceValue);
-                                                displayName = language?.name || choiceValue;
-                                              } else if (choiceType === 'ability') {
-                                                const ability = ABILITIES.find(a => a.key === choiceValue);
-                                                displayName = ability?.label || choiceValue;
-                                              }
-                                              
-                                              return (
-                                                <div key={choiceIndex} className="text-xs text-gray-300">
-                                                  • {displayName}
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            
-                            {feat.prerequisites && (
-                              <div className="space-y-1">
-                                <h4 className="text-sm font-semibold text-gray-200">Требования:</h4>
-                                <div className="text-xs text-gray-300 space-y-1">
-                                  {feat.prerequisites.level && (
-                                    <p>• Уровень: {feat.prerequisites.level}</p>
-                                  )}
-                                  {feat.prerequisites.oneOfAbilities && (
-                                    <p>• Характеристики: {Object.entries(feat.prerequisites.oneOfAbilities).map(([key, value]) => `${key} ${value}+`).join(' или ')}</p>
-                                  )}
-                                  {feat.prerequisites.races && (
-                                    <p>• Расы: {feat.prerequisites.races.join(', ')}</p>
-                                  )}
-                                  {feat.prerequisites.spellcasting && (
-                                    <p>• Заклинательство</p>
-                                  )}
-                                  {feat.prerequisites.armor && (
-                                    <p>• Доспехи: {feat.prerequisites.armor}</p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-                ))}
+        {/* Подвкладка "Особенности" */}
+        {activeSubTab === 'features' && (
+          <>
+            {/* Особенности класса */}
+            {characterData?.class?.key === 'paladin' && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
+                  ОСОБЕННОСТИ КЛАССА
+                </h3>
+                <div className="space-y-3">
+                  <LayOnHandsManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                  {(() => {
+                    const level = draft.basics.level || 1;
+                    const subclass = draft.basics.subclass;
+                    
+                    return level >= 3 && (
+                      <ChannelDivinityManager 
+                        level={level} 
+                        frameColor={getFrameColor(frameColor)}
+                        subclass={subclass}
+                      />
+                    );
+                  })()}
+                  <AuraManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} subclass={draft.basics.subclass} />
+                  <RadiantStrikesManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                </div>
               </div>
             )}
-          </div>
+
+            {/* Выученные черты */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFrameColor(frameColor) }}></span>
+                ЧЕРТЫ
+              </h3>
+              {getCharacterFeats().length === 0 ? (
+                <p className="text-gray-400 text-sm py-4">
+                  Черты отсутствуют
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {getCharacterFeats().map((feat, index) => (
+                    <div key={index} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
+                      <Collapsible>
+                        <CollapsibleTrigger asChild>
+                          <div className="w-full p-3 bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer">
+                            <div className="flex items-center justify-between">
+                              <div className="flex flex-col items-start">
+                                <span className="text-white font-medium">{feat.name}</span>
+                                {feat.isLegacy && (
+                                  <span 
+                                    className="text-xs font-medium mt-1"
+                                    style={{ color: getFrameColor(frameColor) }}
+                                  >
+                                    Legacy
+                                  </span>
+                                )}
+                              </div>
+                              <ChevronDown className="w-4 h-4 text-gray-400" />
+                            </div>
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="p-4 bg-neutral-900">
+                            <div className="space-y-3">
+                              <div className="text-gray-300 text-sm leading-relaxed">
+                                {formatText(feat.desc)}
+                              </div>
+                              
+                              {feat.effect && feat.effect.length > 0 && (
+                                <div className="space-y-2">
+                                  <h4 className="text-sm font-semibold text-gray-200">Эффекты:</h4>
+                                  {feat.effect.map((effect, effectIndex) => {
+                                    const choices = getFeatChoices(feat.key);
+                                    console.log('Displaying feat choices for:', feat.key, 'choices:', choices);
+                                    
+                                    return (
+                                      <div key={effectIndex} className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
+                                        {effect.name && (
+                                          <h5 className="text-sm font-medium text-gray-200 mb-1">{effect.name}</h5>
+                                        )}
+                                        {effect.desc && (
+                                          <div className="text-xs text-gray-300 leading-relaxed">
+                                            {formatText(effect.desc)}
+                                          </div>
+                                        )}
+                                        
+                                        {/* Отображение выбранных опций внутри эффекта */}
+                                        {choices.length > 0 && (
+                                          <div>
+                                            <h6 className="text-sm font-semibold text-gray-200 mb-2">Выбранные опции:</h6>
+                                            <div className="space-y-1">
+                                              {choices.map((choice, choiceIndex) => {
+                                                const [choiceType, choiceValue] = choice.split(':');
+                                                let displayName = choiceValue;
+                                                
+                                                // Переводим ключи в читаемые названия
+                                                if (choiceType === 'skill') {
+                                                  const skill = SKILLS.find(s => s.key === choiceValue);
+                                                  displayName = skill?.name || choiceValue;
+                                                } else if (choiceType === 'tool') {
+                                                  const tool = Tools.find(t => t.key === choiceValue);
+                                                  displayName = tool?.name || choiceValue;
+                                                } else if (choiceType === 'language') {
+                                                  const language = LANGUAGES.find(l => l.key === choiceValue);
+                                                  displayName = language?.name || choiceValue;
+                                                } else if (choiceType === 'ability') {
+                                                  const ability = ABILITIES.find(a => a.key === choiceValue);
+                                                  displayName = ability?.label || choiceValue;
+                                                }
+                                                
+                                                return (
+                                                  <div key={choiceIndex} className="text-xs text-gray-300">
+                                                    • {displayName}
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              
+                              {feat.prerequisites && (
+                                <div className="space-y-1">
+                                  <h4 className="text-sm font-semibold text-gray-200">Требования:</h4>
+                                  <div className="text-xs text-gray-300 space-y-1">
+                                    {feat.prerequisites.level && (
+                                      <p>• Уровень: {feat.prerequisites.level}</p>
+                                    )}
+                                    {feat.prerequisites.oneOfAbilities && (
+                                      <p>• Характеристики: {Object.entries(feat.prerequisites.oneOfAbilities).map(([key, value]) => `${key} ${value}+`).join(' или ')}</p>
+                                    )}
+                                    {feat.prerequisites.races && (
+                                      <p>• Расы: {feat.prerequisites.races.join(', ')}</p>
+                                    )}
+                                    {feat.prerequisites.spellcasting && (
+                                      <p>• Заклинательство</p>
+                                    )}
+                                    {feat.prerequisites.armor && (
+                                      <p>• Доспехи: {feat.prerequisites.armor}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Боевые стили */}
+            <FightingStylesSection
+              draft={draft}
+              frameColor={frameColor}
+              getFrameColor={getFrameColor}
+              showTitle={true}
+            />
+          </>
         )}
 
-        {/* Боевые стили */}
-        {(featuresCategoryFilter === 'all' || featuresCategoryFilter === 'fighting-styles') && (
-          <FightingStylesSection
-            draft={draft}
-            frameColor={frameColor}
-            getFrameColor={getFrameColor}
-            featuresSearchFilter={featuresSearchFilter}
-            showTitle={true}
-          />
+        {/* Подвкладка "Развитие" */}
+        {activeSubTab === 'progression' && (
+          <div className="space-y-2">
+            {getClassFeaturesByLevel().map((f, idx) => (
+              <div key={f.uniqueId} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <div className="w-full p-3 bg-neutral-800 hover:bg-neutral-700 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col items-start">
+                          <span className="text-white font-medium">{f.name}</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-400">
+                              {f.featureLevel}-й уровень
+                            </span>
+                            {f.isSubclass && (
+                              <span 
+                                className="text-xs font-medium px-2 py-1 rounded"
+                                style={{ 
+                                  backgroundColor: `${getFrameColor(frameColor)}20`,
+                                  color: getFrameColor(frameColor)
+                                }}
+                              >
+                                Подкласс
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="p-4 bg-neutral-900">
+                      <div className="space-y-3">
+                        <div className="text-gray-300 text-sm leading-relaxed">
+                          {formatText(f.desc)}
+                        </div>
+                        
+                        {f.effect && f.effect.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-200">Эффекты:</h4>
+                            {f.effect.map((effect, effectIndex) => (
+                              <div key={effectIndex} className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
+                                {effect.name && (
+                                  <h5 className="text-sm font-medium text-gray-200 mb-1">{effect.name}</h5>
+                                )}
+                                {effect.desc && (
+                                  <div className="text-xs text-gray-300 leading-relaxed">
+                                    {formatText(effect.desc)}
+                                  </div>
+                                )}
+                                {effect.type && (
+                                  <p className="text-xs text-gray-400 mt-1">Тип: {effect.type}</p>
+                                )}
+                                {effect.count && (
+                                  <p className="text-xs text-gray-400">Количество: {effect.count}</p>
+                                )}
+                                {effect.options && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    Опции: {Array.isArray(effect.options) ? effect.options.join(', ') : JSON.stringify(effect.options)}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {f.choices && f.choices.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-200">Выборы:</h4>
+                            <div className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
+                              <div className="text-xs text-gray-300 leading-relaxed space-y-1">
+                                {f.choices.map((choice, choiceIndex) => (
+                                  <div key={choiceIndex}>
+                                    {typeof choice === 'string' ? choice : (choice.name || JSON.stringify(choice))}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
