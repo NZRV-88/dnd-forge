@@ -158,8 +158,8 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           name: `${weaponData.name} (${translatedDamageType})`,
           dice: diceString,
           diceRoll: diceRoll,
-          modifier: 0, // Модификатор добавляется только к основному урону
-          result: finalResult,
+          modifier: index === 0 ? modifier : 0, // Модификатор добавляется только к первому источнику урона
+          result: finalResult + (index === 0 ? modifier : 0),
           individualRolls: individualRolls,
           damageType: translatedDamageType
         };
@@ -289,6 +289,23 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           console.log('DEBUG: damageSources for separateRolls:', damageSources);
           console.log('DEBUG: damageSources length:', damageSources.length);
           
+          // Создаем массив всех бросков: источники урона + сияющие удары (если есть)
+          let allSeparateRolls = [...damageSources];
+          
+          // Добавляем сияющие удары, если они есть
+          if (hasRadiantStrikes) {
+            console.log('DEBUG: Adding radiant strikes to multiple damage sources');
+            allSeparateRolls.push({
+              name: "Сияющие удары",
+              dice: isCritical ? "2d8" : "1d8",
+              diceRoll: radiantDamage,
+              modifier: 0,
+              result: radiantDamage,
+              individualRolls: radiantRolls,
+              damageType: "Излучение"
+            });
+          }
+          
           const combinedRollData: DiceRollData = {
             characterName: characterName || 'Персонаж',
             dice: dice,
@@ -298,7 +315,7 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
             description: `${desc}`,
             type: "Урон",
             timestamp: new Date().toISOString(),
-            separateRolls: damageSources
+            separateRolls: allSeparateRolls
           };
           
           setDiceRollData(combinedRollData);
