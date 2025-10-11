@@ -562,9 +562,8 @@ export default function FeaturesTab({
                             </span>
                             {f.isSubclass && (
                               <span 
-                                className="text-xs font-medium px-2 py-1 rounded"
+                                className="text-xs font-medium"
                                 style={{ 
-                                  backgroundColor: `${getFrameColor(frameColor)}20`,
                                   color: getFrameColor(frameColor)
                                 }}
                               >
