@@ -283,7 +283,29 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
         result = finalResult;
         individualRolls = damageIndividualRolls;
         
-        if (hasRadiantStrikes) {
+        if (hasMultipleDamageSources) {
+          // Для магического оружия с несколькими источниками урона
+          console.log('DEBUG: Creating combinedRollData for multiple damage sources');
+          console.log('DEBUG: damageSources for separateRolls:', damageSources);
+          console.log('DEBUG: damageSources length:', damageSources.length);
+          
+          const combinedRollData: DiceRollData = {
+            characterName: characterName || 'Персонаж',
+            dice: dice,
+            modifier: modifier,
+            result: finalResult,
+            individualRolls: damageIndividualRolls,
+            description: `${desc}`,
+            type: "Урон",
+            timestamp: new Date().toISOString(),
+            separateRolls: damageSources
+          };
+          
+          setDiceRollData(combinedRollData);
+          setDiceModalOpen(true);
+          
+          return; // Выходим из функции, так как уже обработали все
+        } else if (hasRadiantStrikes) {
           // Создаем отдельные записи для базового урона и излучения
           const baseRollsStr = damageIndividualRolls.slice(0, -radiantRolls.length).join('+');
           const radiantRollsStr = radiantRolls.join('+');
@@ -361,27 +383,6 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           setDiceModalOpen(true);
           
           return; // Выходим из функции, так как уже обработали все
-        } else if (hasMultipleDamageSources) {
-          // Для магического оружия с несколькими источниками урона
-          console.log('DEBUG: Creating combinedRollData for multiple damage sources');
-          console.log('DEBUG: damageSources for separateRolls:', damageSources);
-          console.log('DEBUG: damageSources length:', damageSources.length);
-          
-          const combinedRollData: DiceRollData = {
-            characterName: characterName || 'Персонаж',
-            dice: dice,
-            modifier: modifier,
-            result: finalResult,
-            individualRolls: damageIndividualRolls,
-            description: `${desc}`,
-            type: "Урон",
-            timestamp: new Date().toISOString(),
-            separateRolls: damageSources
-          };
-          
-          setDiceRollData(combinedRollData);
-          setDiceModalOpen(true);
-          return;
         } else if (weaponDamageType) {
           // Для заклинаний или оружия с известным типом урона создаем отдельный бросок
           const combinedRollData: DiceRollData = {
