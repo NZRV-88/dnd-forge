@@ -156,11 +156,12 @@ export default function FeaturesTab({
     return paragraphs;
   };
 
-  // Получаем особенности класса по уровням (аналогично Class.tsx)
+  // Получаем особенности класса по уровням (только полученные на текущем уровне)
   const getClassFeaturesByLevel = () => {
     if (!characterData?.class) return [];
 
     const classInfo = characterData.class;
+    const currentLevel = draft.basics.level || 1;
     const classFeats: { 
       name: string; 
       desc: string; 
@@ -173,17 +174,18 @@ export default function FeaturesTab({
       uniqueId: string;
     }[] = [];
 
-    // Фичи класса
+    // Фичи класса - только те, что получены на текущем уровне или раньше
     Object.entries(classInfo.features).forEach(([lvl, featsArr]) => {
-      if (Array.isArray(featsArr)) {
+      const level = Number(lvl);
+      if (level <= currentLevel && Array.isArray(featsArr)) {
         featsArr.forEach((f, featIdx) => {
           // Исключаем "Основные особенности класса"
           if (f.name !== "Основные особенности класса") {
             classFeats.push({ 
               ...f, 
-              featureLevel: Number(lvl),
+              featureLevel: level,
               originalIndex: featIdx,
-              originalLevel: Number(lvl),
+              originalLevel: level,
               uniqueId: `${classInfo.key}-${lvl}-${featIdx}-${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`
             });
           }
@@ -191,16 +193,17 @@ export default function FeaturesTab({
       }
     });
 
-    // Фичи подклассов, если выбрана
+    // Фичи подклассов - только те, что получены на текущем уровне или раньше
     const subclass = classInfo.subclasses?.find((sc: any) => sc.key === draft.basics.subclass);
     if (subclass) {
       Object.entries(subclass.features || {}).forEach(([lvl, featsArr]) => {
-        if (Array.isArray(featsArr)) {
+        const level = Number(lvl);
+        if (level <= currentLevel && Array.isArray(featsArr)) {
           featsArr.forEach((f, featIdx) => classFeats.push({ 
             ...f, 
-            featureLevel: Number(lvl),
+            featureLevel: level,
             originalIndex: featIdx,
-            originalLevel: Number(lvl),
+            originalLevel: level,
             isSubclass: true,
             uniqueId: `${classInfo.key}-subclass-${subclass.key}-${lvl}-${featIdx}-${f.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`
           }));
