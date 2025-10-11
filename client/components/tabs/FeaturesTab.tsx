@@ -78,6 +78,58 @@ export default function FeaturesTab({
     return choices;
   };
 
+  // Получаем выбранные опции особенности класса
+  const getClassFeatureChoices = (featureName: string, featureLevel: number) => {
+    if (!draft?.chosen) return [];
+    
+    const choices: string[] = [];
+    
+    // Создаем маппинг особенностей к их типам выборов
+    const featureChoiceMapping: { [key: string]: string[] } = {
+      'Основные особенности класса': ['skills'],
+      'Боевой стиль': ['fightingStyle'],
+      'Оружейное мастерство': ['weaponMastery'],
+      'Увеличение характеристик': ['feats'],
+      'Клятва Паладина': ['subclass'],
+      'Проведение божественности': ['channelDivinity'],
+      'Аура защиты': ['aura'],
+      'Аура отваги': ['aura'],
+      'Расширение ауры': ['aura'],
+      'Сияющие удары': ['radiantStrikes'],
+      'Дополнительная атака': ['extraAttack'],
+      'Верный скакун': ['spells'],
+      'Порицание врагов': ['channelDivinity'],
+      'Восстанавливающее касание': ['layOnHands'],
+      'Эпический дар': ['feats']
+    };
+    
+    const expectedChoices = featureChoiceMapping[featureName] || [];
+    
+    // Ищем выборы в различных категориях
+    Object.entries(draft.chosen).forEach(([category, choicesData]) => {
+      if (typeof choicesData === 'object' && choicesData !== null) {
+        Object.entries(choicesData).forEach(([source, selectedItems]) => {
+          // Проверяем, связан ли источник с особенностью класса и уровнем
+          const isClassRelated = source.includes('class') || source.includes('paladin');
+          const isLevelRelated = source.includes('level-' + featureLevel) || source.includes('-' + featureLevel + '-');
+          const isCategoryMatch = expectedChoices.includes(category);
+          
+          if ((isClassRelated || isLevelRelated) && (expectedChoices.length === 0 || isCategoryMatch)) {
+            if (Array.isArray(selectedItems)) {
+              selectedItems.forEach(item => {
+                if (typeof item === 'string') {
+                  choices.push(`${category}:${item}`);
+                }
+              });
+            }
+          }
+        });
+      }
+    });
+    
+    return choices;
+  };
+
   // Получаем все черты персонажа
   const getCharacterFeats = () => {
     const allFeats: any[] = [];
@@ -162,10 +214,6 @@ export default function FeaturesTab({
 
     const classInfo = characterData.class;
     const currentLevel = Number(characterData.level) || Number(draft.basics.level) || 1;
-    console.log('=== DEBUG: getClassFeaturesByLevel ===');
-    console.log('draft.basics.level:', draft.basics.level);
-    console.log('characterData.level:', characterData.level);
-    console.log('currentLevel (after conversion):', currentLevel);
     const classFeats: { 
       name: string; 
       desc: string; 
@@ -219,8 +267,6 @@ export default function FeaturesTab({
 
     // Сортируем по уровню
     classFeats.sort((a, b) => a.featureLevel - b.featureLevel);
-    console.log('Total features after filtering:', classFeats.length);
-    console.log('Features:', classFeats.map(f => `${f.name} (lvl ${f.featureLevel})`));
 
     return classFeats;
   };
@@ -466,29 +512,67 @@ export default function FeaturesTab({
                         {f.effect && f.effect.length > 0 && (
                           <div className="space-y-2">
                             <h4 className="text-sm font-semibold text-gray-200">Эффекты:</h4>
-                            {f.effect.map((effect, effectIndex) => (
-                              <div key={effectIndex} className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
-                                {effect.name && (
-                                  <h5 className="text-sm font-medium text-gray-200 mb-1">{effect.name}</h5>
-                                )}
-                                {effect.desc && (
-                                  <div className="text-xs text-gray-300 leading-relaxed">
-                                    {formatText(effect.desc)}
-                                  </div>
-                                )}
-                                {effect.type && (
-                                  <p className="text-xs text-gray-400 mt-1">Тип: {effect.type}</p>
-                                )}
-                                {effect.count && (
-                                  <p className="text-xs text-gray-400">Количество: {effect.count}</p>
-                                )}
-                                {effect.options && (
-                                  <div className="text-xs text-gray-400 mt-1">
-                                    Опции: {Array.isArray(effect.options) ? effect.options.join(', ') : JSON.stringify(effect.options)}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                            {f.effect.map((effect, effectIndex) => {
+                              const choices = getClassFeatureChoices(f.name, f.featureLevel);
+                              
+                              return (
+                                <div key={effectIndex} className="bg-neutral-800 p-3 rounded border-l-2" style={{ borderLeftColor: getFrameColor(frameColor) }}>
+                                  {effect.name && (
+                                    <h5 className="text-sm font-medium text-gray-200 mb-1">{effect.name}</h5>
+                                  )}
+                                  {effect.desc && (
+                                    <div className="text-xs text-gray-300 leading-relaxed">
+                                      {formatText(effect.desc)}
+                                    </div>
+                                  )}
+                                  {effect.type && (
+                                    <p className="text-xs text-gray-400 mt-1">Тип: {effect.type}</p>
+                                  )}
+                                  {effect.count && (
+                                    <p className="text-xs text-gray-400">Количество: {effect.count}</p>
+                                  )}
+                                  {effect.options && (
+                                    <div className="text-xs text-gray-400 mt-1">
+                                      Опции: {Array.isArray(effect.options) ? effect.options.join(', ') : JSON.stringify(effect.options)}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Отображение выбранных опций */}
+                                  {choices.length > 0 && (
+                                    <div className="mt-3">
+                                      <h6 className="text-sm font-semibold text-gray-200 mb-2">Выбранные опции:</h6>
+                                      <div className="space-y-1">
+                                        {choices.map((choice, choiceIndex) => {
+                                          const [choiceType, choiceValue] = choice.split(':');
+                                          let displayName = choiceValue;
+                                          
+                                          // Переводим ключи в читаемые названия
+                                          if (choiceType === 'skill') {
+                                            const skill = SKILLS.find(s => s.key === choiceValue);
+                                            displayName = skill?.name || choiceValue;
+                                          } else if (choiceType === 'tool') {
+                                            const tool = Tools.find(t => t.key === choiceValue);
+                                            displayName = tool?.name || choiceValue;
+                                          } else if (choiceType === 'language') {
+                                            const language = LANGUAGES.find(l => l.key === choiceValue);
+                                            displayName = language?.name || choiceValue;
+                                          } else if (choiceType === 'ability') {
+                                            const ability = ABILITIES.find(a => a.key === choiceValue);
+                                            displayName = ability?.label || choiceValue;
+                                          }
+                                          
+                                          return (
+                                            <div key={choiceIndex} className="text-xs text-gray-300">
+                                              • {displayName}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                         
@@ -503,6 +587,43 @@ export default function FeaturesTab({
                                   </div>
                                 ))}
                               </div>
+                              
+                              {/* Отображение выбранных опций для выборов */}
+                              {(() => {
+                                const choices = getClassFeatureChoices(f.name, f.featureLevel);
+                                return choices.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t border-gray-600">
+                                    <h6 className="text-sm font-semibold text-gray-200 mb-2">Выбранные опции:</h6>
+                                    <div className="space-y-1">
+                                      {choices.map((choice, choiceIndex) => {
+                                        const [choiceType, choiceValue] = choice.split(':');
+                                        let displayName = choiceValue;
+                                        
+                                        // Переводим ключи в читаемые названия
+                                        if (choiceType === 'skill') {
+                                          const skill = SKILLS.find(s => s.key === choiceValue);
+                                          displayName = skill?.name || choiceValue;
+                                        } else if (choiceType === 'tool') {
+                                          const tool = Tools.find(t => t.key === choiceValue);
+                                          displayName = tool?.name || choiceValue;
+                                        } else if (choiceType === 'language') {
+                                          const language = LANGUAGES.find(l => l.key === choiceValue);
+                                          displayName = language?.name || choiceValue;
+                                        } else if (choiceType === 'ability') {
+                                          const ability = ABILITIES.find(a => a.key === choiceValue);
+                                          displayName = ability?.label || choiceValue;
+                                        }
+                                        
+                                        return (
+                                          <div key={choiceIndex} className="text-xs text-gray-300">
+                                            • {displayName}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         )}
