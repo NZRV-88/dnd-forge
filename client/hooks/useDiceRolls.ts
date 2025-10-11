@@ -64,7 +64,7 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
   };
 
   // Функция для броска кубика урона с учетом особенностей персонажа
-  const rollDamageDiceWithFeatures = (diceString: string, isMeleeWeapon: boolean = false, isCritical: boolean = false, weaponData?: any) => {
+  const rollDamageDiceWithFeatures = (diceString: string, isMeleeWeapon: boolean = false, isCritical: boolean = false, weaponData?: any, modifier: number = 0) => {
         console.log('DEBUG: rollDamageDiceWithFeatures called with:', { diceString, isMeleeWeapon, characterData: characterData?.basics, weaponData });
         console.log('DEBUG: characterData.radiantStrikes:', characterData?.radiantStrikes);
     const { diceRoll: baseDiceRoll, finalResult: baseResult, individualRolls: baseIndividualRolls, dice: baseDice, modifier: baseModifier } = rollDamageDice(diceString);
@@ -276,7 +276,7 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
       // Для урона: используем правильный кубик урона с учетом особенностей
       console.log('DEBUG: addRoll called for damage with:', { desc, damageString, isMeleeWeapon, characterData: characterData?.basics });
       if (damageString) {
-        const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier, baseDamage, radiantDamage, hasRadiantStrikes, radiantRolls, hasMultipleDamageSources, damageSources } = rollDamageDiceWithFeatures(damageString, isMeleeWeapon, isCritical, weaponData);
+        const { diceRoll: damageDiceRoll, finalResult, individualRolls: damageIndividualRolls, dice: damageDice, modifier: damageModifier, baseDamage, radiantDamage, hasRadiantStrikes, radiantRolls, hasMultipleDamageSources, damageSources } = rollDamageDiceWithFeatures(damageString, isMeleeWeapon, isCritical, weaponData, modifier);
         dice = damageDice;
         diceRoll = damageDiceRoll;
         modifier = damageModifier;
