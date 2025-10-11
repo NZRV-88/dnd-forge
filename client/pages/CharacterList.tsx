@@ -480,15 +480,6 @@ export default function CharacterList() {
             }
         }
         
-        // Добавляем бонус от щита только из активного набора
-        const activeSlot = char.equipped.activeWeaponSlot || 1;
-        if (activeSlot === 1 && shield1) {
-            totalAC += 2; // Стандартный бонус щита из первого набора
-        }
-        if (activeSlot === 2 && shield2) {
-            totalAC += 2; // Стандартный бонус щита из второго набора
-        }
-        
         // Проверяем бонусы от магических предметов типа "item" (кольца, головные уборы, обувь, перчатки)
         if (characterData?.equipment) {
             const magicItems = characterData.equipment.filter((item: any) => 
@@ -505,14 +496,25 @@ export default function CharacterList() {
             );
             
             if (acBonusItems.length > 0) {
-                // Берем максимальный бонус к КБ
-                const maxACBonus = Math.max(...acBonusItems.map((item: any) => 
+                // Берем максимальное фиксированное значение КБ от предметов
+                const maxACValue = Math.max(...acBonusItems.map((item: any) => 
                     parseInt(item.item.itemBonusValue) || 0
                 ));
                 
-                // Добавляем бонус к КБ (не заменяем)
-                totalAC += maxACBonus;
+                // Если фиксированное значение КБ больше текущего, используем его
+                if (maxACValue > totalAC) {
+                    totalAC = maxACValue;
+                }
             }
+        }
+        
+        // Добавляем бонус от щита только из активного набора (ПОСЛЕ проверки магических предметов)
+        const activeSlot = char.equipped.activeWeaponSlot || 1;
+        if (activeSlot === 1 && shield1) {
+            totalAC += 2; // Стандартный бонус щита из первого набора
+        }
+        if (activeSlot === 2 && shield2) {
+            totalAC += 2; // Стандартный бонус щита из второго набора
         }
         
         return Math.floor(totalAC);
