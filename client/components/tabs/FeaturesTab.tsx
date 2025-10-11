@@ -8,6 +8,7 @@ import { SKILLS } from "@/data/skills";
 import { Tools } from "@/data/items/tools";
 import { LANGUAGES } from "@/data/languages/languages";
 import { ABILITIES } from "@/data/abilities";
+import { getWeaponByKey } from "@/data/items/weapons";
 import LayOnHandsManager from "@/components/ui/LayOnHandsManager";
 import ChannelDivinityManager from "@/components/ui/ChannelDivinityManager";
 import AuraManager from "@/components/ui/AuraManager";
@@ -165,15 +166,15 @@ export default function FeaturesTab({
     
     // Добавляем черты из characterData.feats (массив строк)
     characterData.feats.forEach((featKey: string) => {
-      const feat = ALL_FEATS.find(f => f.key === featKey);
-      if (feat) {
-        allFeats.push({
-          ...feat,
+        const feat = ALL_FEATS.find(f => f.key === featKey);
+        if (feat) {
+          allFeats.push({
+            ...feat,
           source: 'character',
-          choices: getFeatChoices(featKey)
-        });
-      }
-    });
+            choices: getFeatChoices(featKey)
+          });
+        }
+      });
     
     return allFeats;
   };
@@ -369,7 +370,7 @@ export default function FeaturesTab({
                   Черты отсутствуют
                 </p>
               ) : (
-                <div className="space-y-2">
+              <div className="space-y-2">
                   {getCharacterFeats().map((feat, index) => (
                     <div key={index} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
                       <Collapsible>
@@ -386,9 +387,9 @@ export default function FeaturesTab({
                                     Legacy
                                   </span>
                                 )}
-                              </div>
+                      </div>
                               <ChevronDown className="w-4 h-4 text-gray-400" />
-                            </div>
+                      </div>
                           </div>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
@@ -413,8 +414,8 @@ export default function FeaturesTab({
                                         {effect.desc && (
                                           <div className="text-xs text-gray-300 leading-relaxed">
                                             {formatText(effect.desc)}
-                                          </div>
-                                        )}
+                          </div>
+                        )}
                                         
                                         {/* Отображение выбранных опций внутри эффекта */}
                                         {choices.length > 0 && (
@@ -443,18 +444,18 @@ export default function FeaturesTab({
                                                 return (
                                                   <div key={choiceIndex} className="text-xs text-gray-300">
                                                     • {displayName}
-                                                  </div>
+                      </div>
                                                 );
                                               })}
-                                            </div>
-                                          </div>
+              </div>
+            </div>
                                         )}
                                       </div>
                                     );
                                   })}
-                                </div>
-                              )}
-                              
+        </div>
+      )}
+
                               {feat.prerequisites && (
                                 <div className="space-y-1">
                                   <h4 className="text-sm font-semibold text-gray-200">Требования:</h4>
@@ -486,7 +487,7 @@ export default function FeaturesTab({
                 </div>
               )}
             </div>
-
+            
             {/* Боевые стили */}
             <FightingStylesSection
               draft={draft}
@@ -499,7 +500,7 @@ export default function FeaturesTab({
 
         {/* Подвкладка "Развитие" */}
         {activeSubTab === 'progression' && (
-          <div className="space-y-2">
+              <div className="space-y-2">
             {getClassFeaturesByLevel().map((f, idx) => (
               <div key={f.uniqueId} className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
                 <Collapsible>
@@ -521,14 +522,14 @@ export default function FeaturesTab({
                                 }}
                               >
                                 Подкласс
-                              </span>
-                            )}
-                          </div>
+                          </span>
+                        )}
+                      </div>
                         </div>
                         <ChevronDown className="w-4 h-4 text-gray-400" />
                       </div>
-                    </div>
-                  </CollapsibleTrigger>
+                      </div>
+                    </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="p-4 bg-neutral-900">
                       <div className="space-y-3">
@@ -568,7 +569,7 @@ export default function FeaturesTab({
                                   {choices.length > 0 && (
                                     <div className="mt-3">
                                       <h6 className="text-sm font-semibold text-gray-200 mb-2">Выбранные опции:</h6>
-                                      <div className="space-y-1">
+                            <div className="space-y-1">
                                         {choices.map((choice, choiceIndex) => {
                                           const [choiceType, choiceValue] = choice.split(':');
                                           let displayName = choiceValue;
@@ -649,6 +650,21 @@ export default function FeaturesTab({
                                           'archery': 'Стрельба из лука'
                                         };
                                         displayName = fightingStyleNames[choiceValue] || choiceValue;
+                                      } else if (choiceType === 'weaponMastery') {
+                                        // Для оружия переводим ключи в названия
+                                        const weapon = getWeaponByKey(choiceValue);
+                                        displayName = weapon?.name || choiceValue;
+                                      } else if (choiceType === 'fightingStyle') {
+                                        // Для конкретных боевых стилей переводим ключи
+                                        const fightingStyleNames: { [key: string]: string } = {
+                                          'great_weapon_fighting': 'Бой большим оружием',
+                                          'defense': 'Защита',
+                                          'dueling': 'Дуэль',
+                                          'protection': 'Защита',
+                                          'two_weapon_fighting': 'Бой двумя оружиями',
+                                          'archery': 'Стрельба из лука'
+                                        };
+                                        displayName = fightingStyleNames[choiceValue] || choiceValue;
                                       }
                                       
                                       return (
@@ -668,9 +684,9 @@ export default function FeaturesTab({
                           </div>
                         )}
                       </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
               </div>
             ))}
           </div>
