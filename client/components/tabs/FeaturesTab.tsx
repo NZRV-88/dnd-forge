@@ -92,16 +92,20 @@ export default function FeaturesTab({
     
     // Специальная обработка для "Увеличение характеристик" - ищем черты по уровню
     if (featureName === 'Увеличение характеристик') {
-      Object.entries(draft.chosen.feats || {}).forEach(([source, selectedFeats]) => {
-        // Ищем черты, связанные с уровнем паладина
-        if (source.includes('paladin') && source.includes('level-' + featureLevel)) {
-          if (Array.isArray(selectedFeats)) {
-            selectedFeats.forEach(feat => {
-              choices.push(`feat:${feat}`);
-            });
+      // Черты хранятся как массив строк в формате "source:featKey"
+      if (Array.isArray(draft.chosen.feats)) {
+        console.log('Debug - Все черты:', draft.chosen.feats);
+        console.log('Debug - Ищем уровень:', featureLevel);
+        draft.chosen.feats.forEach(featEntry => {
+          const [source, featKey] = featEntry.split(':');
+          console.log('Debug - Черта:', featEntry, 'Источник:', source, 'Ключ:', featKey);
+          // Ищем черты, связанные с уровнем паладина
+          if (source && featKey && source.includes('paladin') && source.includes('level-' + featureLevel)) {
+            console.log('Debug - Найдена подходящая черта:', featKey);
+            choices.push(`feat:${featKey}`);
           }
-        }
-      });
+        });
+      }
     }
     
     // Создаем маппинг особенностей к их типам выборов
@@ -404,8 +408,8 @@ export default function FeaturesTab({
                       </div>
                               <ChevronDown className="w-4 h-4 text-gray-400" />
                       </div>
-                          </div>
-                        </CollapsibleTrigger>
+                      </div>
+                    </CollapsibleTrigger>
                         <CollapsibleContent>
                           <div className="p-4 bg-neutral-900">
                             <div className="space-y-3">
