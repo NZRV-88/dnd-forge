@@ -4946,19 +4946,20 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     const bonusActions = [];
                     
                     // Добавляем заклинания, которые являются бонусными действиями
-                    // characterData.spells уже содержит все заклинания персонажа
-                    const allSpells = characterData?.spells || [];
+                    // Используем ту же логику, что и для вкладки "Заклинания"
+                    const allSpells = getAllCharacterSpells();
+                    
+                    console.log('BONUS ACTIONS: getAllCharacterSpells updated:', allSpells);
                     
                     if (allSpells.length > 0) {
-                      allSpells.forEach((spell: string, i: number) => {
-                        const spellData = getSpellData(spell);
+                      allSpells.forEach((spell: any, i: number) => {
                         // Проверяем, является ли заклинание бонусным действием
-                        const castingTime = spellData?.castingTime;
-                        const isBonusAction = Array.isArray(castingTime) 
+                        const castingTime = spell?.castingTime;
+                        const isBonusAction = Array.isArray(castingTime)
                             ? castingTime.includes("Бонусное действие")
                             : castingTime === "Бонусное действие";
-                        if (isBonusAction && spellData?.isCombat) {
-                          bonusActions.push({ type: 'spell', data: spell, index: i });
+                        if (isBonusAction && spell?.isCombat) {
+                          bonusActions.push({ type: 'spell', data: spell.key, index: i });
                         }
                       });
                     }

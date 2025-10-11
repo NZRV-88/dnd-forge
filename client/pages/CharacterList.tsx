@@ -322,15 +322,29 @@ export default function CharacterList() {
         }
     }, [char, finalStats]);
 
+    // Обновляем char при изменении draft.chosen.spells
+    useEffect(() => {
+        if (char && draft.chosen.spells !== char.chosen.spells) {
+            console.log('CharacterList: draft.chosen.spells changed, updating char');
+            console.log('CharacterList: draft.chosen.spells:', draft.chosen.spells);
+            console.log('CharacterList: char.chosen.spells:', char.chosen.spells);
+            
+            const updatedChar = { ...char, chosen: { ...char.chosen, spells: draft.chosen.spells } };
+            setCharWithLog(updatedChar);
+        }
+    }, [draft.chosen.spells, char]);
+
     // Get all character data including proficiencies
     const characterData = useMemo(() => {
         if (!char) return null;
         console.log('CharacterList: calculating characterData for char:', char);
+        console.log('CharacterList: char.chosen:', char?.chosen);
+        console.log('CharacterList: char.chosen.spells:', char?.chosen?.spells);
         console.log('CharacterList: char.basics.currency:', char?.basics?.currency);
         const result = getAllCharacterData(char);
-        console.log('CharacterList: characterData result:', result);
+        console.log('CharacterList: characterData result spells:', result?.spells);
         return result;
-    }, [char, char?.chosen?.spells]);
+    }, [char, char?.chosen?.spells, char?.chosen, draft.chosen.spells, draft]);
 
     // skill profs set (normalized)
     const skillProfs: string[] = Array.isArray(char?.skills) ? char.skills : [];
