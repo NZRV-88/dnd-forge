@@ -499,7 +499,11 @@ export default function FeaturesTab({
                                       <p>• Уровень: {feat.prerequisites.level}</p>
                                     )}
                                     {feat.prerequisites.oneOfAbilities && (
-                                      <p>• Характеристики: {Object.entries(feat.prerequisites.oneOfAbilities).map(([key, value]) => `${key} ${value}+`).join(' или ')}</p>
+                                      <p>• Характеристики: {Object.entries(feat.prerequisites.oneOfAbilities).map(([key, value]) => {
+                                        const ability = ABILITIES.find(a => a.key === key);
+                                        const abilityName = ability?.label || key;
+                                        return `${abilityName} ${value}+`;
+                                      }).join(' или ')}</p>
                                     )}
                                     {feat.prerequisites.races && (
                                       <p>• Расы: {feat.prerequisites.races.join(', ')}</p>
