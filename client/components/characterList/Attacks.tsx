@@ -4946,32 +4946,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     const bonusActions = [];
                     
                     // Добавляем заклинания, которые являются бонусными действиями
-                    // Получаем все заклинания персонажа из всех источников
-                    const allSpells: string[] = [];
-                    
-                    // Заклинания класса
-                    if (characterData?.chosen?.spells?.class) {
-                      allSpells.push(...characterData.chosen.spells.class);
-                    }
-                    
-                    // Заклинания подрасы
-                    if (characterData?.chosen?.spells?.subrace) {
-                      allSpells.push(...characterData.chosen.spells.subrace);
-                    }
-                    
-                    // Заклинания черт
-                    if (characterData?.chosen?.spells?.features) {
-                      Object.values(characterData.chosen.spells.features).forEach((spellList: string[]) => {
-                        allSpells.push(...spellList);
-                      });
-                    }
-                    
-                    // Выученные заклинания
-                    if (characterData?.chosen?.learnedSpells) {
-                      Object.values(characterData.chosen.learnedSpells).forEach((spellList: string[]) => {
-                        allSpells.push(...spellList);
-                      });
-                    }
+                    // characterData.spells уже содержит все заклинания персонажа
+                    const allSpells = characterData?.spells || [];
                     
                     if (allSpells.length > 0) {
                       allSpells.forEach((spell: string, i: number) => {
