@@ -180,19 +180,36 @@ export default function FeaturesTab({
   const getCharacterFeats = () => {
     const allFeats: any[] = [];
     
-    if (!characterData?.feats) return allFeats;
-    
     // Добавляем черты из characterData.feats (массив строк)
-    characterData.feats.forEach((featKey: string) => {
+    if (characterData?.feats) {
+      characterData.feats.forEach((featKey: string) => {
         const feat = ALL_FEATS.find(f => f.key === featKey);
         if (feat) {
           allFeats.push({
             ...feat,
-          source: 'character',
+            source: 'character',
             choices: getFeatChoices(featKey)
           });
         }
       });
+    }
+    
+    // Добавляем черты из draft.chosen.feats (черты от класса)
+    if (draft?.chosen?.feats && Array.isArray(draft.chosen.feats)) {
+      draft.chosen.feats.forEach((featEntry: string) => {
+        const [source, featKey] = featEntry.split(':');
+        if (source && featKey) {
+        const feat = ALL_FEATS.find(f => f.key === featKey);
+        if (feat) {
+          allFeats.push({
+            ...feat,
+              source: 'class',
+            choices: getFeatChoices(featKey)
+          });
+        }
+        }
+      });
+    }
     
     return allFeats;
   };
