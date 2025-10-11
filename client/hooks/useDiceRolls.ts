@@ -9,6 +9,15 @@ export interface DiceRollData {
   diceRoll: number;
   type: string;
   individualRolls?: number[];
+  // Новые поля для поддержки нескольких бросков
+  separateRolls?: Array<{
+    name: string;
+    dice: string;
+    diceRoll: number;
+    modifier: number;
+    result: number;
+    individualRolls?: number[];
+  }>;
 }
 
 export interface RollLogEntry {
@@ -223,16 +232,35 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           onRollAdded?.({ entry: baseEntry, rollData: baseRollData });
           onRollAdded?.({ entry: radiantEntry, rollData: radiantRollData });
           
-          // Передаем комбинированный объект в модальное окно
+          // Передаем комбинированный объект в модальное окно с отдельными бросками
           const combinedRollData: DiceRollData = {
             characterName: characterName || 'Персонаж',
-            dice: `${dice} + 1d8`, // Комбинированные кубики
+            dice: `${dice} + 1d8`, // Комбинированные кубики для совместимости
             modifier: modifier,
             result: finalResult, // Общий результат
             individualRolls: damageIndividualRolls, // Все броски
             description: `${desc}`, // Только название оружия
             type: "Урон", // Указываем тип как урон
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            // Новое поле для отдельных бросков
+            separateRolls: [
+              {
+                name: desc,
+                dice: dice,
+                diceRoll: damageIndividualRolls.slice(0, -radiantRolls.length).reduce((sum, roll) => sum + roll, 0),
+                modifier: modifier,
+                result: baseDamage,
+                individualRolls: damageIndividualRolls.slice(0, -radiantRolls.length)
+              },
+              {
+                name: "Сияющие удары",
+                dice: "1d8",
+                diceRoll: radiantDamage,
+                modifier: 0,
+                result: radiantDamage,
+                individualRolls: radiantRolls
+              }
+            ]
           };
           
           setDiceRollData(combinedRollData);
