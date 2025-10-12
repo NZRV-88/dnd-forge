@@ -932,9 +932,18 @@ export default function ClassPick() {
 
     // Функция для получения всех доступных заклинаний
     const getAllAvailableSpells = () => {
-        const cantrips = getAvailableCantrips();
-        const spellbookSpells = getAvailableSpellbookSpells();
-        return [...cantrips, ...spellbookSpells];
+        if (info?.spellcasting?.cantrips) {
+            // Для классов с заговорами (как волшебник)
+            const cantrips = getAvailableCantrips();
+            const spellbookSpells = getAvailableSpellbookSpells();
+            return [...cantrips, ...spellbookSpells];
+        } else if (info?.spellcasting?.spellbook) {
+            // Для классов только с книгой заклинаний
+            return getAvailableSpellbookSpells();
+        } else {
+            // Для классов без заговоров и книги заклинаний (как паладин) - только заклинания 1+ уровня
+            return getAvailablePreparedSpells();
+        }
     };
 
     // Функция для фильтрации всех доступных заклинаний
@@ -1209,17 +1218,18 @@ export default function ClassPick() {
                             {activeTab === 'spells' && !isSpellsCollapsed && (
                                 <div className="space-y-4">
                                     
-                                    {/* Шапка "Заговоры" */}
-                                    <div className="border rounded-lg">
-                                        <button
-                                            onClick={() => setIsCantripsOpen(!isCantripsOpen)}
-                                            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
-                                        >
-                                            <span className="font-semibold">Заговоры</span>
-                                            <Icons.ChevronDown 
-                                                className={`w-5 h-5 transition-transform ${isCantripsOpen ? 'rotate-180' : ''}`} 
-                                            />
-                                        </button>
+                                    {/* Шапка "Заговоры" - только если у класса есть заговоры */}
+                                    {info?.spellcasting?.cantrips && (
+                                        <div className="border rounded-lg">
+                                            <button
+                                                onClick={() => setIsCantripsOpen(!isCantripsOpen)}
+                                                className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+                                            >
+                                                <span className="font-semibold">Заговоры</span>
+                                                <Icons.ChevronDown 
+                                                    className={`w-5 h-5 transition-transform ${isCantripsOpen ? 'rotate-180' : ''}`} 
+                                                />
+                                            </button>
                                         
                                         {isCantripsOpen && (
                                             <div className="px-4 pb-4 border-t">
@@ -1324,6 +1334,7 @@ export default function ClassPick() {
                                             </div>
                                         )}
                                     </div>
+                                    )}
                                     
                                     {/* Шапка "Подготовленные Заклинания" */}
                                     <div className="border rounded-lg">
@@ -1632,11 +1643,20 @@ export default function ClassPick() {
                                                 {/* Отображение лимитов */}
                                                 <div className="py-3 border-b">
                                                     <div className="text-sm text-muted-foreground">
-                                                        Заговоры: {cantrips.length}/{getMaxCantrips()}
-                                                        {info?.spellcasting?.spellbook && (
-                                                            <span className="ml-4">
-                                                                Книга заклинаний: {spellbook.length}/{getMaxSpellbookSpells()}
-                                                            </span>
+                                                        {info?.spellcasting?.cantrips && (
+                                                            <>
+                                                                Заговоры: {cantrips.length}/{getMaxCantrips()}
+                                                                {info?.spellcasting?.spellbook && (
+                                                                    <span className="ml-4">
+                                                                        Книга заклинаний: {spellbook.length}/{getMaxSpellbookSpells()}
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                        {!info?.spellcasting?.cantrips && (
+                                                            <>
+                                                                Подготовленные заклинания: {preparedSpells.length}/{getMaxPreparedSpells()}
+                                                            </>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1728,8 +1748,8 @@ export default function ClassPick() {
                                                                         <button
                                                                             onClick={() => {
                                                                                 if (draft.basics.class) {
-                                                                                    if (spell.level === 0) {
-                                                                                        // Заговоры добавляем в cantrips
+                                                                                    if (info?.spellcasting?.cantrips && spell.level === 0) {
+                                                                                        // Заговоры добавляем в cantrips (только для классов с заговорами)
                                                                                         if (cantrips.includes(spell.key)) {
                                                                                             const newCantrips = cantrips.filter(key => key !== spell.key);
                                                                                             setChosenCantrips(draft.basics.class, newCantrips);
@@ -1737,8 +1757,8 @@ export default function ClassPick() {
                                                                                             const newCantrips = [...cantrips, spell.key];
                                                                                             setChosenCantrips(draft.basics.class, newCantrips);
                                                                                         }
-                                                                                    } else {
-                                                                                        // Заклинания 1+ уровня добавляем в spellbook
+                                                                                    } else if (info?.spellcasting?.spellbook && spell.level > 0) {
+                                                                                        // Заклинания 1+ уровня добавляем в spellbook (только для классов с книгой заклинаний)
                                                                                         if (spellbook.includes(spell.key)) {
                                                                                             const newSpellbook = spellbook.filter(key => key !== spell.key);
                                                                                             setChosenSpellbook(draft.basics.class, newSpellbook);
@@ -1746,29 +1766,52 @@ export default function ClassPick() {
                                                                                             const newSpellbook = [...spellbook, spell.key];
                                                                                             setChosenSpellbook(draft.basics.class, newSpellbook);
                                                                                         }
+                                                                                    } else if (!info?.spellcasting?.cantrips && !info?.spellcasting?.spellbook && spell.level > 0) {
+                                                                                        // Для классов без заговоров и книги заклинаний (как паладин) - добавляем в подготовленные
+                                                                                        if (preparedSpells.includes(spell.key)) {
+                                                                                            const newSpells = preparedSpells.filter(key => key !== spell.key);
+                                                                                            setChosenSpells(draft.basics.class, newSpells);
+                                                                                        } else if (preparedSpells.length < getMaxPreparedSpells()) {
+                                                                                            const newSpells = [...preparedSpells, spell.key];
+                                                                                            setChosenSpells(draft.basics.class, newSpells);
+                                                                                        }
                                                                                     }
                                                                                 }
                                                                             }}
                                                                             disabled={
-                                                                                spell.level === 0 
+                                                                                info?.spellcasting?.cantrips && spell.level === 0
                                                                                     ? (!cantrips.includes(spell.key) && cantrips.length >= getMaxCantrips())
-                                                                                    : (!spellbook.includes(spell.key) && spellbook.length >= getMaxSpellbookSpells())
+                                                                                    : info?.spellcasting?.spellbook && spell.level > 0
+                                                                                        ? (!spellbook.includes(spell.key) && spellbook.length >= getMaxSpellbookSpells())
+                                                                                        : !info?.spellcasting?.cantrips && !info?.spellcasting?.spellbook && spell.level > 0
+                                                                                            ? (!preparedSpells.includes(spell.key) && preparedSpells.length >= getMaxPreparedSpells())
+                                                                                            : false
                                                                             }
                                                                             className={
-                                                                                (spell.level === 0 ? cantrips.includes(spell.key) : spellbook.includes(spell.key))
+                                                                                (info?.spellcasting?.cantrips && spell.level === 0 ? cantrips.includes(spell.key) : 
+                                                                                 info?.spellcasting?.spellbook && spell.level > 0 ? spellbook.includes(spell.key) :
+                                                                                 !info?.spellcasting?.cantrips && !info?.spellcasting?.spellbook && spell.level > 0 ? preparedSpells.includes(spell.key) : false)
                                                                                     ? 'p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors'
                                                                                     : 'px-3 py-1.5 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
                                                                             }
                                                                             title={
-                                                                                spell.level === 0 
+                                                                                info?.spellcasting?.cantrips && spell.level === 0
                                                                                     ? (cantrips.includes(spell.key) ? "Убрать заговор" : "Выучить заговор")
-                                                                                    : (spellbook.includes(spell.key) ? "Убрать из книги заклинаний" : "Выучить заклинание")
+                                                                                    : info?.spellcasting?.spellbook && spell.level > 0
+                                                                                        ? (spellbook.includes(spell.key) ? "Убрать из книги заклинаний" : "Выучить заклинание")
+                                                                                        : !info?.spellcasting?.cantrips && !info?.spellcasting?.spellbook && spell.level > 0
+                                                                                            ? (preparedSpells.includes(spell.key) ? "Убрать из подготовленных" : "Подготовить заклинание")
+                                                                                            : ""
                                                                             }
                                                                         >
-                                                                            {(spell.level === 0 ? cantrips.includes(spell.key) : spellbook.includes(spell.key)) ? (
+                                                                            {(info?.spellcasting?.cantrips && spell.level === 0 ? cantrips.includes(spell.key) : 
+                                                                              info?.spellcasting?.spellbook && spell.level > 0 ? spellbook.includes(spell.key) :
+                                                                              !info?.spellcasting?.cantrips && !info?.spellcasting?.spellbook && spell.level > 0 ? preparedSpells.includes(spell.key) : false) ? (
                                                                                 <Icons.X className="w-4 h-4" />
                                                                             ) : (
-                                                                                'ВЫУЧИТЬ'
+                                                                                info?.spellcasting?.cantrips && spell.level === 0 ? 'ВЫУЧИТЬ' :
+                                                                                info?.spellcasting?.spellbook && spell.level > 0 ? 'ВЫУЧИТЬ' :
+                                                                                !info?.spellcasting?.cantrips && !info?.spellcasting?.spellbook && spell.level > 0 ? 'ПОДГОТОВИТЬ' : ''
                                                                             )}
                                                                         </button>
                                                                         <button
