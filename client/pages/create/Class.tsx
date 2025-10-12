@@ -1728,26 +1728,44 @@ export default function ClassPick() {
                                                                         <button
                                                                             onClick={() => {
                                                                                 if (draft.basics.class) {
-                                                                                    if (spellbook.includes(spell.key)) {
-                                                                                        // Убираем заклинание из книги заклинаний
-                                                                                        const newSpellbook = spellbook.filter(key => key !== spell.key);
-                                                                                        setChosenSpellbook(draft.basics.class, newSpellbook);
-                                                                                    } else if (spellbook.length < getMaxSpellbookSpells()) {
-                                                                                        // Добавляем заклинание в книгу заклинаний
-                                                                                        const newSpellbook = [...spellbook, spell.key];
-                                                                                        setChosenSpellbook(draft.basics.class, newSpellbook);
+                                                                                    if (spell.level === 0) {
+                                                                                        // Заговоры добавляем в cantrips
+                                                                                        if (cantrips.includes(spell.key)) {
+                                                                                            const newCantrips = cantrips.filter(key => key !== spell.key);
+                                                                                            setChosenCantrips(draft.basics.class, newCantrips);
+                                                                                        } else if (cantrips.length < getMaxCantrips()) {
+                                                                                            const newCantrips = [...cantrips, spell.key];
+                                                                                            setChosenCantrips(draft.basics.class, newCantrips);
+                                                                                        }
+                                                                                    } else {
+                                                                                        // Заклинания 1+ уровня добавляем в spellbook
+                                                                                        if (spellbook.includes(spell.key)) {
+                                                                                            const newSpellbook = spellbook.filter(key => key !== spell.key);
+                                                                                            setChosenSpellbook(draft.basics.class, newSpellbook);
+                                                                                        } else if (spellbook.length < getMaxSpellbookSpells()) {
+                                                                                            const newSpellbook = [...spellbook, spell.key];
+                                                                                            setChosenSpellbook(draft.basics.class, newSpellbook);
+                                                                                        }
                                                                                     }
                                                                                 }
                                                                             }}
-                                                                            disabled={!spellbook.includes(spell.key) && spellbook.length >= getMaxSpellbookSpells()}
+                                                                            disabled={
+                                                                                spell.level === 0 
+                                                                                    ? (!cantrips.includes(spell.key) && cantrips.length >= getMaxCantrips())
+                                                                                    : (!spellbook.includes(spell.key) && spellbook.length >= getMaxSpellbookSpells())
+                                                                            }
                                                                             className={
-                                                                                spellbook.includes(spell.key)
+                                                                                (spell.level === 0 ? cantrips.includes(spell.key) : spellbook.includes(spell.key))
                                                                                     ? 'p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors'
                                                                                     : 'px-3 py-1.5 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
                                                                             }
-                                                                            title={spellbook.includes(spell.key) ? "Убрать из книги заклинаний" : "Выучить заклинание"}
+                                                                            title={
+                                                                                spell.level === 0 
+                                                                                    ? (cantrips.includes(spell.key) ? "Убрать заговор" : "Выучить заговор")
+                                                                                    : (spellbook.includes(spell.key) ? "Убрать из книги заклинаний" : "Выучить заклинание")
+                                                                            }
                                                                         >
-                                                                            {spellbook.includes(spell.key) ? (
+                                                                            {(spell.level === 0 ? cantrips.includes(spell.key) : spellbook.includes(spell.key)) ? (
                                                                                 <Icons.X className="w-4 h-4" />
                                                                             ) : (
                                                                                 'ВЫУЧИТЬ'
