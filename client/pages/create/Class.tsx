@@ -1604,30 +1604,16 @@ export default function ClassPick() {
                                         
                                         {isAddSpellsOpen && (
                                             <div className="px-4 pb-4 border-t">
-                                                {/* Переключатель между заговорами и книгой заклинаний */}
-                                                <div className="flex gap-2 py-3 border-b">
-                                                    <button
-                                                        onClick={() => setActiveSpellType('cantrips')}
-                                                        className={`px-3 py-1 rounded text-sm font-medium transition-colors border ${
-                                                            activeSpellType === 'cantrips'
-                                                                ? 'bg-primary text-primary-foreground border-primary'
-                                                                : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
-                                                        }`}
-                                                    >
-                                                        Заговоры ({cantrips.length}/{getMaxCantrips()})
-                                                    </button>
-                                                    {info?.spellcasting?.spellbook && (
-                                                        <button
-                                                            onClick={() => setActiveSpellType('spellbook')}
-                                                            className={`px-3 py-1 rounded text-sm font-medium transition-colors border ${
-                                                                activeSpellType === 'spellbook'
-                                                                    ? 'bg-primary text-primary-foreground border-primary'
-                                                                    : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
-                                                            }`}
-                                                        >
-                                                            Книга заклинаний ({spellbook.length}/{getMaxSpellbookSpells()})
-                                                        </button>
-                                                    )}
+                                                {/* Отображение лимитов */}
+                                                <div className="py-3 border-b">
+                                                    <div className="text-sm text-muted-foreground">
+                                                        Заговоры: {cantrips.length}/{getMaxCantrips()}
+                                                        {info?.spellcasting?.spellbook && (
+                                                            <span className="ml-4">
+                                                                Книга заклинаний: {spellbook.length}/{getMaxSpellbookSpells()}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 
                                                 {/* Поиск и фильтры */}
