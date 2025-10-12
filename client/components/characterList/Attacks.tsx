@@ -1593,11 +1593,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   // Функция для определения владения магическим оружием
   const hasMagicWeaponMastery = (itemDetails: any) => {
     console.log('=== DEBUG hasMagicWeaponMastery ===');
-    console.log('itemDetails:', itemDetails);
-    console.log('itemDetails.itemType:', itemDetails.itemType);
-    console.log('itemDetails.weaponCategory:', itemDetails.weaponCategory);
-    console.log('itemDetails.weapon:', itemDetails.weapon);
-    console.log('itemDetails.weapon?.weaponCategory:', itemDetails.weapon?.weaponCategory);
+    console.log('Full itemDetails object:', JSON.stringify(itemDetails, null, 2));
     console.log('characterData?.weapons:', characterData?.weapons);
     
     if (itemDetails.itemType === 'weapon' && itemDetails.weaponCategory) {
