@@ -60,7 +60,12 @@ export function ItemDetailsSidebar({
           <>
             <div className="text-gray-400">
               <span className="font-medium text-gray-200">Владение:</span> {(() => {
-                // Проверяем владение оружием по английским ключам
+                // Для магических предметов используем специальную функцию
+                if (itemDetails.type === 'magic_item' && itemDetails.itemType === 'weapon') {
+                  return hasMagicWeaponMastery(itemDetails) ? 'Да' : 'Нет';
+                }
+                
+                // Для обычных предметов проверяем владение оружием по английским ключам
                 const weaponCategory = itemDetails.category === 'Простое оружие ближнего боя' || 
                                       itemDetails.category === 'Простое оружие дальнего боя' ? 'simple' :
                                       itemDetails.category === 'Воинское оружие ближнего боя' || 
