@@ -1592,6 +1592,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
 
   // Функция для определения владения магическим оружием
   const hasMagicWeaponMastery = (itemDetails: any) => {
+    console.log('=== DEBUG hasMagicWeaponMastery ===');
+    console.log('itemDetails:', itemDetails);
+    console.log('itemDetails.itemType:', itemDetails.itemType);
+    console.log('itemDetails.weaponCategory:', itemDetails.weaponCategory);
+    console.log('itemDetails.weapon:', itemDetails.weapon);
+    console.log('itemDetails.weapon?.weaponCategory:', itemDetails.weapon?.weaponCategory);
+    console.log('characterData?.weapons:', characterData?.weapons);
+    
     if (itemDetails.itemType === 'weapon' && itemDetails.weaponCategory) {
       // Для магического оружия проверяем категорию в characterData.weapons
       const hasCategoryMastery = characterData?.weapons?.includes(itemDetails.weaponCategory);
@@ -1606,11 +1614,14 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
         }
       }
       
-      return hasCategoryMastery || hasSpecificMastery;
+      const result = hasCategoryMastery || hasSpecificMastery;
+      console.log('hasCategoryMastery:', hasCategoryMastery, 'hasSpecificMastery:', hasSpecificMastery, 'result:', result);
+      return result;
     } else if (itemDetails.mastery) {
       // Для обычного оружия проверяем конкретное мастерство
       return characterData?.weapons?.includes(itemDetails.key);
     }
+    console.log('No weapon mastery found, returning false');
     return false;
   };
 
