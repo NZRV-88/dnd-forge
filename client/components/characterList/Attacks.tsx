@@ -2795,7 +2795,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               weaponMastery: magicItem.weapon?.weaponMastery,
               weaponCategory: magicItem.weapon?.weaponCategory,
               weaponRange: magicItem.weapon?.weaponRange,
-              weaponProperties: magicItem.weapon?.weaponProperties || []
+              weaponProperties: magicItem.weapon?.weaponProperties || [],
+              // Копируем весь объект weapon для проверки мастерства
+              weapon: magicItem.weapon
             } as any;
           }
         }
@@ -2834,7 +2836,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
               weaponMastery: magicItem.weapon?.weaponMastery,
               weaponCategory: magicItem.weapon?.weaponCategory,
               weaponRange: magicItem.weapon?.weaponRange,
-              weaponProperties: magicItem.weapon?.weaponProperties || []
+              weaponProperties: magicItem.weapon?.weaponProperties || [],
+              // Копируем весь объект weapon для проверки мастерства
+              weapon: magicItem.weapon
             } as any;
           }
         }
@@ -2869,7 +2873,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
           damageSources: weapon.weapon?.damageSources || [],
           weaponKind: weapon.weapon?.weaponKind,
           weaponMastery: weapon.weapon?.weaponMastery,
-          weaponProperties: weapon.weapon?.weaponProperties || []
+          weaponProperties: weapon.weapon?.weaponProperties || [],
+          // Копируем весь объект weapon для проверки мастерства
+          weapon: weapon.weapon
         };
         
         allWeapons.push(weaponObj);
@@ -2894,38 +2900,58 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       Math.floor((stats.str - 10) / 2);
     
     // Для магических предметов используем их собственный бонус атаки + модификатор характеристики + бонус мастерства (если есть владение)
-    if (weapon.bonusAttack !== undefined) {
-      const attackBonusNum = typeof weapon.bonusAttack === 'string' ? parseInt(weapon.bonusAttack) : weapon.bonusAttack;
+    if (weapon.magicItem && weapon.attackBonus !== undefined) {
+      const attackBonusNum = typeof weapon.attackBonus === 'string' ? parseInt(weapon.attackBonus) : weapon.attackBonus;
       
       // Проверяем владение оружием
       let hasMastery = false;
+      
+      console.log('Checking mastery for magic weapon:', {
+        weaponName: weapon.name,
+        weaponData: weapon.weapon,
+        characterWeapons: characterData?.weapons
+      });
       
       // Для магических предметов проверяем weapon.weapon.weaponCategory и weapon.weapon.weaponKind
       if (weapon.weapon && characterData?.weapons) {
         // Сначала проверяем конкретное мастерство по виду оружия
         if (weapon.weapon.weaponKind) {
           const weaponData = Weapons.find(w => w.key === weapon.weapon.weaponKind);
+          console.log('Found weapon data for weaponKind:', weaponData);
           if (weaponData?.key) {
             hasMastery = characterData.weapons.includes(weaponData.key);
+            console.log('Checking mastery for weaponKind:', weaponData.key, 'result:', hasMastery);
           }
         }
         
         // Если конкретное мастерство не найдено, проверяем категорию
         if (!hasMastery && weapon.weapon.weaponCategory) {
           hasMastery = characterData.weapons.includes(weapon.weapon.weaponCategory);
+          console.log('Checking mastery for weaponCategory:', weapon.weapon.weaponCategory, 'result:', hasMastery);
         }
       }
       
       // Если и это не сработало, проверяем базовое оружие по имени
       if (!hasMastery && weapon.name) {
         const baseWeapon = Weapons.find(w => w.name === weapon.name);
+        console.log('Found base weapon for name:', baseWeapon);
         if (baseWeapon && characterData?.weapons) {
           // Проверяем категорию базового оружия
           hasMastery = characterData.weapons.includes(baseWeapon.category);
+          console.log('Checking mastery for base weapon category:', baseWeapon.category, 'result:', hasMastery);
         }
       }
       
-      return attackBonusNum + abilityModifier + (hasMastery ? proficiencyBonus : 0);
+      const result = attackBonusNum + abilityModifier + (hasMastery ? proficiencyBonus : 0);
+      console.log('Magic weapon calculation:', {
+        weapon: weapon.name,
+        attackBonusNum,
+        abilityModifier,
+        hasMastery,
+        proficiencyBonus,
+        result
+      });
+      return result;
     }
     
     // Добавляем бонус к атаке из данных оружия
