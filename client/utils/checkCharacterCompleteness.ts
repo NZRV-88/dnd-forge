@@ -73,7 +73,15 @@ function isChoiceComplete(choice: ChoiceOption, source: string, draft: Character
         case "language":
             return (draft.chosen.languages?.[source]?.filter(l => l).length || 0) >= count;
         case "spell":
-            return (draft.chosen.spells?.[source]?.filter(s => s).length || 0) >= count;
+            // Для заклинаний нужно проверить и cantrips, и spells в зависимости от уровня
+            const spellLevel = (choice as any).spellLevel ?? 0;
+            const isCantrip = spellLevel === 0;
+            
+            if (isCantrip) {
+                return (draft.chosen.cantrips?.[source]?.filter(s => s).length || 0) >= count;
+            } else {
+                return (draft.chosen.spells?.[source]?.filter(s => s).length || 0) >= count;
+            }
         case "feat": {
             const selectedFeats = draft.chosen.feats?.filter(f => f.startsWith(`${source}-`)) || [];
             const result = selectedFeats.length >= count;
@@ -211,6 +219,7 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                         ...Object.keys(draft.chosen.languages || {}),
                         ...Object.keys(draft.chosen.tools || {}),
                         ...Object.keys(draft.chosen.spells || {}),
+                        ...Object.keys(draft.chosen.cantrips || {}),
                         // Для талантов ищем в массиве feats, а не в объекте
                         ...(draft.chosen.feats || []).map(feat => feat.split(':')[0]).filter(key => key.startsWith(baseSource))
                     ].filter(key => key.startsWith(baseSource));
@@ -255,6 +264,7 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                             ...Object.keys(draft.chosen.skills || {}),
                             ...Object.keys(draft.chosen.languages || {}),
                             ...Object.keys(draft.chosen.spells || {}),
+                            ...Object.keys(draft.chosen.cantrips || {}),
                             // Для талантов ищем в массиве feats, а не в объекте
                             ...(draft.chosen.feats || []).map(feat => feat.split(':')[0]).filter(key => key.startsWith(baseSource))
                         ].filter(key => key.startsWith(baseSource));
@@ -356,9 +366,20 @@ export function checkCharacterCompleteness(draft: CharacterDraft): IncompleteCho
                 if (feature.choices) {
                     const baseSource = `background-${draft.basics.background}-feature-${i}`;
                     // Ищем все возможные источники для этой feature (с учетом суффиксов)
-                    const possibleSources = Object.keys(draft.chosen.abilities || {}).filter(key => 
-                        key.startsWith(baseSource)
-                    );
+                    const possibleSources = [
+                        ...Object.keys(draft.chosen.abilities || {}),
+                        ...Object.keys(draft.chosen.skills || {}),
+                        ...Object.keys(draft.chosen.languages || {}),
+                        ...Object.keys(draft.chosen.tools || {}),
+                        ...Object.keys(draft.chosen.spells || {}),
+                        ...Object.keys(draft.chosen.cantrips || {}),
+                        ...Object.keys(draft.chosen.toolProficiencies || {}),
+                        ...Object.keys(draft.chosen.fightingStyle || {}),
+                        ...Object.keys(draft.chosen.weaponMastery || {}),
+                        ...Object.keys(draft.chosen.features || {}),
+                        // Для талантов ищем в массиве feats, а не в объекте
+                        ...(draft.chosen.feats || []).map(feat => feat.split(':')[0]).filter(key => key.startsWith(baseSource))
+                    ].filter(key => key.startsWith(baseSource));
                     
                     for (const choice of feature.choices) {
                         // Проверяем все возможные источники

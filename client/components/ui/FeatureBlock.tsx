@@ -6,6 +6,7 @@ import { ClassTraitsTable } from "@/components/ui/ClassTraitsTable";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useCharacter } from "@/store/character";
 import { FEATURES } from "@/data/classes/features/features";
+import { ALL_FEATS } from "@/data/feats/feats";
 import type { ChoiceOption } from "@/data/shared/choices";
 import type { ClassInfo } from "@/data/classes/types";
 
@@ -106,7 +107,12 @@ export default function FeatureBlock({
       case "language":
         return draft.chosen.languages?.[sourceKey] ? [...draft.chosen.languages[sourceKey]] : [];
       case "spell":
-        return draft.chosen.spells?.[sourceKey] ? [...draft.chosen.spells[sourceKey]] : [];
+        // Для заклинаний нужно проверить и cantrips, и spells в зависимости от уровня
+        // Но в FeatureBlock у нас нет доступа к spellLevel из choice
+        // Поэтому возвращаем объединенный массив из обоих источников
+        const spells = draft.chosen.spells?.[sourceKey] ? [...draft.chosen.spells[sourceKey]] : [];
+        const cantrips = draft.chosen.cantrips?.[sourceKey] ? [...draft.chosen.cantrips[sourceKey]] : [];
+        return [...spells, ...cantrips];
       case "fighting-style":
         return draft.chosen.fightingStyle?.[sourceKey] ? [...draft.chosen.fightingStyle[sourceKey]] : [];
                 case "weapon-mastery":
@@ -117,9 +123,15 @@ export default function FeatureBlock({
       case "feat":
         // Используем source-specific ключ для талантов
         const sourceFeats = draft.chosen.feats || [];
-        const featKey = `${sourceKey}-0`; // используем индекс 0 для первого таланта
-        const selectedFeat = sourceFeats.find(f => f.startsWith(featKey + ':'))?.split(':')[1];
-        return selectedFeat ? [selectedFeat] : [];
+        // Если есть featKey, используем его для поиска, иначе используем старую логику
+        if (featKey) {
+          const selectedFeat = sourceFeats.find(f => f === featKey);
+          return selectedFeat ? [selectedFeat] : [];
+        } else {
+          const featKey = `${sourceKey}-0`; // используем индекс 0 для первого таланта
+          const selectedFeat = sourceFeats.find(f => f.startsWith(featKey + ':'))?.split(':')[1];
+          return selectedFeat ? [selectedFeat] : [];
+        }
       case "subclass":
         // В твоём ChoiceRenderer подкласс хранится в basics.subclass
         return draft.basics.subclass ? [draft.basics.subclass] : [];
@@ -153,6 +165,28 @@ export default function FeatureBlock({
             // вложенные выборы увеличивают общий total и selected
             total += nested.total;
             selected += nested.selected;
+          }
+        }
+      }
+
+      // Специальная логика для черт (feats)
+      if (choice.type === "feat" && featKey) {
+        // Проверяем, выбрана ли черта
+        const sourceFeats = draft.chosen.feats || [];
+        const isFeatSelected = sourceFeats.includes(featKey);
+        
+        if (isFeatSelected) {
+          // Если черта выбрана, считаем её выборы
+          const featInfo = ALL_FEATS.find(f => f.key === featKey);
+          if (featInfo?.effect) {
+            for (const effect of featInfo.effect) {
+              if (effect.choices && effect.choices.length > 0) {
+                const effectSource = `feat:${featKey}:effect-${featInfo.effect.indexOf(effect)}`;
+                const nested = countChoicesRecursive(effect.choices, effectSource);
+                total += nested.total;
+                selected += nested.selected;
+              }
+            }
           }
         }
       }

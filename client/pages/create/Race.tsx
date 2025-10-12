@@ -679,7 +679,7 @@ export default function Race() {
                                                 name={trait.name}
                                                 desc={trait.desc}
 
-                                                source={`subrace-${subrace}-trait`}
+                                                source={`subrace-${subrace}-trait-${ti}`}
                                                 idx={ti}
                                                 choices={trait.choices}
                                                 textMaxHeight={100}

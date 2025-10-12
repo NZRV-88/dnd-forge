@@ -902,7 +902,15 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     isComplete = (draft.chosen.languages?.[subSource]?.length || 0) >= cnt;
                                     break;
                                 case "spell":
-                                    isComplete = (draft.chosen.spells?.[subSource]?.length || 0) >= cnt;
+                                    // Для заклинаний нужно проверить и cantrips, и spells в зависимости от уровня
+                                    const spellLevel = (subChoice as any).spellLevel ?? 0;
+                                    const isCantrip = spellLevel === 0;
+                                    
+                                    if (isCantrip) {
+                                        isComplete = (draft.chosen.cantrips?.[subSource]?.length || 0) >= cnt;
+                                    } else {
+                                        isComplete = (draft.chosen.spells?.[subSource]?.length || 0) >= cnt;
+                                    }
                                     break;
                                 case "weapon-mastery":
                                     isComplete = (draft.chosen.weaponMastery?.[subSource]?.length || 0) >= cnt;
