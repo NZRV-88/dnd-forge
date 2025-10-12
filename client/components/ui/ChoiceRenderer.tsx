@@ -87,6 +87,8 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         // Функции для работы с заклинаниями
         setChosenSpells,
         removeChosenSpell,
+        setChosenCantrips,
+        removeChosenCantrip,
         
         // Функции для работы с оружейным мастерством
         setChosenWeaponMastery,
@@ -246,6 +248,9 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         Object.keys(draft.chosen.spells).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenSpells(key, []);
         });
+        Object.keys(draft.chosen.cantrips).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenCantrips(key, []);
+        });
         Object.keys(draft.chosen.weaponMastery || {}).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenWeaponMastery(key, []);
         });
@@ -276,6 +281,9 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         });
         Object.keys(draft.chosen.spells).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenSpells(key, []);
+        });
+        Object.keys(draft.chosen.cantrips).forEach((key) => {
+            if (key.startsWith(cleanupPrefix)) setChosenCantrips(key, []);
         });
         Object.keys(draft.chosen.weaponMastery || {}).forEach((key) => {
             if (key.startsWith(cleanupPrefix)) setChosenWeaponMastery(key, []);
@@ -488,8 +496,14 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                 available = available.filter(s => choice.options?.includes(s.key));
                             }
 
-                            // Получаем текущий выбор - фиксируем позицию в массиве
-                            const sourceArray = draft.chosen.spells?.[source] || [];
+                            // Определяем уровень заклинания и соответствующий источник данных
+                            const spellLevel = (choice as any).spellLevel ?? 0;
+                            const isCantrip = spellLevel === 0;
+                            
+                            // Получаем текущий выбор из правильного источника
+                            const sourceArray = isCantrip 
+                                ? (draft.chosen.cantrips?.[source] || [])
+                                : (draft.chosen.spells?.[source] || []);
                             const selected = sourceArray[idx] ?? "";
 
                             // Исключаем уже выбранные в других слотах
@@ -525,7 +539,12 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                                 i === idx ? value : (sourceArray[i] || "")
                                             );
 
-                                            setChosenSpells(source, updated);
+                                            // Сохраняем в правильный источник в зависимости от уровня
+                                            if (isCantrip) {
+                                                setChosenCantrips(source, updated);
+                                            } else {
+                                                setChosenSpells(source, updated);
+                                            }
                                         }}
                                     >
                                         <option value="">— Выберите заклинание —</option>

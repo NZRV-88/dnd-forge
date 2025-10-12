@@ -1387,7 +1387,7 @@ export default function ClassPick() {
                                                                                         <span> • </span>
                                                                                     </>
                                                                                 ) : null}
-                                                                                {spell.level}-й уровень • {spell.school}
+                                                                                {spell.level === 0 ? 'Заговор' : `${spell.level}-й уровень`} • {spell.school}
                                                                                 {isFromLearned && (
                                                                                     <>
                                                                                         <span> • </span>
@@ -1495,7 +1495,7 @@ export default function ClassPick() {
                                                                             : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
                                                                     }`}
                                                                 >
-                                                                    {level} УРОВЕНЬ
+                                                                    - {level} -
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -1545,7 +1545,7 @@ export default function ClassPick() {
                                                                                             <span> • </span>
                                                                                         </>
                                                                                     ) : null}
-                                                                                    {spell.level}-й уровень • {spell.school}
+                                                                                    {spell.level === 0 ? 'Заговор' : `${spell.level}-й уровень`} • {spell.school}
                                                                                 </div>
                                                                             </button>
                                                                             <div className="flex items-center gap-2 ml-3">
@@ -1680,7 +1680,7 @@ export default function ClassPick() {
                                                                             : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
                                                                     }`}
                                                                 >
-                                                                    {level} УРОВЕНЬ
+                                                                    - {level} -
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -1721,7 +1721,7 @@ export default function ClassPick() {
                                                                                     <span> • </span>
                                                                                 </>
                                                                             ) : null}
-                                                                            {spell.level}-й уровень • {spell.school}
+                                                                            {spell.level === 0 ? 'Заговор' : `${spell.level}-й уровень`} • {spell.school}
                                                                         </div>
                                                                     </button>
                                                                     <div className="flex items-center gap-2 ml-3">
