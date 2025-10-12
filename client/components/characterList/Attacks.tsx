@@ -2894,8 +2894,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       Math.floor((stats.str - 10) / 2);
     
     // Для магических предметов используем их собственный бонус атаки + модификатор характеристики + бонус мастерства (если есть владение)
-    if (weapon.type === 'magic_item' && weapon.itemType === 'weapon' && weapon.attackBonus !== undefined) {
-      const attackBonusNum = typeof weapon.attackBonus === 'string' ? parseInt(weapon.attackBonus) : weapon.attackBonus;
+    if (weapon.bonusAttack !== undefined) {
+      const attackBonusNum = typeof weapon.bonusAttack === 'string' ? parseInt(weapon.bonusAttack) : weapon.bonusAttack;
       
       // Проверяем владение оружием
       let hasMastery = false;
