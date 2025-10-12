@@ -408,6 +408,7 @@ export default function CharacterView() {
                         <Skills
                             stats={finalStats}
                             profs={char?.skills || []}
+                            expertise={char?.expertise || []}
                             proficiencyBonus={proficiencyBonus}
                             onRoll={addRoll}
                             onToggleProf={(skillKey) => {

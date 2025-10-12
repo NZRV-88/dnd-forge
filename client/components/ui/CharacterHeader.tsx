@@ -3,7 +3,7 @@ import { useCharacter } from "@/store/character";
 import { useNavigate } from "react-router-dom";
 import AvatarManager from "./AvatarManager";
 import NameGenerator from "./NameGenerator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SimpleTooltip } from "@/components/ui/SimpleTooltip";
 import { AlertCircle } from "lucide-react";
 import { checkCharacterCompleteness } from "@/utils/checkCharacterCompleteness";
 
@@ -168,32 +168,16 @@ const CharacterHeader = forwardRef<CharacterHeaderRef, CharacterHeaderProps>(({ 
                 {/* Индикатор незавершенных выборов в нижнем правом углу шапки */}
                 {incompletePages.length > 0 && (
                     <div className="absolute bottom-4 right-4 z-10">
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className="relative cursor-pointer">
-                                    <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors">
-                                        <AlertCircle className="w-5 h-5" />
-                                    </div>
-                                    <div className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">
-                                        {incompletePages.length}
-                                    </div>
+                        <SimpleTooltip content={`Незавершенные выборы: ${incompletePages.map(p => p.label).join(', ')}`}>
+                            <div className="relative cursor-pointer">
+                                <div className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors">
+                                    <AlertCircle className="w-5 h-5" />
                                 </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-xs">
-                                <div className="space-y-2">
-                                    <div className="font-semibold text-sm">Незавершенные выборы:</div>
-                                    {incompletePages.map((page, idx) => (
-                                        <div 
-                                            key={idx}
-                                            onClick={() => navigate(page.path)}
-                                            className="text-xs hover:text-primary cursor-pointer hover:underline"
-                                        >
-                                            • {page.label}
-                                        </div>
-                                    ))}
+                                <div className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">
+                                    {incompletePages.length}
                                 </div>
-                            </TooltipContent>
-                        </Tooltip>
+                            </div>
+                        </SimpleTooltip>
                     </div>
                 )}
             </div>

@@ -82,6 +82,11 @@ export interface ClassInfo {
 export interface SpellcastingInfo {
     ability: "int" | "wis" | "cha"; // основная характеристика
     preparedFormula?: string; // формула для подготовленных заклинаний (для всех уровней)
+    cantripFormula?: string; // формула для заговоров (для всех уровней)
+    cantrips?: Record<number, number>; // фиксированное количество заговоров по уровням
+    preparedSpells?: Record<number, number>; // фиксированное количество подготовленных заклинаний по уровням
+    spellbook?: boolean; // есть ли книга заклинаний (для волшебника)
+    spellbookFormula?: string; // формула для количества заклинаний в книге (например "6 + (level - 1) * 2")
     progression: Record<number, SpellcastingLevel>; // данные по уровням
 }
 

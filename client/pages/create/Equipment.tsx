@@ -777,7 +777,12 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
 export default function EquipmentPick() {
     const { id } = useParams<{ id: string }>(); 
     const nav = useNavigate();
-    const { draft, setBasics, calculateMaxCarryWeight, isOverloaded, setActiveWeaponSlot } = useCharacter();
+    const { draft, setBasics, calculateMaxCarryWeight, isOverloaded, setActiveWeaponSlot, isLoading } = useCharacter();
+    
+    // Показываем загрузку если контекст еще не готов
+    if (isLoading) {
+        return <div className="p-4">Загрузка...</div>;
+    }
     const [selectedClassChoice, setSelectedClassChoice] = useState<number>(0);
     const [selectedBackgroundChoice, setSelectedBackgroundChoice] = useState<number>(0);
     const [currency, setCurrency] = useState({

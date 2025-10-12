@@ -38,7 +38,12 @@ function pointBuyCost(score: number) {
 export default function AbilitiesPick() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
-    const { draft, setDraft } = useCharacter();
+    const { draft, setDraft, isLoading } = useCharacter();
+    
+    // Показываем загрузку если контекст еще не готов
+    if (isLoading) {
+        return <div className="p-4">Загрузка...</div>;
+    }
     const draftRolls = draft.rolls || [];
     const setDraftRolls = (newRolls: RollResult[]) => {
         setDraft(d => ({ ...d, rolls: newRolls }));

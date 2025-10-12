@@ -108,9 +108,23 @@ export default function FeaturesTab({
       }
     }
     
+    // Специальная обработка для "Академические знания" - экспертность навыков
+    if (featureName === 'Академические знания' && draft.chosen.expertise) {
+      Object.entries(draft.chosen.expertise).forEach(([source, skillList]) => {
+        if (source.includes('wizard') && source.includes('-' + featureLevel + '-')) {
+          if (Array.isArray(skillList)) {
+            skillList.forEach(skill => {
+              choices.push(`expertise:${skill}`);
+            });
+          }
+        }
+      });
+    }
+    
     // Создаем маппинг особенностей к их типам выборов
     const featureChoiceMapping: { [key: string]: string[] } = {
       'Основные особенности класса': ['skills'],
+      'Академические знания': ['expertise'],
       'Боевой стиль': ['features', 'fightingStyle', 'blessedWarrior'],
       'Оружейное мастерство': ['weaponMastery'],
       'Увеличение характеристик': ['feats'],
@@ -470,7 +484,10 @@ export default function FeaturesTab({
                                                 let displayName = choiceValue;
                                                 
                                                 // Переводим ключи в читаемые названия
-                                                if (choiceType === 'skill') {
+                                                if (choiceType === 'expertise') {
+                                                  const skill = SKILLS.find(s => s.key === choiceValue);
+                                                  displayName = skill?.name ? `${skill.name} (Экспертность)` : choiceValue;
+                                                } else if (choiceType === 'skill') {
                                                   const skill = SKILLS.find(s => s.key === choiceValue);
                                                   displayName = skill?.name || choiceValue;
                                                 } else if (choiceType === 'tool') {
@@ -621,7 +638,10 @@ export default function FeaturesTab({
                                           let displayName = choiceValue;
                                           
                                           // Переводим ключи в читаемые названия
-                                          if (choiceType === 'skill') {
+                                          if (choiceType === 'expertise') {
+                                            const skill = SKILLS.find(s => s.key === choiceValue);
+                                            displayName = skill?.name ? `${skill.name} (Экспертность)` : choiceValue;
+                                          } else if (choiceType === 'skill') {
                                             const skill = SKILLS.find(s => s.key === choiceValue);
                                             displayName = skill?.name || choiceValue;
                                           } else if (choiceType === 'tool') {
@@ -664,7 +684,10 @@ export default function FeaturesTab({
                                       let displayName = choiceValue;
                                       
                                       // Переводим ключи в читаемые названия
-                                      if (choiceType === 'skill') {
+                                      if (choiceType === 'expertise') {
+                                        const skill = SKILLS.find(s => s.key === choiceValue);
+                                        displayName = skill?.name ? `${skill.name} (Экспертность)` : choiceValue;
+                                      } else if (choiceType === 'skill') {
                                         const skill = SKILLS.find(s => s.key === choiceValue);
                                         displayName = skill?.name || choiceValue;
                                       } else if (choiceType === 'tool') {

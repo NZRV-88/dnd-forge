@@ -1,6 +1,7 @@
 import React from "react";
 import DynamicFrame from "@/components/ui/DynamicFrame";
 import { useFrameColor } from "@/contexts/FrameColorContext";
+import { SimpleTooltip } from "@/components/ui/SimpleTooltip";
 
 // Импортируем FRAME_COLORS из DynamicFrame
 const FRAME_COLORS = {
@@ -44,6 +45,7 @@ type Props = {
   stats: Record<string, number>;
   onRoll: (label: string, key: string, value: number) => void;
   profs: string[];
+  expertise: string[];  // навыки с экспертностью
   proficiencyBonus: number;
   onToggleProf?: (skillKey: string) => void; // опционально
   isActive?: boolean;
@@ -85,11 +87,13 @@ export default function Skills({
   stats,
   onRoll,
   profs,
+  expertise = [],
   proficiencyBonus,
   onToggleProf,
   isActive = true,
 }: Props) {
   const profSet = new Set(profs);
+  const expertiseSet = new Set(expertise);
 
   const sortedSkills = Object.entries(SKILLS).sort(([, a], [, b]) =>
     a.ru.localeCompare(b.ru, "ru")
@@ -120,7 +124,9 @@ export default function Skills({
       >
         {sortedSkills.map(([key, { ability, ru }], index) => {
           const value = stats[ability] || 0;
-          const bonus = mod(value) + (profSet.has(key) ? proficiencyBonus : 0);
+          const hasProf = profSet.has(key);
+          const hasExpertise = expertiseSet.has(key);
+          const bonus = mod(value) + (hasProf ? proficiencyBonus : 0) + (hasExpertise ? proficiencyBonus : 0);
 
           return (
             <React.Fragment key={key}>
@@ -141,11 +147,36 @@ export default function Skills({
                   onClick={() => onToggleProf(key)}
                   className="w-4 h-4 rounded-full flex items-center justify-center focus:outline-none -ml-6"
                 >
-                  {profSet.has(key) ? (
-                    <span 
-                      className="w-3 h-3 rounded-full block hover:opacity-70"
-                      style={{ backgroundColor: getFrameColor(frameColor) }}
-                    ></span>
+                  {hasProf || hasExpertise ? (
+                    hasExpertise ? (
+                      <SimpleTooltip content="Экспертность">
+                        <span 
+                          className="w-3 h-3 rounded-full block hover:opacity-70 relative"
+                          style={{ backgroundColor: getFrameColor(frameColor) }}
+                        >
+                          <span 
+                            className="absolute -inset-1 rounded-full border-2 border-transparent"
+                            style={{ 
+                              borderColor: `${getFrameColor(frameColor)}40`,
+                              backgroundColor: 'transparent'
+                            }}
+                          >
+                            <span 
+                              className="absolute -inset-0.5 rounded-full border"
+                              style={{ 
+                                borderColor: getFrameColor(frameColor),
+                                backgroundColor: 'transparent' 
+                              }}
+                            />
+                          </span>
+                        </span>
+                      </SimpleTooltip>
+                    ) : (
+                      <span 
+                        className="w-3 h-3 rounded-full block hover:opacity-70"
+                        style={{ backgroundColor: getFrameColor(frameColor) }}
+                      />
+                    )
                   ) : (
                     <span 
                       className="w-3 h-3 rounded-full border block transition-colors duration-200"
@@ -164,11 +195,36 @@ export default function Skills({
                 </button>
               ) : (
                 <div className="w-4 h-4 rounded-full flex items-center justify-center">
-                  {profSet.has(key) ? (
-                    <span 
-                      className="w-3 h-3 rounded-full block"
-                      style={{ backgroundColor: getFrameColor(frameColor) }}
-                    ></span>
+                  {hasProf || hasExpertise ? (
+                    hasExpertise ? (
+                      <SimpleTooltip content="Экспертность">
+                        <span 
+                          className="w-3 h-3 rounded-full block relative"
+                          style={{ backgroundColor: getFrameColor(frameColor) }}
+                        >
+                          <span 
+                            className="absolute -inset-1 rounded-full border-2 border-transparent"
+                            style={{ 
+                              borderColor: `${getFrameColor(frameColor)}40`,
+                              backgroundColor: 'transparent'
+                            }}
+                          >
+                            <span 
+                              className="absolute -inset-0.5 rounded-full border"
+                              style={{ 
+                                borderColor: getFrameColor(frameColor),
+                                backgroundColor: 'transparent' 
+                              }}
+                            />
+                          </span>
+                        </span>
+                      </SimpleTooltip>
+                    ) : (
+                      <span 
+                        className="w-3 h-3 rounded-full block"
+                        style={{ backgroundColor: getFrameColor(frameColor) }}
+                      />
+                    )
                   ) : (
                     <span 
                       className="w-3 h-3 rounded-full border block transition-colors duration-200"

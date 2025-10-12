@@ -26,9 +26,15 @@ export default function Summary() {
         tools,
         feats,
         spells,
-        saveToSupabase
+        saveToSupabase,
+        isLoading
         //equipment,
     } = useCharacter();
+
+    // Показываем загрузку если контекст еще не готов
+    if (isLoading) {
+        return <div className="p-4">Загрузка...</div>;
+    }
 
     // Состояние для уведомлений
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);

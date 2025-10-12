@@ -20,10 +20,15 @@ export default function BackgroundPick() {
 
     // Загружаем персонажа при редактировании
     useEffect(() => {
-        if (id && draft.id !== id) {
+        if (id && draft.id !== id && !isLoading) {
             loadFromSupabase(id);
         }
-    }, [id, draft.id, loadFromSupabase]);
+    }, [id, draft.id, loadFromSupabase, isLoading]);
+
+    // Показываем загрузку если контекст еще не готов
+    if (isLoading) {
+        return <div className="p-4">Загрузка...</div>;
+    }
 
     // Модальные окна
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);

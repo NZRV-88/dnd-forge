@@ -830,6 +830,7 @@ export default function CharacterList() {
                             <Skills
                                 stats={finalStats}
                                 profs={characterData?.skills || []}
+                                expertise={characterData?.expertise || []}
                                 proficiencyBonus={proficiencyBonus}
                                 onRoll={addRoll}
                                 onToggleProf={(skillKey) => {

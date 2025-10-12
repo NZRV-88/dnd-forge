@@ -86,10 +86,13 @@ export type CharacterDraft = {
         languages: Record<string, string[]>;
         feats: string[];                                // выбранные фиты (ключи)
         spells: Record<string, string[]>;
+        cantrips: Record<string, string[]>;
+        spellbook: Record<string, string[]>;      // источник -> заклинания в книге заклинаний
         learnedSpells: Record<string, string[]>;        // источник -> выученные заклинания (не учитываются в лимите)
         features: Record<string, string[]>;
         fightingStyle?: Record<string, string[]>;
         weaponMastery?: Record<string, string[]>;       // источник -> выбранное оружейное мастерство
+        expertise?: Record<string, string[]>;          // источник -> навыки с экспертностью
     };
     abilitiesMode?: "array" | "roll" | "point-buy";
     rolls?: RollResult[];
@@ -130,6 +133,7 @@ export type CharacterContextType = {
     weapons: string[];
     armors: string[];
     savingThrows: string[];
+    expertise: string[];  // навыки с экспертностью
     abilityBonuses: Partial<Record<keyof Abilities, number>>;
     speed?: number;
     initiativeBonus?: number;
@@ -141,6 +145,9 @@ export type CharacterContextType = {
     setChosenSkills: (source: string, skills: string[]) => void;
     removeChosenSkill: (source: string, skill: string) => void;
 
+    setChosenExpertise: (source: string, skills: string[]) => void;
+    removeChosenExpertise: (source: string, skill: string) => void;
+
     setChosenTools: (source: string, tools: string[]) => void;
     removeChosenTool: (source: string, tool: string) => void;
     setChosenToolProficiencies: (source: string, toolProficiencies: string[]) => void;
@@ -151,6 +158,11 @@ export type CharacterContextType = {
 
     setChosenSpells: (source: string, spells: string[]) => void;
     removeChosenSpell: (source: string, spell: string) => void;
+    setChosenCantrips: (source: string, cantrips: string[]) => void;
+    removeChosenCantrip: (source: string, cantrip: string) => void;
+    
+    setChosenSpellbook: (source: string, spells: string[]) => void;
+    removeChosenSpellbookSpell: (source: string, spell: string) => void;
     
     setLearnedSpells: (source: string, spells: string[]) => void;
     removeLearnedSpell: (source: string, spell: string) => void;
@@ -255,6 +267,8 @@ const makeDefaultDraft = (id?: string): CharacterDraft => ({
         languages: {},
         feats: [],
         spells: {},
+        cantrips: {},
+        spellbook: {},
         learnedSpells: {},
         features: {},
         fightingStyle: {},
@@ -665,6 +679,35 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             },
         }));
 
+    const setChosenExpertise = (source: string, skills: string[]) => {
+        setDraft(d => {
+            const newDraft = {
+                ...d,
+                chosen: { 
+                    ...d.chosen, 
+                    expertise: { 
+                        ...d.chosen.expertise, 
+                        [source]: skills 
+                    } 
+                },
+            };
+            
+            return newDraft;
+        });
+    };
+
+    const removeChosenExpertise = (source: string, skill: string) =>
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                expertise: {
+                    ...d.chosen.expertise,
+                    [source]: (d.chosen.expertise?.[source] || []).filter(s => s !== skill),
+                },
+            },
+        }));
+
     const setChosenTools = (source: string, tools: string[]) =>
         setDraft(d => ({
             ...d,
@@ -733,6 +776,42 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                 spells: {
                     ...d.chosen.spells,
                     [source]: (d.chosen.spells[source] || []).filter(s => s !== spell),
+                },
+            },
+        }));
+
+    const setChosenCantrips = (source: string, cantrips: string[]) =>
+        setDraft(d => ({
+            ...d,
+            chosen: { ...d.chosen, cantrips: { ...d.chosen.cantrips, [source]: cantrips } },
+        }));
+
+    const removeChosenCantrip = (source: string, cantrip: string) =>
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                cantrips: {
+                    ...d.chosen.cantrips,
+                    [source]: (d.chosen.cantrips[source] || []).filter(s => s !== cantrip),
+                },
+            },
+        }));
+
+    const setChosenSpellbook = (source: string, spells: string[]) =>
+        setDraft(d => ({
+            ...d,
+            chosen: { ...d.chosen, spellbook: { ...d.chosen.spellbook, [source]: spells } },
+        }));
+
+    const removeChosenSpellbookSpell = (source: string, spell: string) =>
+        setDraft(d => ({
+            ...d,
+            chosen: {
+                ...d.chosen,
+                spellbook: {
+                    ...d.chosen.spellbook,
+                    [source]: (d.chosen.spellbook[source] || []).filter(s => s !== spell),
                 },
             },
         }));
@@ -1474,6 +1553,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenAbility,
         setChosenSkills,
         removeChosenSkill,
+        setChosenExpertise,
+        removeChosenExpertise,
         setChosenTools,
         removeChosenTool,
         setChosenToolProficiencies,
@@ -1482,6 +1563,10 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenLanguage,
         setChosenSpells,
         removeChosenSpell,
+        setChosenCantrips,
+        removeChosenCantrip,
+        setChosenSpellbook,
+        removeChosenSpellbookSpell,
         setLearnedSpells,
         removeLearnedSpell,
         setChosenWeaponMastery,
@@ -1551,6 +1636,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenAbility: () => {},
         setChosenSkills: () => {},
         removeChosenSkill: () => {},
+        setChosenExpertise: () => {},
+        removeChosenExpertise: () => {},
         setChosenTools: () => {},
         removeChosenTool: () => {},
         setChosenToolProficiencies: () => {},
@@ -1559,6 +1646,10 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         removeChosenLanguage: () => {},
         setChosenSpells: () => {},
         removeChosenSpell: () => {},
+        setChosenCantrips: () => {},
+        removeChosenCantrip: () => {},
+        setChosenSpellbook: () => {},
+        removeChosenSpellbookSpell: () => {},
         setLearnedSpells: () => {},
         removeLearnedSpell: () => {},
         setChosenWeaponMastery: () => {},
@@ -1609,12 +1700,8 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <CharacterContext.Provider value={isInitialized ? api : fallbackApi}>
-            {!isInitialized ? (
-                <div className="p-4">Загрузка...</div>
-            ) : (
-                children
-            )}
+        <CharacterContext.Provider value={api}>
+            {children}
         </CharacterContext.Provider>
     );
 }

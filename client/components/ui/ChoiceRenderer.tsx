@@ -70,6 +70,10 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
         setChosenSkills,
         removeChosenSkill,
         
+        // Функции для работы с экспертностью
+        setChosenExpertise,
+        removeChosenExpertise,
+        
         // Функции для работы с инструментами
         setChosenTools,
         removeChosenTool,
@@ -490,9 +494,20 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
 
                             // Исключаем уже выбранные в других слотах
                             const takenExceptCurrent = sourceArray.filter((_, i) => i !== idx);
+                            
+                            // Получаем все заклинания класса (заговоры и подготовленные)
+                            const classSpells = draft.basics.class ? [
+                                ...(draft.chosen.cantrips?.[draft.basics.class] || []),
+                                ...(draft.chosen.spells?.[draft.basics.class] || [])
+                            ] : [];
+                            
+                            // Исключаем заклинания, которые уже выбраны в классе
                             const options = [...available]
                                 .sort((a, b) => a.name.localeCompare(b.name, "ru", { sensitivity: "base" }))
-                                .filter(s => !takenExceptCurrent.includes(s.key) || s.key === selected);
+                                .filter(s => 
+                                    (!takenExceptCurrent.includes(s.key) || s.key === selected) &&
+                                    !classSpells.includes(s.key)
+                                );
 
                             // Находим выбранное заклинание для карточки
                             const selectedSpell = selected ? available.find(s => s.key === selected) : null;
@@ -1282,6 +1297,61 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
 
                                         return (
                                             <option key={key} value={key} disabled={isTaken}>
+                                                {displayLabel}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            );
+                        });
+                    }
+
+
+                    // ========================================================================
+                    // ВЫБОР ЭКСПЕРТНОСТИ НАВЫКОВ
+                    // ========================================================================
+                    case "expertise": {
+                        return Array.from({ length: choice.count ?? 1 }).map((_, idx) => {
+                            const choiceKey = `${source}:expertise:${ci}:${idx}`;
+                            const sourceArray = draft.chosen.expertise?.[source] || [];
+                            const selected = sourceArray[idx] ?? "";
+
+                            // Получаем ВСЕ навыки персонажа (включая владения)
+                            const allData = getAllCharacterData(draft);
+                            
+                            // Доступные навыки = все навыки персонажа (только те, которыми он владеет)
+                            const availableSkills = allData.skills;
+
+                            // Все навыки (включая недоступные)
+                            const allSkills = choice.options?.length ? choice.options : SKILLS.map(s => s.key);
+
+                            return (
+                                <select
+                                    key={choiceKey}
+                                    className={getSelectStyles(!!selected)}
+                                    value={selected}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+
+                                        // Создаем массив фиксированной длины для сохранения позиций
+                                        const updated = Array.from({ length: choice.count ?? 1 }, (_, i) => 
+                                            i === idx ? value : (sourceArray[i] || "")
+                                        );
+                                        
+                                        // Защита от дублирования: очищаем пустые значения
+                                        const cleanedUpdated = updated.filter(val => val !== "");
+
+                                        setChosenExpertise(source, cleanedUpdated);
+                                    }}
+                                >
+                                    <option value="">— Выберите навык с экспертностью —</option>
+                                    {allSkills.map((key) => {
+                                        const isAvailable = availableSkills.includes(key);
+                                        const label = SKILL_LABELS[key] ?? key;
+                                        const displayLabel = isAvailable ? label : `${label} (не владеете)`;
+
+                                        return (
+                                            <option key={key} value={key} disabled={!isAvailable}>
                                                 {displayLabel}
                                             </option>
                                         );

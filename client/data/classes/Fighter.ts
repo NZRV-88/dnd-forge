@@ -380,7 +380,7 @@ export const Fighter: ClassInfo = {
             description: "Выберите один из следующих комплектов:",
             choices: [
                 {
-                    name: "(А) Тяжёлый воин",
+                    name: "Тяжёлый воин",
                     items: [
                         { type: "armor", key: "chain-mail" },
                         { type: "weapon", key: "greatsword" },
@@ -391,7 +391,7 @@ export const Fighter: ClassInfo = {
                     gold: 4
                 },
                 {
-                    name: "(Б) Лёгкий воин",
+                    name: "Лёгкий воин",
                     items: [
                         { type: "armor", key: "studded-leather-armor" },
                         { type: "weapon", key: "scimitar" },
@@ -404,7 +404,7 @@ export const Fighter: ClassInfo = {
                     gold: 11
                 },
                 {
-                    name: "(В) Только золото",
+                    name: "Только золото",
                     items: [],
                     gold: 155
                 }

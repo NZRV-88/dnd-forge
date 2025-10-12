@@ -42,7 +42,7 @@ const ALL_CLASSES = [
 export default function ClassPick() {
     const { id } = useParams<{ id: string }>();
     const nav = useNavigate();
-    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, setChosenSpells, removeChosenSpell, loadFromSupabase, isLoading, abilityBonuses, setDraft } = useCharacter();
+    const { draft, setBasics, setLevel, setHpRollAtLevel, resetHpRolls, clearClassChoices, setChosenSpells, removeChosenSpell, setChosenCantrips, removeChosenCantrip, setChosenSpellbook, removeChosenSpellbookSpell, loadFromSupabase, isLoading, abilityBonuses, setDraft } = useCharacter();
     
     // Модальные окна
     const [previewClass, setPreviewClass] = useState<string | null>(null);
@@ -56,15 +56,45 @@ export default function ClassPick() {
     
     // Состояние для управления заклинаниями
     const [isPreparedSpellsOpen, setIsPreparedSpellsOpen] = useState(false);
+    const [isCantripsOpen, setIsCantripsOpen] = useState(false);
+    const [isSpellbookOpen, setIsSpellbookOpen] = useState(false);
     const [isAddSpellsOpen, setIsAddSpellsOpen] = useState(false);
     const [expandedSpells, setExpandedSpells] = useState<Set<number>>(new Set());
+    
+    // Состояние для разделения заговоров, подготовленных заклинаний и книги заклинаний
+    const [activeSpellType, setActiveSpellType] = useState<'cantrips' | 'prepared' | 'spellbook'>('cantrips');
     
     // Состояние для поиска и фильтров заклинаний
     const [spellSearch, setSpellSearch] = useState('');
     const [spellLevelFilter, setSpellLevelFilter] = useState<number | 'all'>('all');
     
+    // Состояние для поиска и фильтров в книге заклинаний
+    const [spellbookSearch, setSpellbookSearch] = useState('');
+    const [spellbookLevelFilter, setSpellbookLevelFilter] = useState<number | 'all'>('all');
+    
     // Получаем подготовленные заклинания из драфта
     const preparedSpells = draft.basics.class ? (draft.chosen.spells[draft.basics.class] || []) : [];
+    
+    // Получаем заговоры из драфта (предполагаем, что они хранятся отдельно)
+    const cantrips = draft.basics.class ? (draft.chosen.cantrips?.[draft.basics.class] || []) : [];
+    
+    // Получаем заклинания из книги заклинаний
+    const spellbook = draft.basics.class ? (draft.chosen.spellbook?.[draft.basics.class] || []) : [];
+    
+    // Получаем все выученные заклинания (из предыстории, черт и т.д.)
+    const learnedSpells = Object.values(draft.chosen.learnedSpells || {}).flat();
+    
+    // Получаем все заговоры (из класса + выученные)
+    const allCantrips = [...cantrips, ...learnedSpells.filter(spellKey => {
+        const spell = Spells.find(s => s.key === spellKey);
+        return spell && spell.level === 0;
+    })];
+    
+    // Получаем все подготовленные заклинания (из класса + выученные)
+    const allPreparedSpells = [...preparedSpells, ...learnedSpells.filter(spellKey => {
+        const spell = Spells.find(s => s.key === spellKey);
+        return spell && spell.level > 0;
+    })];
     
     // Загружаем персонажа при редактировании
     useEffect(() => {
@@ -642,9 +672,71 @@ export default function ClassPick() {
         </div>
     );
 
+    // Функция для расчета максимального количества заклинаний в книге заклинаний
+    const getMaxSpellbookSpells = () => {
+        if (!info?.spellcasting?.spellbook) return 0;
+        
+        const level = draft.basics.level;
+        
+        if (info.spellcasting.spellbookFormula) {
+            try {
+                const processedFormula = info.spellcasting.spellbookFormula
+                    .replace(/level/g, level.toString());
+                
+                // eslint-disable-next-line no-eval
+                return Math.max(0, eval(processedFormula));
+            } catch (error) {
+                console.error('Ошибка в формуле книги заклинаний:', error);
+                return 0;
+            }
+        }
+        
+        return 0;
+    };
+
+    // Функция для расчета максимального количества заговоров
+    const getMaxCantrips = () => {
+        if (!info?.spellcasting) return 0;
+        
+        // Если есть фиксированные значения заговоров по уровням (как у волшебника)
+        if (info.spellcasting.cantrips && typeof info.spellcasting.cantrips === 'object') {
+            return info.spellcasting.cantrips[draft.basics.level as keyof typeof info.spellcasting.cantrips] || 0;
+        }
+        
+        // Если есть формула для заговоров
+        if (info.spellcasting.cantripFormula) {
+            const abilityKey = info.spellcasting.ability;
+            const baseAbilityScore = Number(draft.stats?.[abilityKey]) || 10;
+            const abilityBonus = abilityBonuses?.[abilityKey] || 0;
+            const finalAbilityScore = baseAbilityScore + abilityBonus;
+            const abilityMod = Math.floor((finalAbilityScore - 10) / 2);
+            
+            const level = draft.basics.level;
+            
+            try {
+                const processedFormula = info.spellcasting.cantripFormula
+                    .replace(/level/g, level.toString())
+                    .replace(/chaMod/g, abilityMod.toString());
+                
+                // eslint-disable-next-line no-eval
+                return Math.max(0, eval(processedFormula));
+            } catch (error) {
+                console.error('Ошибка в формуле заговоров:', error);
+                return 0;
+            }
+        }
+        
+        return 0;
+    };
+
     // Функция для расчета максимального количества подготовленных заклинаний
     const getMaxPreparedSpells = () => {
         if (!info?.spellcasting) return 0;
+        
+        // Если есть фиксированные значения подготовленных заклинаний по уровням (как у волшебника)
+        if (info.spellcasting.preparedSpells && typeof info.spellcasting.preparedSpells === 'object') {
+            return info.spellcasting.preparedSpells[draft.basics.level as keyof typeof info.spellcasting.preparedSpells] || 0;
+        }
         
         // Получаем формулу из данных класса (приоритет: уровень -> класс -> умолчание)
         const levelSlots = info.spellcasting.progression[draft.basics.level as keyof typeof info.spellcasting.progression];
@@ -689,8 +781,23 @@ export default function ClassPick() {
         };
     };
 
-    // Функция для получения доступных заклинаний класса
-    const getAvailableSpells = () => {
+    // Функция для получения доступных заговоров класса
+    const getAvailableCantrips = () => {
+        if (!info?.spellcasting) return [];
+        
+        // Фильтруем заклинания по классу и уровню 0 (заговоры)
+        const allCantrips = Spells.filter((spell) => 
+            spell.classes && 
+            spell.classes.includes(info.key) &&
+            spell.level === 0
+        );
+        
+        // Исключаем уже выученные заговоры
+        return allCantrips.filter(spell => !learnedSpells.includes(spell.key));
+    };
+
+    // Функция для получения доступных подготовленных заклинаний класса (1+ уровень)
+    const getAvailablePreparedSpells = () => {
         if (!info?.spellcasting) return [];
         
         // Получаем доступные слоты заклинаний для текущего уровня
@@ -700,17 +807,69 @@ export default function ClassPick() {
         // Определяем максимальный уровень заклинаний, доступный на текущем уровне
         const maxSpellLevel = levelSlots.slots.length;
         
-        // Фильтруем заклинания по классу и уровню
-        return Spells.filter((spell) => 
+        // Если у класса есть книга заклинаний, подготовленные заклинания выбираются из книги
+        if (info.spellcasting.spellbook) {
+            const spellbookSpells = spellbook.map(spellKey => Spells.find(s => s.key === spellKey)).filter(Boolean);
+            return spellbookSpells.filter(spell => 
+                spell && spell.level > 0 && spell.level <= maxSpellLevel
+            );
+        }
+        
+        // Для классов без книги заклинаний (как паладин) - обычная логика
+        const allPreparedSpells = Spells.filter((spell) => 
             spell.classes && 
             spell.classes.includes(info.key) &&
+            spell.level > 0 &&
             spell.level <= maxSpellLevel
+        );
+        
+        // Исключаем уже выученные заклинания и заклинания из книги заклинаний
+        return allPreparedSpells.filter(spell => 
+            !learnedSpells.includes(spell.key) && 
+            !spellbook.includes(spell.key)
         );
     };
 
-    // Функция для фильтрации заклинаний по поиску и уровню
-    const getFilteredSpells = () => {
-        let spells = getAvailableSpells();
+    // Функция для получения доступных заклинаний для книги заклинаний
+    const getAvailableSpellbookSpells = () => {
+        if (!info?.spellcasting?.spellbook) return [];
+        
+        // Получаем доступные слоты заклинаний для текущего уровня
+        const levelSlots = info.spellcasting.progression[draft.basics.level as keyof typeof info.spellcasting.progression];
+        if (!levelSlots) return [];
+        
+        // Определяем максимальный уровень заклинаний, доступный на текущем уровне
+        const maxSpellLevel = levelSlots.slots.length;
+        
+        // Фильтруем заклинания по классу и уровню (исключаем заговоры)
+        const allSpellbookSpells = Spells.filter((spell) => 
+            spell.classes && 
+            spell.classes.includes(info.key) &&
+            spell.level > 0 &&
+            spell.level <= maxSpellLevel
+        );
+        
+        // Исключаем уже выученные заклинания
+        return allSpellbookSpells.filter(spell => !learnedSpells.includes(spell.key));
+    };
+
+    // Функция для фильтрации заговоров по поиску
+    const getFilteredCantrips = () => {
+        let cantrips = getAvailableCantrips();
+        
+        // Фильтр по поиску
+        if (spellSearch.trim()) {
+            cantrips = cantrips.filter(spell => 
+                spell.name.toLowerCase().includes(spellSearch.toLowerCase())
+            );
+        }
+        
+        return cantrips;
+    };
+
+    // Функция для фильтрации подготовленных заклинаний по поиску и уровню
+    const getFilteredPreparedSpells = () => {
+        let spells = getAvailablePreparedSpells();
         
         // Фильтр по поиску
         if (spellSearch.trim()) {
@@ -727,9 +886,54 @@ export default function ClassPick() {
         return spells;
     };
 
+    // Функция для фильтрации заклинаний книги заклинаний по поиску и уровню
+    const getFilteredSpellbookSpells = () => {
+        let spells = getAvailableSpellbookSpells();
+        
+        // Фильтр по поиску
+        if (spellSearch.trim()) {
+            spells = spells.filter(spell => 
+                spell.name.toLowerCase().includes(spellSearch.toLowerCase())
+            );
+        }
+        
+        // Фильтр по уровню
+        if (spellLevelFilter !== 'all') {
+            spells = spells.filter(spell => spell.level === spellLevelFilter);
+        }
+        
+        return spells;
+    };
+
+    // Функция для фильтрации заклинаний в книге заклинаний по поиску и уровню
+    const getFilteredSpellbookDisplaySpells = () => {
+        let spells = spellbook.map(spellKey => Spells.find(s => s.key === spellKey)).filter(Boolean);
+        
+        // Фильтр по поиску
+        if (spellbookSearch.trim()) {
+            spells = spells.filter(spell => 
+                spell && spell.name.toLowerCase().includes(spellbookSearch.toLowerCase())
+            );
+        }
+        
+        // Фильтр по уровню
+        if (spellbookLevelFilter !== 'all') {
+            spells = spells.filter(spell => spell && spell.level === spellbookLevelFilter);
+        }
+        
+        return spells;
+    };
+
+    // Функция для получения доступных уровней заклинаний в книге заклинаний
+    const getAvailableSpellbookLevels = () => {
+        const spells = spellbook.map(spellKey => Spells.find(s => s.key === spellKey)).filter(Boolean);
+        const levels = [...new Set(spells.map(spell => spell?.level).filter(Boolean))].sort((a, b) => (a || 0) - (b || 0));
+        return levels;
+    };
+
     // Функция для получения доступных уровней заклинаний
     const getAvailableSpellLevels = () => {
-        const spells = getAvailableSpells();
+        const spells = activeSpellType === 'spellbook' ? getAvailableSpellbookSpells() : getAvailablePreparedSpells();
         const levels = [...new Set(spells.map(spell => spell.level))].sort((a, b) => a - b);
         return levels;
     };
@@ -980,6 +1184,122 @@ export default function ClassPick() {
                             {activeTab === 'spells' && !isSpellsCollapsed && (
                                 <div className="space-y-4">
                                     
+                                    {/* Шапка "Заговоры" */}
+                                    <div className="border rounded-lg">
+                                        <button
+                                            onClick={() => setIsCantripsOpen(!isCantripsOpen)}
+                                            className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+                                        >
+                                            <span className="font-semibold">Заговоры</span>
+                                            <Icons.ChevronDown 
+                                                className={`w-5 h-5 transition-transform ${isCantripsOpen ? 'rotate-180' : ''}`} 
+                                            />
+                                        </button>
+                                        
+                                        {isCantripsOpen && (
+                                            <div className="px-4 pb-4 border-t">
+                                                {allCantrips.length === 0 ? (
+                                                    <p className="text-muted-foreground py-4">
+                                                        Заговоры отсутствуют
+                                                    </p>
+                                                ) : (
+                                                    <div className="py-4 space-y-2">
+                                                        {allCantrips.map((cantripKey, index) => {
+                                                            // Находим полную информацию о заговоре
+                                                            const cantrip = Spells.find(s => s.key === cantripKey);
+                                                            if (!cantrip) return null;
+                                                            
+                                                            // Определяем источник заговора
+                                                            const isFromClass = cantrips.includes(cantripKey);
+                                                            const isFromLearned = learnedSpells.includes(cantripKey);
+                                                            
+                                                            const isExpanded = expandedSpells.has(-index - 1000); // Используем отрицательные числа для заговоров
+                                                            
+                                                            return (
+                                                                <div key={index} className="border rounded-lg bg-muted/30">
+                                                                    {/* Шапка карточки */}
+                                                                    <div className="flex items-center justify-between p-3">
+                                                                        <button
+                                                                            onClick={() => toggleSpellExpansion(-index - 1000)}
+                                                                            className="flex-1 text-left hover:bg-muted/50 rounded transition-colors"
+                                                                        >
+                                                                            <div className="font-medium text-base flex items-center gap-2">
+                                                                                {cantrip.name}
+                                                                                {/* Индикаторы */}
+                                                                                <div className="flex gap-1">
+                                                                                    {cantrip.needConcentration && (
+                                                                                        <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                            К
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {cantrip.isRitual && (
+                                                                                        <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                            Р
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="text-sm text-muted-foreground mt-1">
+                                                                                {cantrip.isLegacy ? (
+                                                                                    <>
+                                                                                        <span style={{ color: '#b59e54' }}>Legacy</span>
+                                                                                        <span> • </span>
+                                                                                    </>
+                                                                                ) : null}
+                                                                                Заговор • {cantrip.school}
+                                                                                {isFromLearned && (
+                                                                                    <>
+                                                                                        <span> • </span>
+                                                                                        <span className="text-blue-600 font-medium">От предыстории</span>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+                                                                        </button>
+                                                                        <div className="flex items-center gap-2 ml-3">
+                                                                            {/* Показываем кнопку удаления только для заговоров класса */}
+                                                                            {cantrips.includes(cantripKey) && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        if (draft.basics.class) {
+                                                                                            const newCantrips = cantrips.filter((_, i) => i !== cantrips.indexOf(cantripKey));
+                                                                                            setChosenCantrips(draft.basics.class, newCantrips);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors"
+                                                                                    title="Удалить заговор"
+                                                                                >
+                                                                                    <Icons.X className="w-4 h-4" />
+                                                                                </button>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={() => toggleSpellExpansion(-index - 1000)}
+                                                                                className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
+                                                                                title={isExpanded ? "Свернуть" : "Развернуть"}
+                                                                            >
+                                                                                <Icons.ChevronDown 
+                                                                                    className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                                                                />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    {/* Описание заговора */}
+                                                                    {isExpanded && (
+                                                                        <div className="px-3 pb-3 border-t bg-muted/20">
+                                                                            <div className="pt-3">
+                                                                                <SpellDescription spell={cantrip} />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
                                     {/* Шапка "Подготовленные Заклинания" */}
                                     <div className="border rounded-lg">
                                         <button
@@ -994,16 +1314,20 @@ export default function ClassPick() {
                                         
                                         {isPreparedSpellsOpen && (
                                             <div className="px-4 pb-4 border-t">
-                                                {preparedSpells.length === 0 ? (
+                                                {allPreparedSpells.length === 0 ? (
                                                     <p className="text-muted-foreground py-4">
                                                         Подготовленные заклинания отсутствуют
                                                     </p>
                                                 ) : (
                                                     <div className="py-4 space-y-2">
-                                                        {preparedSpells.map((spellKey, index) => {
+                                                        {allPreparedSpells.map((spellKey, index) => {
                                                             // Находим полную информацию о заклинании
-                                                            const spell = getAvailableSpells().find(s => s.key === spellKey);
+                                                            const spell = Spells.find(s => s.key === spellKey);
                                                             if (!spell) return null;
+                                                            
+                                                            // Определяем источник заклинания
+                                                            const isFromClass = preparedSpells.includes(spellKey);
+                                                            const isFromLearned = learnedSpells.includes(spellKey);
                                                             
                                                             const isExpanded = expandedSpells.has(-index - 1); // Используем отрицательные числа для подготовленных заклинаний
                                                             
@@ -1039,21 +1363,30 @@ export default function ClassPick() {
                                                                                     </>
                                                                                 ) : null}
                                                                                 {spell.level}-й уровень • {spell.school}
+                                                                                {isFromLearned && (
+                                                                                    <>
+                                                                                        <span> • </span>
+                                                                                        <span className="text-blue-600 font-medium">От предыстории</span>
+                                                                                    </>
+                                                                                )}
                                                                             </div>
                                                                         </button>
                                                                         <div className="flex items-center gap-2 ml-3">
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    if (draft.basics.class) {
-                                                                                        const newSpells = preparedSpells.filter((_, i) => i !== index);
-                                                                                        setChosenSpells(draft.basics.class, newSpells);
-                                                                                    }
-                                                                                }}
-                                                                                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors"
-                                                                                title="Удалить заклинание"
-                                                                            >
-                                                                                <Icons.X className="w-4 h-4" />
-                                                                            </button>
+                                                                            {/* Показываем кнопку удаления только для подготовленных заклинаний класса */}
+                                                                            {preparedSpells.includes(spellKey) && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        if (draft.basics.class) {
+                                                                                            const newSpells = preparedSpells.filter((_, i) => i !== preparedSpells.indexOf(spellKey));
+                                                                                            setChosenSpells(draft.basics.class, newSpells);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors"
+                                                                                    title="Удалить заклинание"
+                                                                                >
+                                                                                    <Icons.X className="w-4 h-4" />
+                                                                                </button>
+                                                                            )}
                                                                             <button
                                                                                 onClick={() => toggleSpellExpansion(-index - 1)}
                                                                                 className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
@@ -1083,6 +1416,180 @@ export default function ClassPick() {
                                         )}
                                     </div>
                                     
+                                    {/* Шапка "Книга заклинаний" - только для классов с книгой заклинаний */}
+                                    {info?.spellcasting?.spellbook && (
+                                        <div className="border rounded-lg">
+                                            <button
+                                                onClick={() => setIsSpellbookOpen(!isSpellbookOpen)}
+                                                className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+                                            >
+                                                <span className="font-semibold">Книга заклинаний</span>
+                                                <Icons.ChevronDown 
+                                                    className={`w-5 h-5 transition-transform ${isSpellbookOpen ? 'rotate-180' : ''}`} 
+                                                />
+                                            </button>
+                                            
+                                            {isSpellbookOpen && (
+                                                <div className="px-4 pb-4 border-t">
+                                                    {/* Поиск и фильтры для книги заклинаний */}
+                                                    <div className="space-y-4 py-4">
+                                                        {/* Поисковая строка */}
+                                                        <div className="relative">
+                                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Поиск заклинаний в книге..."
+                                                                value={spellbookSearch}
+                                                                onChange={(e) => setSpellbookSearch(e.target.value)}
+                                                                className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0"
+                                                                style={{
+                                                                    borderColor: 'hsl(var(--border))'
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        
+                                                        {/* Фильтры по уровню */}
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <button
+                                                                onClick={() => setSpellbookLevelFilter('all')}
+                                                                className={`px-2 py-1 rounded text-xs font-medium transition-colors border ${
+                                                                    spellbookLevelFilter === 'all'
+                                                                        ? 'bg-primary text-primary-foreground border-primary'
+                                                                        : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
+                                                                }`}
+                                                            >
+                                                                ВСЕ
+                                                            </button>
+                                                            {getAvailableSpellbookLevels().map(level => (
+                                                                <button
+                                                                    key={level}
+                                                                    onClick={() => setSpellbookLevelFilter(level)}
+                                                                    className={`px-2 py-1 rounded text-xs font-medium transition-colors border ${
+                                                                        spellbookLevelFilter === level
+                                                                            ? 'bg-primary text-primary-foreground border-primary'
+                                                                            : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
+                                                                    }`}
+                                                                >
+                                                                    {level} УРОВЕНЬ
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {spellbook.length === 0 ? (
+                                                        <p className="text-muted-foreground py-4">
+                                                            Книга заклинаний пуста
+                                                        </p>
+                                                    ) : (
+                                                        <div className="py-4 space-y-2">
+                                                            {getFilteredSpellbookDisplaySpells().map((spell, index) => {
+                                                                if (!spell) return null;
+                                                                
+                                                                // Находим оригинальный индекс в массиве spellbook
+                                                                const originalIndex = spellbook.findIndex(key => key === spell.key);
+                                                                const isExpanded = expandedSpells.has(-originalIndex - 2000); // Используем отрицательные числа для книги заклинаний
+                                                                
+                                                                return (
+                                                                    <div key={index} className="border rounded-lg bg-muted/30">
+                                                                        {/* Шапка карточки */}
+                                                                        <div className="flex items-center justify-between p-3">
+                                                                            <button
+                                                                                onClick={() => toggleSpellExpansion(-index - 2000)}
+                                                                                className="flex-1 text-left hover:bg-muted/50 rounded transition-colors"
+                                                                            >
+                                                                                <div className="font-medium text-base flex items-center gap-2">
+                                                                                    {spell.name}
+                                                                                    {/* Индикаторы */}
+                                                                                    <div className="flex gap-1">
+                                                                                        {spell.needConcentration && (
+                                                                                            <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                                К
+                                                                                            </span>
+                                                                                        )}
+                                                                                        {spell.isRitual && (
+                                                                                            <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                                Р
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="text-sm text-muted-foreground mt-1">
+                                                                                    {spell.isLegacy ? (
+                                                                                        <>
+                                                                                            <span style={{ color: '#b59e54' }}>Legacy</span>
+                                                                                            <span> • </span>
+                                                                                        </>
+                                                                                    ) : null}
+                                                                                    {spell.level}-й уровень • {spell.school}
+                                                                                </div>
+                                                                            </button>
+                                                                            <div className="flex items-center gap-2 ml-3">
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        if (draft.basics.class) {
+                                                                                            if (preparedSpells.includes(spell.key)) {
+                                                                                                // Убираем заклинание из подготовленных
+                                                                                                const newSpells = preparedSpells.filter(key => key !== spell.key);
+                                                                                                setChosenSpells(draft.basics.class, newSpells);
+                                                                                            } else if (preparedSpells.length < getMaxPreparedSpells()) {
+                                                                                                // Добавляем заклинание в подготовленные
+                                                                                                const newSpells = [...preparedSpells, spell.key];
+                                                                                                setChosenSpells(draft.basics.class, newSpells);
+                                                                                            }
+                                                                                        }
+                                                                                    }}
+                                                                                    disabled={!preparedSpells.includes(spell.key) && preparedSpells.length >= getMaxPreparedSpells()}
+                                                                                    className={
+                                                                                        preparedSpells.includes(spell.key)
+                                                                                            ? 'px-2 py-1 text-xs font-medium bg-red-500 text-white hover:bg-red-600 rounded transition-colors'
+                                                                                            : 'px-2 py-1 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
+                                                                                    }
+                                                                                    title={preparedSpells.includes(spell.key) ? "Убрать из подготовленных" : "Подготовить заклинание"}
+                                                                                >
+                                                                                    {preparedSpells.includes(spell.key) ? 'УБРАТЬ' : 'ПОДГОТОВИТЬ'}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        if (draft.basics.class) {
+                                                                                            const newSpellbook = spellbook.filter((_, i) => i !== originalIndex);
+                                                                                            setChosenSpellbook(draft.basics.class, newSpellbook);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors"
+                                                                                    title="Удалить из книги заклинаний"
+                                                                                >
+                                                                                    <Icons.X className="w-4 h-4" />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => toggleSpellExpansion(-originalIndex - 2000)}
+                                                                                    className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
+                                                                                    title={isExpanded ? "Свернуть" : "Развернуть"}
+                                                                                >
+                                                                                    <Icons.ChevronDown 
+                                                                                        className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                                                                    />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                                        {/* Описание заклинания */}
+                                                                        {isExpanded && (
+                                                                            <div className="px-3 pb-3 border-t bg-muted/20">
+                                                                                <div className="pt-3">
+                                                                                    <SpellDescription spell={spell} />
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    
                                     {/* Шапка "Добавить Заклинание" */}
                                     <div className="border rounded-lg">
                                         <button
@@ -1097,9 +1604,30 @@ export default function ClassPick() {
                                         
                                         {isAddSpellsOpen && (
                                             <div className="px-4 pb-4 border-t">
-                                                {/* Информация о подготовленных заклинаниях */}
-                                                <div className="text-sm text-muted-foreground text-center py-3 border-b">
-                                                    Подготовленные заклинания: {preparedSpells.length}/{getMaxPreparedSpells()}
+                                                {/* Переключатель между заговорами и книгой заклинаний */}
+                                                <div className="flex gap-2 py-3 border-b">
+                                                    <button
+                                                        onClick={() => setActiveSpellType('cantrips')}
+                                                        className={`px-3 py-1 rounded text-sm font-medium transition-colors border ${
+                                                            activeSpellType === 'cantrips'
+                                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                                : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
+                                                        }`}
+                                                    >
+                                                        Заговоры ({cantrips.length}/{getMaxCantrips()})
+                                                    </button>
+                                                    {info?.spellcasting?.spellbook && (
+                                                        <button
+                                                            onClick={() => setActiveSpellType('spellbook')}
+                                                            className={`px-3 py-1 rounded text-sm font-medium transition-colors border ${
+                                                                activeSpellType === 'spellbook'
+                                                                    ? 'bg-primary text-primary-foreground border-primary'
+                                                                    : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
+                                                            }`}
+                                                        >
+                                                            Книга заклинаний ({spellbook.length}/{getMaxSpellbookSpells()})
+                                                        </button>
+                                                    )}
                                                 </div>
                                                 
                                                 {/* Поиск и фильтры */}
@@ -1109,7 +1637,7 @@ export default function ClassPick() {
                                                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                                         <input
                                                             type="text"
-                                                            placeholder="Поиск заклинаний..."
+                                                            placeholder={`Поиск ${activeSpellType === 'cantrips' ? 'заговоров' : 'заклинаний для книги'}...`}
                                                             value={spellSearch}
                                                             onChange={(e) => setSpellSearch(e.target.value)}
                                                             className="w-full pl-10 pr-3 py-2 bg-transparent border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0"
@@ -1119,110 +1647,297 @@ export default function ClassPick() {
                                                         />
                                                     </div>
                                                     
-                                                    {/* Фильтры по уровню */}
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <button
-                                                            onClick={() => setSpellLevelFilter('all')}
-                                                            className={`px-2 py-1 rounded text-xs font-medium transition-colors border ${
-                                                                spellLevelFilter === 'all'
-                                                                    ? 'bg-primary text-primary-foreground border-primary'
-                                                                    : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
-                                                            }`}
-                                                        >
-                                                            ВСЕ
-                                                        </button>
-                                                        {getAvailableSpellLevels().map(level => (
+                                                    {/* Фильтры по уровню (для книги заклинаний) */}
+                                                    {activeSpellType === 'spellbook' && (
+                                                        <div className="flex flex-wrap gap-2">
                                                             <button
-                                                                key={level}
-                                                                onClick={() => setSpellLevelFilter(level)}
+                                                                onClick={() => setSpellLevelFilter('all')}
                                                                 className={`px-2 py-1 rounded text-xs font-medium transition-colors border ${
-                                                                    spellLevelFilter === level
+                                                                    spellLevelFilter === 'all'
                                                                         ? 'bg-primary text-primary-foreground border-primary'
                                                                         : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
                                                                 }`}
                                                             >
-                                                                {level === 0 ? 'ЗАГОВОРЫ' : `${level} УРОВЕНЬ`}
+                                                                ВСЕ
                                                             </button>
-                                                        ))}
-                                                    </div>
+                                                            {getAvailableSpellLevels().map(level => (
+                                                                <button
+                                                                    key={level}
+                                                                    onClick={() => setSpellLevelFilter(level)}
+                                                                    className={`px-2 py-1 rounded text-xs font-medium transition-colors border ${
+                                                                        spellLevelFilter === level
+                                                                            ? 'bg-primary text-primary-foreground border-primary'
+                                                                            : 'bg-transparent text-muted-foreground border-border hover:bg-muted'
+                                                                    }`}
+                                                                >
+                                                                    {level} УРОВЕНЬ
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 
                                                 <div className="py-4 space-y-2">
-                                                    {getFilteredSpells().map((spell, index) => {
+                                                    {/* Отображение заговоров */}
+                                                    {activeSpellType === 'cantrips' && getFilteredCantrips().map((spell, index) => {
                                                         const isExpanded = expandedSpells.has(index);
-    return (
+                                                        return (
                                                             <div key={index} className="border rounded-lg bg-muted/30">
-                                                        {/* Шапка карточки */}
-                                                        <div className="flex items-center justify-between p-3">
-                                                            <button
-                                                                onClick={() => toggleSpellExpansion(index)}
-                                                                className="flex-1 text-left hover:bg-muted/50 rounded transition-colors"
-                                                            >
-                                                                <div className="font-medium text-base flex items-center gap-2">
-                                                                    {spell.name}
-                                                                    {/* Индикаторы */}
-                                                                    <div className="flex gap-1">
-                                                                        {spell.needConcentration && (
-                                                                            <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded font-medium">
-                                                                                К
-                                                                            </span>
-                                                                        )}
-                                                                        {spell.isRitual && (
-                                                                            <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
-                                                                                Р
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="text-sm text-muted-foreground mt-1">
-                                                                    {spell.isLegacy ? (
-                                                                        <>
-                                                                            <span style={{ color: '#b59e54' }}>Legacy</span>
-                                                                            <span> • </span>
-                                                                        </>
-                                                                    ) : null}
-                                                                    {spell.level}-й уровень • {spell.school}
-                                                                </div>
-                                                            </button>
-                                                            <div className="flex items-center gap-2 ml-3">
-                <button
-                                                                    onClick={() => {
-                                                                        if (draft.basics.class) {
-                                                                            if (preparedSpells.includes(spell.key)) {
-                                                                                // Убираем заклинание из подготовленных
-                                                                                const newSpells = preparedSpells.filter(key => key !== spell.key);
-                                                                                setChosenSpells(draft.basics.class, newSpells);
-                                                                            } else if (preparedSpells.length < getMaxPreparedSpells()) {
-                                                                                // Добавляем заклинание в подготовленные
-                                                                                const newSpells = [...preparedSpells, spell.key];
-                                                                                setChosenSpells(draft.basics.class, newSpells);
+                                                                {/* Шапка карточки */}
+                                                                <div className="flex items-center justify-between p-3">
+                                                                    <button
+                                                                        onClick={() => toggleSpellExpansion(index)}
+                                                                        className="flex-1 text-left hover:bg-muted/50 rounded transition-colors"
+                                                                    >
+                                                                        <div className="font-medium text-base flex items-center gap-2">
+                                                                            {spell.name}
+                                                                            {/* Индикаторы */}
+                                                                            <div className="flex gap-1">
+                                                                                {spell.needConcentration && (
+                                                                                    <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                        К
+                                                                                    </span>
+                                                                                )}
+                                                                                {spell.isRitual && (
+                                                                                    <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                        Р
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-sm text-muted-foreground mt-1">
+                                                                            {spell.isLegacy ? (
+                                                                                <>
+                                                                                    <span style={{ color: '#b59e54' }}>Legacy</span>
+                                                                                    <span> • </span>
+                                                                                </>
+                                                                            ) : null}
+                                                                            Заговор • {spell.school}
+                                                                        </div>
+                                                                    </button>
+                                                                    <div className="flex items-center gap-2 ml-3">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (draft.basics.class) {
+                                                                                    if (cantrips.includes(spell.key)) {
+                                                                                        // Убираем заговор
+                                                                                        const newCantrips = cantrips.filter(key => key !== spell.key);
+                                                                                        setChosenCantrips(draft.basics.class, newCantrips);
+                                                                                    } else if (cantrips.length < getMaxCantrips()) {
+                                                                                        // Добавляем заговор
+                                                                                        const newCantrips = [...cantrips, spell.key];
+                                                                                        setChosenCantrips(draft.basics.class, newCantrips);
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                            disabled={!cantrips.includes(spell.key) && cantrips.length >= getMaxCantrips()}
+                                                                            className={
+                                                                                cantrips.includes(spell.key)
+                                                                                    ? 'p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors'
+                                                                                    : 'px-3 py-1.5 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
                                                                             }
-                                                                        }
-                                                                    }}
-                                                                    disabled={!preparedSpells.includes(spell.key) && preparedSpells.length >= getMaxPreparedSpells()}
-                                                                    className={
-                                                                        preparedSpells.includes(spell.key)
-                                                                            ? 'p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors'
-                                                                            : 'px-3 py-1.5 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
-                                                                    }
-                                                                    title={preparedSpells.includes(spell.key) ? "Убрать заклинание" : "Подготовить заклинание"}
-                                                                >
-                                                                    {preparedSpells.includes(spell.key) ? (
-                                                                        <Icons.X className="w-4 h-4" />
-                                                                    ) : (
-                                                                        'ПОДГОТОВИТЬ'
-                                                                    )}
-                </button>
-                <button
+                                                                            title={cantrips.includes(spell.key) ? "Убрать заговор" : "Выучить заговор"}
+                                                                        >
+                                                                            {cantrips.includes(spell.key) ? (
+                                                                                <Icons.X className="w-4 h-4" />
+                                                                            ) : (
+                                                                                'ВЫУЧИТЬ'
+                                                                            )}
+                                                                        </button>
+                                                                        <button
                                                                             onClick={() => toggleSpellExpansion(index)}
                                                                             className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
                                                                             title={isExpanded ? "Свернуть" : "Развернуть"}
-                >
+                                                                        >
                                                                             <Icons.ChevronDown 
                                                                                 className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
                                                                             />
-                </button>
-            </div>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {/* Описание заговора */}
+                                                                {isExpanded && (
+                                                                    <div className="px-3 pb-3 border-t bg-muted/20">
+                                                                        <div className="pt-3">
+                                                                            <SpellDescription spell={spell} />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    
+                                                    {/* Отображение подготовленных заклинаний */}
+                                                    {activeSpellType === 'prepared' && getFilteredPreparedSpells().map((spell, index) => {
+                                                        const isExpanded = expandedSpells.has(index);
+                                                        return (
+                                                            <div key={index} className="border rounded-lg bg-muted/30">
+                                                                {/* Шапка карточки */}
+                                                                <div className="flex items-center justify-between p-3">
+                                                                    <button
+                                                                        onClick={() => toggleSpellExpansion(index)}
+                                                                        className="flex-1 text-left hover:bg-muted/50 rounded transition-colors"
+                                                                    >
+                                                                        <div className="font-medium text-base flex items-center gap-2">
+                                                                            {spell.name}
+                                                                            {/* Индикаторы */}
+                                                                            <div className="flex gap-1">
+                                                                                {spell.needConcentration && (
+                                                                                    <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                        К
+                                                                                    </span>
+                                                                                )}
+                                                                                {spell.isRitual && (
+                                                                                    <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                        Р
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-sm text-muted-foreground mt-1">
+                                                                            {spell.isLegacy ? (
+                                                                                <>
+                                                                                    <span style={{ color: '#b59e54' }}>Legacy</span>
+                                                                                    <span> • </span>
+                                                                                </>
+                                                                            ) : null}
+                                                                            {spell.level}-й уровень • {spell.school}
+                                                                        </div>
+                                                                    </button>
+                                                                    <div className="flex items-center gap-2 ml-3">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (draft.basics.class) {
+                                                                                    if (preparedSpells.includes(spell.key)) {
+                                                                                        // Убираем заклинание из подготовленных
+                                                                                        const newSpells = preparedSpells.filter(key => key !== spell.key);
+                                                                                        setChosenSpells(draft.basics.class, newSpells);
+                                                                                    } else if (preparedSpells.length < getMaxPreparedSpells()) {
+                                                                                        // Для волшебника проверяем, что заклинание есть в книге заклинаний
+                                                                                        if (info?.spellcasting?.spellbook && !spellbook.includes(spell.key)) {
+                                                                                            return; // Нельзя подготовить заклинание, которого нет в книге
+                                                                                        }
+                                                                                        // Добавляем заклинание в подготовленные
+                                                                                        const newSpells = [...preparedSpells, spell.key];
+                                                                                        setChosenSpells(draft.basics.class, newSpells);
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                            disabled={!preparedSpells.includes(spell.key) && (preparedSpells.length >= getMaxPreparedSpells() || (info?.spellcasting?.spellbook && !spellbook.includes(spell.key)))}
+                                                                            className={
+                                                                                preparedSpells.includes(spell.key)
+                                                                                    ? 'p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors'
+                                                                                    : 'px-3 py-1.5 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
+                                                                            }
+                                                                            title={preparedSpells.includes(spell.key) ? "Убрать заклинание" : (info?.spellcasting?.spellbook && !spellbook.includes(spell.key)) ? "Сначала добавьте в книгу заклинаний" : "Подготовить заклинание"}
+                                                                        >
+                                                                            {preparedSpells.includes(spell.key) ? (
+                                                                                <Icons.X className="w-4 h-4" />
+                                                                            ) : (
+                                                                                'ПОДГОТОВИТЬ'
+                                                                            )}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => toggleSpellExpansion(index)}
+                                                                            className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
+                                                                            title={isExpanded ? "Свернуть" : "Развернуть"}
+                                                                        >
+                                                                            <Icons.ChevronDown 
+                                                                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                                                            />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {/* Описание заклинания */}
+                                                                {isExpanded && (
+                                                                    <div className="px-3 pb-3 border-t bg-muted/20">
+                                                                        <div className="pt-3">
+                                                                            <SpellDescription spell={spell} />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    
+                                                    {/* Отображение заклинаний для книги заклинаний */}
+                                                    {activeSpellType === 'spellbook' && getFilteredSpellbookSpells().map((spell, index) => {
+                                                        const isExpanded = expandedSpells.has(index);
+                                                        return (
+                                                            <div key={index} className="border rounded-lg bg-muted/30">
+                                                                {/* Шапка карточки */}
+                                                                <div className="flex items-center justify-between p-3">
+                                                                    <button
+                                                                        onClick={() => toggleSpellExpansion(index)}
+                                                                        className="flex-1 text-left hover:bg-muted/50 rounded transition-colors"
+                                                                    >
+                                                                        <div className="font-medium text-base flex items-center gap-2">
+                                                                            {spell.name}
+                                                                            {/* Индикаторы */}
+                                                                            <div className="flex gap-1">
+                                                                                {spell.needConcentration && (
+                                                                                    <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                        К
+                                                                                    </span>
+                                                                                )}
+                                                                                {spell.isRitual && (
+                                                                                    <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium">
+                                                                                        Р
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-sm text-muted-foreground mt-1">
+                                                                            {spell.isLegacy ? (
+                                                                                <>
+                                                                                    <span style={{ color: '#b59e54' }}>Legacy</span>
+                                                                                    <span> • </span>
+                                                                                </>
+                                                                            ) : null}
+                                                                            {spell.level}-й уровень • {spell.school}
+                                                                        </div>
+                                                                    </button>
+                                                                    <div className="flex items-center gap-2 ml-3">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (draft.basics.class) {
+                                                                                    if (spellbook.includes(spell.key)) {
+                                                                                        // Убираем заклинание из книги заклинаний
+                                                                                        const newSpellbook = spellbook.filter(key => key !== spell.key);
+                                                                                        setChosenSpellbook(draft.basics.class, newSpellbook);
+                                                                                    } else if (spellbook.length < getMaxSpellbookSpells()) {
+                                                                                        // Добавляем заклинание в книгу заклинаний
+                                                                                        const newSpellbook = [...spellbook, spell.key];
+                                                                                        setChosenSpellbook(draft.basics.class, newSpellbook);
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                            disabled={!spellbook.includes(spell.key) && spellbook.length >= getMaxSpellbookSpells()}
+                                                                            className={
+                                                                                spellbook.includes(spell.key)
+                                                                                    ? 'p-1.5 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded transition-colors'
+                                                                                    : 'px-3 py-1.5 text-xs font-medium bg-transparent border border-[#96bf6b] text-[#96bf6b] hover:bg-[#96bf6b]/10 rounded transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-muted disabled:cursor-not-allowed'
+                                                                            }
+                                                                            title={spellbook.includes(spell.key) ? "Убрать из книги заклинаний" : "Выучить заклинание"}
+                                                                        >
+                                                                            {spellbook.includes(spell.key) ? (
+                                                                                <Icons.X className="w-4 h-4" />
+                                                                            ) : (
+                                                                                'ВЫУЧИТЬ'
+                                                                            )}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => toggleSpellExpansion(index)}
+                                                                            className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
+                                                                            title={isExpanded ? "Свернуть" : "Развернуть"}
+                                                                        >
+                                                                            <Icons.ChevronDown 
+                                                                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                                                            />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                                 
                                                                 {/* Описание заклинания */}

@@ -92,9 +92,13 @@ export default function Race() {
     const nav = useNavigate();
     const {
         draft, setDraft, spells, skills, feats, tools,
-        setBasics, setChosenSkills, setChosenTools, setChosenLanguages, setChosenSpells, setChosenFeats, setChosenAbilities
-
+        setBasics, setChosenSkills, setChosenTools, setChosenLanguages, setChosenSpells, setChosenFeats, setChosenAbilities, isLoading
     } = useCharacter();
+    
+    // Показываем загрузку если контекст еще не готов
+    if (isLoading) {
+        return <div className="p-4">Загрузка...</div>;
+    }
     const [selected, setSelected] = useState<string>(
         draft.basics.race || RACE_CATALOG[0].key
     );

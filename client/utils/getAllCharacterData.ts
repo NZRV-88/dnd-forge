@@ -317,6 +317,16 @@ export function getAllCharacterData(draft: CharacterDraft) {
         });
     });
     
+    // Обрабатываем экспертность навыков
+    const expertise = new Set<string>();
+    if (draft.chosen.expertise) {
+        Object.entries(draft.chosen.expertise).forEach(([source, skillList]) => {
+            skillList.forEach(s => {
+                expertise.add(s);
+            });
+        });
+    }
+    
     // Обрабатываем выбранные инструменты с учетом источника
     Object.entries(draft.chosen.tools).forEach(([source, toolList]) => {
         toolList.forEach(t => {
@@ -469,6 +479,7 @@ export function getAllCharacterData(draft: CharacterDraft) {
         weapons: Array.from(weapons),
         armors: Array.from(armors),
         savingThrows: Array.from(savingThrows),
+        expertise: Array.from(expertise),
         abilityBonuses,
         abilityMax,
         speed,
