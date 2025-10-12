@@ -419,12 +419,6 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     
     // Ищем описание предмета
     const getItemDescription = (itemName: string | any) => {
-        console.log('=== DEBUG getItemDescription ===');
-        console.log('itemName:', itemName);
-        console.log('typeof itemName:', typeof itemName);
-        console.log('itemName?.type:', itemName?.type);
-        console.log('itemName?.itemType:', itemName?.itemType);
-        
         // Если itemName - это объект (магический предмет), обрабатываем его
         if (typeof itemName === 'object' && itemName !== null) {
             // Если это магическое оружие
@@ -434,19 +428,8 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
                 
                 // Проверяем владение оружием для магических предметов
                 let hasProficiency = false;
-                console.log('=== DEBUG MAGIC WEAPON PROFICIENCY ===');
-                console.log('itemName:', itemName);
-                console.log('itemName.weapon:', itemName.weapon);
-                console.log('itemName.weapon.weaponCategory:', itemName.weapon.weaponCategory);
-                console.log('characterDataFull:', characterDataFull);
-                console.log('characterDataFull?.weapons:', characterDataFull?.weapons);
-                
-                // Используем ту же логику, что и в Attacks.tsx
                 if (characterDataFull?.weapons && itemName.weapon.weaponCategory) {
                     hasProficiency = characterDataFull.weapons.includes(itemName.weapon.weaponCategory);
-                    console.log('hasProficiency result:', hasProficiency);
-                } else {
-                    console.log('Missing data - characterDataFull?.weapons:', characterDataFull?.weapons, 'weaponCategory:', itemName.weapon.weaponCategory);
                 }
                 
                 // Рассчитываем урон
