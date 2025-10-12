@@ -59,6 +59,14 @@ interface ChoiceRendererProps {
 // ОСНОВНОЙ КОМПОНЕНТ
 // ============================================================================
 
+// Утилита для добавления пометки Legacy к названию
+const formatNameWithLegacy = (name: string, isLegacy?: boolean): string => {
+    if (isLegacy) {
+        return `${name} (Legacy)`;
+    }
+    return name;
+};
+
 export default function ChoiceRenderer({ source, choices, isPreview = false }: ChoiceRendererProps) {
     // Получаем все необходимые функции и данные из контекста персонажа
     const {
@@ -324,7 +332,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                 <option value="">— Выберите подкласс —</option>
                                 {availableSubclasses.map(sc => (
                                     <option key={sc.key} value={sc.key}>
-                                        {sc.name || sc.key}
+                                        {formatNameWithLegacy(sc.name || sc.key, sc.isLegacy)}
                                     </option>
                                 ))}
                             </select>
@@ -402,7 +410,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                             <option value="">— Выберите характеристику —</option>
                                             {availableOptions.map((opt) => (
                                                 <option key={opt} value={opt}>
-                                                    {ABILITIES.find(a => a.key === opt)?.label || opt}
+                                                    {formatNameWithLegacy(ABILITIES.find(a => a.key === opt)?.label || opt, false)}
                                                 </option>
                                             ))}
                                         </select>
@@ -461,7 +469,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     <option value="">— Выберите характеристику —</option>
                                     {(choice.options || ABILITIES.map(a => a.key)).map((opt) => (
                                         <option key={opt} value={opt}>
-                                            {ABILITIES.find(a => a.key === opt)?.label || opt}
+                                            {formatNameWithLegacy(ABILITIES.find(a => a.key === opt)?.label || opt, false)}
                                         </option>
                                     ))}
                                 </select>
@@ -550,7 +558,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                         <option value="">— Выберите заклинание —</option>
                                         {options.map((spell) => (
                                             <option key={spell.key} value={spell.key}>
-                                                {spell.name}
+                                                {formatNameWithLegacy(spell.name, spell.isLegacy)}
                                             </option>
                                         ))}
                                     </select>
@@ -626,7 +634,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                             const mastery = getWeaponMasteryByKey(weapon.mastery!);
                                             return (
                                                 <option key={weapon.key} value={weapon.key}>
-                                                    {weapon.name} ({mastery?.name || weapon.mastery})
+                                                    {formatNameWithLegacy(weapon.name, weapon.isLegacy)} ({mastery?.name || weapon.mastery})
                                                 </option>
                                             );
                                         })}
@@ -706,7 +714,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                                 const tool = Tools.find(t => t.key === opt);
                                                 return (
                                                     <option key={opt} value={opt}>
-                                                        {tool?.name || opt}
+                                                        {formatNameWithLegacy(tool?.name || opt, tool?.isLegacy)}
                                                     </option>
                                                 );
                                             })}
@@ -788,7 +796,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                                 const tool = getToolByKey(toolKey);
                                                 return (
                                                     <option key={toolKey} value={toolKey}>
-                                                        {tool?.name || toolKey}
+                                                        {formatNameWithLegacy(tool?.name || toolKey, tool?.isLegacy)}
                                                     </option>
                                                 );
                                             })}
@@ -846,7 +854,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                         .filter(lang => !taken.includes(lang.key) || lang.key === selected)
                                         .map((lang) => (
                                             <option key={lang.key} value={lang.key}>
-                                                {lang.name}
+                                                {formatNameWithLegacy(lang.name, lang.isLegacy)}
                                             </option>
                                         ))}
                                 </select>
@@ -976,7 +984,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     <option value="">— Выберите особенность —</option>
                                     {availableFeatures.map((f) => (
                                         <option key={f.key} value={f.key}>
-                                            {f.name}
+                                            {formatNameWithLegacy(f.name, f.isLegacy)}
                                         </option>
                                     ))}
                                 </select>
@@ -1144,7 +1152,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                         <option value="">— Выберите талант —</option>
                                         {availableFeats.map((feat) => (
                                             <option key={feat.key} value={feat.key}>
-                                                {feat.name}
+                                                {formatNameWithLegacy(feat.name, feat.isLegacy)}
                                             </option>
                                         ))}
                                     </select>
@@ -1229,7 +1237,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
                                     <option value="">— Выберите боевой стиль —</option>
                                     {availableStyles.map((fs) => (
                                         <option key={fs.key} value={fs.key}>
-                                            {fs.name}
+                                            {formatNameWithLegacy(fs.name, fs.isLegacy)}
                                         </option>
                                     ))}
                                 </select>
@@ -1324,7 +1332,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
 
                                         return (
                                             <option key={key} value={key} disabled={isTaken}>
-                                                {displayLabel}
+                                                {formatNameWithLegacy(displayLabel, false)}
                                             </option>
                                         );
                                     })}
@@ -1379,7 +1387,7 @@ export default function ChoiceRenderer({ source, choices, isPreview = false }: C
 
                                         return (
                                             <option key={key} value={key} disabled={!isAvailable}>
-                                                {displayLabel}
+                                                {formatNameWithLegacy(displayLabel, false)}
                                             </option>
                                         );
                                     })}
