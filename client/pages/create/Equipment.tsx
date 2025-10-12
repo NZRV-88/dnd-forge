@@ -419,6 +419,12 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     
     // Ищем описание предмета
     const getItemDescription = (itemName: string | any) => {
+        console.log('=== DEBUG getItemDescription ===');
+        console.log('itemName:', itemName);
+        console.log('typeof itemName:', typeof itemName);
+        console.log('itemName?.type:', itemName?.type);
+        console.log('itemName?.itemType:', itemName?.itemType);
+        
         // Если itemName - это объект (магический предмет), обрабатываем его
         if (typeof itemName === 'object' && itemName !== null) {
             // Если это магическое оружие
