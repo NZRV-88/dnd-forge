@@ -343,6 +343,14 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           setDiceRollData(combinedRollData);
           setDiceModalOpen(true);
           
+          // Вызываем callback для множественных источников урона
+          const logEntry: RollLogEntry = { 
+            entry: `${desc.toUpperCase()}: УРОН (множественные источники): ${finalResult}`, 
+            rollData: combinedRollData 
+          };
+          setRollLog((prev) => [logEntry.entry, ...prev].slice(0, 200));
+          onRollAdded?.(logEntry);
+          
           return; // Выходим из функции, так как уже обработали все
         } else if (hasRadiantStrikes) {
           // Создаем отдельные записи для базового урона и излучения
@@ -421,6 +429,14 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           setDiceRollData(combinedRollData);
           setDiceModalOpen(true);
           
+          // Вызываем callback для сияющих ударов
+          const logEntry: RollLogEntry = { 
+            entry: `${desc.toUpperCase()}: УРОН (оружие + излучение): ${finalResult}`, 
+            rollData: combinedRollData 
+          };
+          setRollLog((prev) => [logEntry.entry, ...prev].slice(0, 200));
+          onRollAdded?.(logEntry);
+          
           return; // Выходим из функции, так как уже обработали все
         } else if (weaponDamageType) {
           // Для заклинаний или оружия с известным типом урона создаем отдельный бросок
@@ -448,6 +464,15 @@ export function useDiceRolls({ characterName, characterData, onRollAdded }: UseD
           
           setDiceRollData(combinedRollData);
           setDiceModalOpen(true);
+          
+          // Вызываем callback для оружия с типом урона
+          const logEntry: RollLogEntry = { 
+            entry: `${desc.toUpperCase()}: УРОН (${weaponDamageType}): ${finalResult}`, 
+            rollData: combinedRollData 
+          };
+          setRollLog((prev) => [logEntry.entry, ...prev].slice(0, 200));
+          onRollAdded?.(logEntry);
+          
           return;
         } else {
           // Обычный урон без особенностей
