@@ -2893,20 +2893,23 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
       // Проверяем владение оружием
       let hasMastery = false;
       
-      // Сначала проверяем конкретное мастерство по виду оружия
-      if (weapon.weaponKind && characterData?.weapons) {
-        const weaponData = Weapons.find(w => w.key === weapon.weaponKind);
-        if (weaponData?.key) {
-          hasMastery = characterData.weapons.includes(weaponData.key);
+      // Для магических предметов проверяем weapon.weapon.weaponCategory и weapon.weapon.weaponKind
+      if (weapon.weapon && characterData?.weapons) {
+        // Сначала проверяем конкретное мастерство по виду оружия
+        if (weapon.weapon.weaponKind) {
+          const weaponData = Weapons.find(w => w.key === weapon.weapon.weaponKind);
+          if (weaponData?.key) {
+            hasMastery = characterData.weapons.includes(weaponData.key);
+          }
+        }
+        
+        // Если конкретное мастерство не найдено, проверяем категорию
+        if (!hasMastery && weapon.weapon.weaponCategory) {
+          hasMastery = characterData.weapons.includes(weapon.weapon.weaponCategory);
         }
       }
       
-      // Если конкретное мастерство не найдено, проверяем категорию
-      if (!hasMastery && weapon.weaponCategory && characterData?.weapons) {
-        hasMastery = characterData.weapons.includes(weapon.weaponCategory);
-      }
-      
-      // Если и категория не найдена, но у нас есть базовое оружие, проверяем его категорию
+      // Если и это не сработало, проверяем базовое оружие по имени
       if (!hasMastery && weapon.name) {
         const baseWeapon = Weapons.find(w => w.name === weapon.name);
         if (baseWeapon && characterData?.weapons) {
