@@ -89,6 +89,10 @@ export default function CharacterList() {
     // Используем хук для бросков кубиков
     const { draft, setDraft } = useCharacter();
     console.log('DEBUG: CharacterList draft:', { draft: draft?.basics, radiantStrikes: draft?.radiantStrikes });
+    
+    // Social sharing hook - должен быть ДО useDiceRolls
+    const { shareRoll } = useSocialSharing();
+    
     const {
         rollLog,
         setRollLog,
@@ -110,9 +114,6 @@ export default function CharacterList() {
             }
         }
     });
-    
-    // Social sharing hook
-    const { shareRoll } = useSocialSharing();
 
     // frame color from context
     const { frameColor, setFrameColor } = useFrameColor();
