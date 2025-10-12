@@ -419,8 +419,63 @@ const EquipmentCard = ({ itemName, onRemove, characterData }: {
     
     // Ищем описание предмета
     const getItemDescription = (itemName: string | any) => {
-        // Если itemName - это объект, используем его свойство description
+        // Если itemName - это объект (магический предмет), обрабатываем его
         if (typeof itemName === 'object' && itemName !== null) {
+            // Если это магическое оружие
+            if (itemName.type === 'magic_item' && itemName.itemType === 'weapon' && itemName.weapon) {
+                const attackType = itemName.weapon.weaponType === 'ranged' ? 'дальний' : 'ближний';
+                const attackRange = itemName.weapon.weaponRange || (itemName.weapon.weaponType === 'melee' ? '5 футов' : '-');
+                
+                // Проверяем владение оружием для магических предметов
+                let hasProficiency = false;
+                if (characterDataFull?.weapons && itemName.weapon.weaponCategory) {
+                    hasProficiency = characterDataFull.weapons.includes(itemName.weapon.weaponCategory);
+                }
+                
+                // Рассчитываем урон
+                const baseDamage = itemName.weapon.damageSources?.[0]?.damage || '1d8';
+                let abilityModifier = 0;
+                let abilityName = '';
+                
+                if (characterDataFull && characterData) {
+                    if (itemName.weapon.weaponType === 'ranged') {
+                        abilityModifier = getAbilityModifier(characterData.stats?.dex || 10);
+                        abilityName = 'ЛОВ';
+                    } else {
+                        abilityModifier = getAbilityModifier(characterData.stats?.str || 10);
+                        abilityName = 'СИЛ';
+                    }
+                }
+                
+                const damageWithBonus = characterData && characterData.stats
+                    ? `${baseDamage} ${abilityModifier >= 0 ? '+' : ''}${abilityModifier}`
+                    : `${baseDamage} + ${abilityName}`;
+                
+                // Определяем категорию оружия
+                const getWeaponCategory = (weaponType: string, weaponCategory: string) => {
+                    if (weaponType === 'ranged') {
+                        return weaponCategory === 'simple' ? 'Простое дальнобойное оружие' : 'Воинское дальнобойное оружие';
+                    } else {
+                        return weaponCategory === 'simple' ? 'Простое рукопашное оружие' : 'Воинское рукопашное оружие';
+                    }
+                };
+                
+                return {
+                    description: getWeaponCategory(itemName.weapon.weaponType, itemName.weapon.weaponCategory),
+                    cost: itemName.cost ? `${itemName.cost} GP` : 'Неизвестно',
+                    weight: itemName.weight || 0,
+                    category: getWeaponCategory(itemName.weapon.weaponType, itemName.weapon.weaponCategory),
+                    attackType: attackType,
+                    attackRange: attackRange,
+                    damage: damageWithBonus,
+                    damageType: itemName.weapon.damageSources?.[0]?.damageType || 'Рубящий',
+                    hasProficiency: hasProficiency,
+                    abilityName: abilityName,
+                    hasWeight: typeof itemName.weight === 'number'
+                };
+            }
+            
+            // Для других магических предметов возвращаем только описание
             return itemName.description || '';
         }
         

@@ -4584,21 +4584,22 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         const attackBonus = getAttackBonus(weapon);
                         const damage = getDamage(weapon);
                         const weaponData = Weapons.find(w => w.name === weapon.name);
-                        const range = weapon.magicItem && weapon.weaponRange ? 
-                          (weapon.weaponRange.includes('/') ? weapon.weaponRange : `${weapon.weaponRange} фт.`) : 
+                        const range = weapon.type === 'magic_item' && weapon.weapon?.weaponRange ? 
+                          (weapon.weapon.weaponRange.includes('/') ? weapon.weapon.weaponRange : `${weapon.weapon.weaponRange} фт.`) : 
                           (weaponData?.range || (weaponData?.type === 'melee' ? '5 фт.' : '-'));
                         
                         // Определяем владение оружием
                         const hasWeaponMastery = () => {
-                          if (weapon.magicItem && weapon.weaponCategory) {
+                          if (weapon.type === 'magic_item' && weapon.itemType === 'weapon' && weapon.weapon) {
                             // Для магического оружия проверяем категорию в characterData.weapons
-                            const hasCategoryMastery = characterData?.weapons?.includes(weapon.weaponCategory);
+                            const hasCategoryMastery = weapon.weapon.weaponCategory ? 
+                              characterData?.weapons?.includes(weapon.weapon.weaponCategory) : false;
                             
                             // Также проверяем конкретное мастерство по виду оружия
                             let hasSpecificMastery = false;
-                            if (weapon.weaponKind && characterData?.weapons) {
+                            if (weapon.weapon.weaponKind && characterData?.weapons) {
                               // Ищем оружие с таким же видом в списке оружия
-                              const weaponData = Weapons.find(w => w.key === weapon.weaponKind);
+                              const weaponData = Weapons.find(w => w.key === weapon.weapon.weaponKind);
                               if (weaponData?.key) {
                                 hasSpecificMastery = characterData.weapons.includes(weaponData.key);
                               }
