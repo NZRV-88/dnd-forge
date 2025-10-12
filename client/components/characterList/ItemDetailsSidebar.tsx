@@ -60,9 +60,9 @@ export function ItemDetailsSidebar({
           <>
             <div className="text-gray-400">
               <span className="font-medium text-gray-200">Владение:</span> {(() => {
-                // Для магических предметов используем специальную функцию
-                if (itemDetails.type === 'magic_item' && itemDetails.itemType === 'weapon') {
-                  return hasMagicWeaponMastery(itemDetails) ? 'Да' : 'Нет';
+                // Для магических предметов проверяем владение оружием по категории
+                if (itemDetails.itemType === 'weapon' && itemDetails.weaponCategory) {
+                  return characterData?.weapons?.includes(itemDetails.weaponCategory) ? 'Да' : 'Нет';
                 }
                 
                 // Для обычных предметов проверяем владение оружием по английским ключам
