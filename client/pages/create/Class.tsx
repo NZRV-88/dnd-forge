@@ -1285,7 +1285,7 @@ export default function ClassPick() {
                                                                                 {isFromLearned && (
                                                                                     <>
                                                                                         <span> • </span>
-                                                                                        <span className="text-blue-600 font-medium">От предыстории</span>
+                                                                                        <span className="text-blue-600 font-medium">Выученные</span>
                                                                                     </>
                                                                                 )}
                                                                             </div>
@@ -1402,7 +1402,7 @@ export default function ClassPick() {
                                                                                 {isFromLearned && (
                                                                                     <>
                                                                                         <span> • </span>
-                                                                                        <span className="text-blue-600 font-medium">От предыстории</span>
+                                                                                        <span className="text-blue-600 font-medium">Выученные</span>
                                                                                     </>
                                                                                 )}
                                                                             </div>

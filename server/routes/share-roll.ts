@@ -9,6 +9,15 @@ export interface ShareRollRequest {
   diceRoll: number;
   type: string;
   individualRolls?: number[];
+  separateRolls?: Array<{
+    name: string;
+    dice: string;
+    diceRoll: number;
+    modifier: number;
+    result: number;
+    individualRolls?: number[];
+    damageType?: string;
+  }>;
   platform: 'telegram' | 'vk';
   chatId?: string; // для Telegram
   userId?: string; // для VK
@@ -29,10 +38,10 @@ export const shareToTelegram: RequestHandler = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Roll data and chat ID are required for Telegram' });
     }
     
-    const { characterName, description, dice, modifier, result, diceRoll, type, individualRolls } = rollData;
+    const { characterName, description, dice, modifier, result, diceRoll, type, individualRolls, separateRolls } = rollData;
 
     // Форматируем сообщение для Telegram
-    const message = formatRollMessage(characterName, description, dice, modifier, result, diceRoll, type, individualRolls);
+    const message = formatRollMessage(characterName, description, dice, modifier, result, diceRoll, type, individualRolls, separateRolls);
     
     // Здесь должен быть ваш Telegram Bot Token
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -88,10 +97,10 @@ export const shareToVK: RequestHandler = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Roll data and user ID are required for VK' });
     }
     
-    const { characterName, description, dice, modifier, result, diceRoll, type, individualRolls } = rollData;
+    const { characterName, description, dice, modifier, result, diceRoll, type, individualRolls, separateRolls } = rollData;
 
     // Форматируем сообщение для VK
-    const message = formatRollMessage(characterName, description, dice, modifier, result, diceRoll, type, individualRolls);
+    const message = formatRollMessage(characterName, description, dice, modifier, result, diceRoll, type, individualRolls, separateRolls);
     
     // Здесь должен быть ваш VK Access Token
     const vkToken = process.env.VK_ACCESS_TOKEN;
@@ -143,11 +152,55 @@ function formatRollMessage(
   result: number,
   diceRoll: number,
   type: string,
-  individualRolls?: number[]
+  individualRolls?: number[],
+  separateRolls?: Array<{
+    name: string;
+    dice: string;
+    diceRoll: number;
+    modifier: number;
+    result: number;
+    individualRolls?: number[];
+    damageType?: string;
+  }>
 ): string {
   const actionType = getActionTypeText(type);
   const modifierText = modifier !== 0 ? (modifier > 0 ? `+${modifier}` : `${modifier}`) : '';
   
+  // Если есть отдельные броски (множественные источники урона), форматируем их
+  if (separateRolls && separateRolls.length > 0) {
+    const actionEmoji = getActionEmoji(type);
+    const separator = '━━━━━━━━━━━━━━━';
+    
+    let message = `${actionEmoji} <b>${characterName}</b> ${getActionVerb(type)}: <i>${rollDescription}</i>\n\n${separator}\n`;
+    
+    // Добавляем каждый источник урона отдельно
+    separateRolls.forEach((roll, index) => {
+      const rollModifierText = roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : '';
+      let rollCalculationText = '';
+      
+      if (roll.individualRolls && roll.individualRolls.length > 0) {
+        rollCalculationText = `${roll.individualRolls.join('+')}${rollModifierText}`;
+      } else {
+        rollCalculationText = `${roll.diceRoll}${rollModifierText}`;
+      }
+      
+      const damageTypeText = roll.damageType ? ` (${roll.damageType})` : '';
+      message += `🎲 <b>${roll.name}${damageTypeText}:</b> <code>${roll.dice}</code>\n`;
+      message += `🔢 <b>Бросок:</b> <code>${rollCalculationText}</code>\n`;
+      message += `📊 <b>Результат:</b> <code>${roll.result}</code>\n`;
+      
+      if (index < separateRolls.length - 1) {
+        message += `\n`;
+      }
+    });
+    
+    message += `\n${separator}\n`;
+    message += `📊 <b>Общий урон:</b> <code>${result}</code>`;
+    
+    return message;
+  }
+  
+  // Обычное форматирование для одиночных бросков
   let calculationText = '';
   if (individualRolls && individualRolls.length > 0) {
     calculationText = `${individualRolls.join('+')}${modifierText}`;

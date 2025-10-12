@@ -9,6 +9,15 @@ export interface ShareRollData {
   diceRoll: number;
   type: string;
   individualRolls?: number[];
+  separateRolls?: Array<{
+    name: string;
+    dice: string;
+    diceRoll: number;
+    modifier: number;
+    result: number;
+    individualRolls?: number[];
+    damageType?: string;
+  }>;
 }
 
 export interface ShareRollResponse {
