@@ -82,6 +82,20 @@ export const SOURCES = {
         year: 2018,
         desc: "Новые монстры и лор о планах бытия.",
     },
+    GGR: {
+        key: "GGR",
+        name: "Guildmasters' Guide to Ravnica",
+        short: "GGR",
+        year: 2018,
+        desc: "Руководство для мастеров гильдий Равники.",
+    },
+    EGW: {
+        key: "EGW",
+        name: "Explorer's Guide to Wildemount",
+        short: "EGW",
+        year: 2020,
+        desc: "Руководство для исследователей Дикогорья.",
+    },
     TCE: {
         key: "TCE",
         name: "Tasha’s Cauldron of Everything",
