@@ -1215,7 +1215,7 @@ export const Cantrips: Spell[] = [
         }
     },
     {
-        key: "control-flames",
+        key: "control-flames-xge",
         source: "XGE",
         nameEn: "Control Flames",
         name: "Власть над огнём",

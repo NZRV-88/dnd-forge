@@ -29,7 +29,7 @@ export type Scaling = CantripScaling | SlotScaling;
 
 export type SpellComponent = "В" | "С" | "М";
 export type SpellSchool = "Воплощение" | "Иллюзия" | "Некромантия" | "Ограждение"| "Очарование"| "Преобразование"| "Призыв"| "Прорицание";
-export type CastingTime = "Действие" | "Бонусное действие" | "Реакция" | "Ритуал";
+export type CastingTime = "Действие" | "Бонусное действие" | "Реакция" | "Ритуал" | "1 минута";
 
 export interface Spell {
     key: string;                  // Ключ заклинания на английском в kebab-case
