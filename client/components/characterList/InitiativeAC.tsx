@@ -213,6 +213,7 @@ export default function InitiativeAC({ initiative, dex, ac, characterData, onRol
 				isWearingArmor={isWearingArmor}
 				equippedArmor={draft?.equipped?.armor}
 				acSource={acSource}
+				frameColor={frameColor}
 				onClose={() => setShowACDetails(false)}
 			  />
 			</div>

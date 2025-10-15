@@ -2,22 +2,23 @@ import React from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Shield, ChevronDown, Heart, Zap, Crown, Sword, Sparkles, User, Sun } from 'lucide-react';
 import { useCharacter } from '@/store/character';
+import { getFrameColor } from '@/utils/colorUtils';
 
 interface AuraManagerProps {
   level: number;
   frameColor?: string;
   subclass?: string;
+  draft?: any;
 }
 
-export default function AuraManager({ level, frameColor = '#3B82F6', subclass }: AuraManagerProps) {
-  const characterContext = useCharacter();
-  
-  if (!characterContext) {
+export default function AuraManager({ level, frameColor = 'blue', subclass, draft }: AuraManagerProps) {
+  // Убираем использование useCharacter, так как draft передается как проп
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  // Ауры доступны с 6 уровня
+  if (level < 6) {
     return null;
   }
-  
-  const { draft } = characterContext;
-  const [isExpanded, setIsExpanded] = React.useState(false);
 
   // Определяем доступные ауры в зависимости от уровня и подкласса
   const availableAuras = [];
@@ -204,7 +205,7 @@ export default function AuraManager({ level, frameColor = '#3B82F6', subclass }:
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-gray-500">(Уровень {aura.level})</span>
                         {aura.type === 'subclass' && (
-                          <span className="text-xs font-medium" style={{ color: frameColor }}>Подкласс</span>
+                          <span className="text-xs font-medium" style={{ color: getFrameColor(frameColor) }}>Подкласс</span>
                         )}
                       </div>
                       <p className="text-xs text-gray-400 mt-1">{aura.description}</p>
@@ -212,11 +213,11 @@ export default function AuraManager({ level, frameColor = '#3B82F6', subclass }:
                       {/* Специальные эффекты для капстоунов */}
                       {aura.special && aura.effects && (
                         <div className="mt-2">
-                          <h6 className="text-xs font-medium mb-1" style={{ color: frameColor }}>Особые эффекты:</h6>
+                          <h6 className="text-xs font-medium mb-1" style={{ color: getFrameColor(frameColor) }}>Особые эффекты:</h6>
                           <ul className="text-xs text-gray-400 space-y-1">
                             {aura.effects.map((effect, effectIndex) => (
                               <li key={effectIndex} className="flex items-start gap-1">
-                                <span className="mt-0.5" style={{ color: frameColor }}>•</span>
+                                <span className="mt-0.5" style={{ color: getFrameColor(frameColor) }}>•</span>
                                 <span>{effect}</span>
                               </li>
                             ))}

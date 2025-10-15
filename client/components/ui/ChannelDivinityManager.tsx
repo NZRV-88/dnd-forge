@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Eye, RotateCcw, ChevronDown, Loader2, Clock, Moon, Zap, Shield, Sword, Heart, TreePine, Crown, Flame, Target } from 'lucide-react';
 import { useCharacter } from '@/store/character';
+import { getFrameColor } from '@/utils/colorUtils';
 
 interface ChannelDivinityManagerProps {
   level: number;
@@ -11,17 +12,17 @@ interface ChannelDivinityManagerProps {
   draft?: any;
 }
 
-export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', subclass, draft: passedDraft }: ChannelDivinityManagerProps) {
+export default function ChannelDivinityManager({ level, frameColor = 'blue', subclass, draft: passedDraft }: ChannelDivinityManagerProps) {
   const characterContext = useCharacter();
   
   if (!characterContext) {
     return null;
   }
   
-  const { draft, initializeChannelDivinity, useChannelDivinity, shortRestChannelDivinity, longRestChannelDivinity } = characterContext;
+  const { initializeChannelDivinity, useChannelDivinity, shortRestChannelDivinity, longRestChannelDivinity } = characterContext;
   
-  // Используем переданный draft или контекстный
-  const currentDraft = passedDraft || draft;
+  // Используем только переданный draft
+  const currentDraft = passedDraft;
   
   // Проверяем подкласс из разных источников
   const actualSubclass = subclass || currentDraft?.basics?.subclass || currentDraft?.subclass;
@@ -37,6 +38,11 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
   }, [level, initializeChannelDivinity, currentDraft.channelDivinity]);
 
   const channelDivinity = currentDraft.channelDivinity;
+
+  // Проверяем уровень - Проведение божественности доступно с 3 уровня
+  if (level < 3) {
+    return null;
+  }
 
   if (!channelDivinity) {
     return null;
@@ -311,16 +317,16 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   disabled={!canUse || isUsing}
                   className="w-full bg-transparent hover:bg-opacity-20 transition-colors"
                   style={{ 
-                    border: `1px solid ${frameColor}`,
-                    color: frameColor
+                    border: `1px solid ${getFrameColor(frameColor)}`,
+                    color: getFrameColor(frameColor)
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = `${frameColor}40`;
-                    e.currentTarget.style.color = frameColor;
+                    e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}40`;
+                    e.currentTarget.style.color = getFrameColor(frameColor);
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = frameColor;
+                    e.currentTarget.style.color = getFrameColor(frameColor);
                   }}
                 >
                   {isUsing ? (

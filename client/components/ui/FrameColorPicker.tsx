@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from './button';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { Palette, Check } from 'lucide-react';
+import { FRAME_COLORS } from '@/utils/colorUtils';
 
 interface FrameColorPickerProps {
   currentColor: string;
@@ -14,44 +15,44 @@ const COLOR_GROUPS = [
   {
     name: 'Металлы',
     colors: [
-      { key: 'gold', name: 'Золото', value: '#B59E54' },
-      { key: 'silver', name: 'Серебро', value: '#C0C0C0' },
-      { key: 'bronze', name: 'Бронза', value: '#CD7F32' },
-      { key: 'copper', name: 'Медь', value: '#B87333' },
-      { key: 'steel', name: 'Сталь', value: '#71797E' },
+      { key: 'gold', name: 'Золото', value: FRAME_COLORS.gold },
+      { key: 'silver', name: 'Серебро', value: FRAME_COLORS.silver },
+      { key: 'bronze', name: 'Бронза', value: FRAME_COLORS.bronze },
+      { key: 'copper', name: 'Медь', value: FRAME_COLORS.copper },
+      { key: 'steel', name: 'Сталь', value: FRAME_COLORS.steel },
     ]
   },
   {
     name: 'Основные',
     colors: [
-      { key: 'red', name: 'Красный', value: '#DC2626' },
-      { key: 'blue', name: 'Синий', value: '#2563EB' },
-      { key: 'green', name: 'Зеленый', value: '#16A34A' },
-      { key: 'purple', name: 'Фиолетовый', value: '#9333EA' },
-      { key: 'orange', name: 'Оранжевый', value: '#EA580C' },
-      { key: 'pink', name: 'Розовый', value: '#EC4899' },
+      { key: 'red', name: 'Красный', value: FRAME_COLORS.red },
+      { key: 'blue', name: 'Синий', value: FRAME_COLORS.blue },
+      { key: 'green', name: 'Зеленый', value: FRAME_COLORS.green },
+      { key: 'purple', name: 'Фиолетовый', value: FRAME_COLORS.purple },
+      { key: 'orange', name: 'Оранжевый', value: FRAME_COLORS.orange },
+      { key: 'pink', name: 'Розовый', value: FRAME_COLORS.pink },
     ]
   },
   {
     name: 'Дополнительные',
     colors: [
-      { key: 'cyan', name: 'Бирюзовый', value: '#0891B2' },
-      { key: 'lime', name: 'Лайм', value: '#65A30D' },
-      { key: 'indigo', name: 'Индиго', value: '#4F46E5' },
-      { key: 'teal', name: 'Тиль', value: '#0D9488' },
-      { key: 'emerald', name: 'Изумруд', value: '#059669' },
-      { key: 'rose', name: 'Роза', value: '#E11D48' },
+      { key: 'cyan', name: 'Бирюзовый', value: FRAME_COLORS.cyan },
+      { key: 'lime', name: 'Лайм', value: FRAME_COLORS.lime },
+      { key: 'indigo', name: 'Индиго', value: FRAME_COLORS.indigo },
+      { key: 'teal', name: 'Тиль', value: FRAME_COLORS.teal },
+      { key: 'emerald', name: 'Изумруд', value: FRAME_COLORS.emerald },
+      { key: 'rose', name: 'Роза', value: FRAME_COLORS.rose },
     ]
   },
   {
     name: 'Нейтральные',
     colors: [
-      { key: 'amber', name: 'Янтарь', value: '#D97706' },
-      { key: 'violet', name: 'Фиалка', value: '#7C3AED' },
-      { key: 'fuchsia', name: 'Фуксия', value: '#C026D3' },
-      { key: 'sky', name: 'Небо', value: '#0284C7' },
-      { key: 'stone', name: 'Камень', value: '#78716C' },
-      { key: 'neutral', name: 'Нейтральный', value: '#6B7280' },
+      { key: 'amber', name: 'Янтарь', value: FRAME_COLORS.amber },
+      { key: 'violet', name: 'Фиалка', value: FRAME_COLORS.violet },
+      { key: 'fuchsia', name: 'Фуксия', value: FRAME_COLORS.fuchsia },
+      { key: 'sky', name: 'Небо', value: FRAME_COLORS.sky },
+      { key: 'stone', name: 'Камень', value: FRAME_COLORS.stone },
+      { key: 'neutral', name: 'Нейтральный', value: FRAME_COLORS.neutral },
     ]
   }
 ];

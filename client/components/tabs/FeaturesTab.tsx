@@ -398,20 +398,14 @@ export default function FeaturesTab({
                 </h3>
                 <div className="space-y-3">
                   <LayOnHandsManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
-                  {(() => {
-                    const level = draft.basics.level || 1;
-                    const subclass = draft.basics.subclass;
-                    
-                    return level >= 3 && (
-                      <ChannelDivinityManager 
-                        level={level} 
-                        frameColor={getFrameColor(frameColor)}
-                        subclass={subclass}
-                      />
-                    );
-                  })()}
-                  <AuraManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} subclass={draft.basics.subclass} />
-                  <RadiantStrikesManager level={draft.basics.level || 1} frameColor={getFrameColor(frameColor)} />
+                  <ChannelDivinityManager 
+                    level={draft.basics.level || 1} 
+                    frameColor={frameColor}
+                    subclass={draft.basics.subclass}
+                    draft={draft}
+                  />
+                  <AuraManager level={draft.basics.level || 1} frameColor={frameColor} subclass={draft.basics.subclass} draft={draft} />
+                  <RadiantStrikesManager level={draft.basics.level || 1} frameColor={frameColor} draft={draft} />
                 </div>
               </div>
             )}

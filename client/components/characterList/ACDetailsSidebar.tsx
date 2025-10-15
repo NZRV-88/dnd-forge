@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useCharacter } from '@/store/character';
+import { getFrameColor } from '@/utils/colorUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ACDetailsSidebarProps {
@@ -10,6 +11,7 @@ interface ACDetailsSidebarProps {
   isWearingArmor: boolean;
   equippedArmor?: any;
   acSource?: string | null;
+  frameColor: string;
   onClose: () => void;
 }
 
@@ -20,6 +22,7 @@ export default function ACDetailsSidebar({
   isWearingArmor,
   equippedArmor,
   acSource,
+  frameColor,
   onClose
 }: ACDetailsSidebarProps) {
   
@@ -115,7 +118,18 @@ export default function ACDetailsSidebar({
                     type="number"
                     value={acBonus}
                     onChange={(e) => setACBonus(parseInt(e.target.value) || 0)}
-                    className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 text-sm bg-neutral-800 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
+                    style={{
+                      '--focus-ring-color': getFrameColor(frameColor)
+                    } as React.CSSProperties}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = getFrameColor(frameColor);
+                      e.target.style.boxShadow = `0 0 0 2px ${getFrameColor(frameColor)}40`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#4B5563'; // border-gray-600
+                      e.target.style.boxShadow = 'none';
+                    }}
                     placeholder="0"
                   />
                 </div>
@@ -125,7 +139,18 @@ export default function ACDetailsSidebar({
                     type="text"
                     value={bonusSource}
                     onChange={(e) => setBonusSource(e.target.value)}
-                    className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 text-sm bg-neutral-800 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
+                    style={{
+                      '--focus-ring-color': getFrameColor(frameColor)
+                    } as React.CSSProperties}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = getFrameColor(frameColor);
+                      e.target.style.boxShadow = `0 0 0 2px ${getFrameColor(frameColor)}40`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#4B5563'; // border-gray-600
+                      e.target.style.boxShadow = 'none';
+                    }}
                     placeholder="Например: Заклинание"
                   />
                 </div>
@@ -148,7 +173,23 @@ export default function ACDetailsSidebar({
                   }
                 }}
                 disabled={acBonus === 0 || !bonusSource.trim()}
-                className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+                className="w-full px-3 py-2 bg-transparent hover:bg-opacity-20 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm rounded transition-colors"
+                style={{ 
+                  border: `1px solid ${getFrameColor(frameColor)}`,
+                  color: getFrameColor(frameColor)
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = `${getFrameColor(frameColor)}40`;
+                    e.currentTarget.style.color = getFrameColor(frameColor);
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = getFrameColor(frameColor);
+                  }
+                }}
               >
                 Применить бонус
               </button>

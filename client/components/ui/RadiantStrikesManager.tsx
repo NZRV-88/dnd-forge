@@ -2,20 +2,16 @@ import React from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Star, ChevronDown } from 'lucide-react';
 import { useCharacter } from '@/store/character';
+import { getFrameColor } from '@/utils/colorUtils';
 
 interface RadiantStrikesManagerProps {
   level: number;
   frameColor?: string;
+  draft?: any;
 }
 
-export default function RadiantStrikesManager({ level, frameColor = '#3B82F6' }: RadiantStrikesManagerProps) {
-  const characterContext = useCharacter();
-  
-  if (!characterContext) {
-    return null;
-  }
-  
-  const { draft } = characterContext;
+export default function RadiantStrikesManager({ level, frameColor = 'blue', draft }: RadiantStrikesManagerProps) {
+  // Убираем использование useCharacter, так как draft передается как проп
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   // Сияющие удары доступны с 11 уровня
