@@ -529,3 +529,37 @@ export function mapKeyToProficiency(key: string): Proficiency | null {
     return null;
 }
 
+/**
+ * Проверяет, владеет ли персонаж определенным боевым стилем
+ */
+export function hasFightingStyle(draft: CharacterDraft, fightingStyleKey: string): boolean {
+    if (!draft.chosen.fightingStyle) {
+        return false;
+    }
+    
+    // Проверяем все источники боевых стилей
+    for (const sourceStyles of Object.values(draft.chosen.fightingStyle)) {
+        if (sourceStyles.includes(fightingStyleKey)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Получает все боевые стили персонажа
+ */
+export function getAllFightingStyles(draft: CharacterDraft): string[] {
+    if (!draft.chosen.fightingStyle) {
+        return [];
+    }
+    
+    const allStyles: string[] = [];
+    for (const sourceStyles of Object.values(draft.chosen.fightingStyle)) {
+        allStyles.push(...sourceStyles);
+    }
+    
+    return allStyles;
+}
+

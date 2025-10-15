@@ -854,6 +854,7 @@ export default function CharacterList() {
                                 initiative={initiative}
                                 ac={calculateAC()}
                                 dex={(finalStats as any).dex ?? 0}
+                                characterData={characterData}
                                 onRoll={addRoll}
                             />
                         </div>

@@ -50,7 +50,7 @@ export default function AbilityScoresEditable({ stats, onRoll }: Props) {
               
               {/* Название характеристики над внутренней рамкой */}
               <div
-                className="absolute top-[16%] left-1/2 -translate-x-1/2 text-center font-bold text-gray-300 leading-tight px-1 z-10"
+                className="absolute top-[16%] left-1/2 -translate-x-1/2 text-center text-gray-300 leading-tight px-1 z-10"
                 style={{
                   width: "90%",
                   fontSize: "9px",
