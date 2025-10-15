@@ -112,7 +112,7 @@ export default function InventoryTab({
 
       {/* Информация о весе */}
       <div className="mb-4">
-        <DynamicFrame frameType="actions" className="w-full">
+        <DynamicFrame frameType="action" className="w-full">
           <div className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export default function InventoryTab({
 
       {/* Рюкзак */}
       <div className="flex-1 overflow-y-auto">
-        <DynamicFrame frameType="actions" className="w-full">
+        <DynamicFrame frameType="action" className="w-full">
           <div className="p-4">
             <h3 className="text-lg font-semibold text-gray-200 mb-3">Рюкзак</h3>
             

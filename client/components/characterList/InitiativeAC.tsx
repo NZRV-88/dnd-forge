@@ -25,8 +25,10 @@ export default function InitiativeAC({ initiative, dex, ac, characterData, onRol
   // Проверяем, надет ли доспех (любой доспех, кроме "без доспеха")
   const isWearingArmor = draft?.equipped?.armor && draft.equipped.armor.name !== 'no-armor';
   
-  // Рассчитываем итоговый КД с учетом боевого стиля "Оборона"
-  const finalAC = ac + (hasDefenseFightingStyle && isWearingArmor ? 1 : 0);
+  // Рассчитываем итоговый КД с учетом боевого стиля "Оборона" и бонусов
+  const acBonuses = draft?.acBonuses || [];
+  const totalACBonus = acBonuses.reduce((sum, bonus) => sum + bonus.bonus, 0);
+  const finalAC = ac + (hasDefenseFightingStyle && isWearingArmor ? 1 : 0) + totalACBonus;
   
   // Определяем источник базового КБ
   const getACSource = () => {

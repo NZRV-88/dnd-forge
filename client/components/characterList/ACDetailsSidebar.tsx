@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useCharacter } from '@/store/character';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ACDetailsSidebarProps {
   baseAC: number;
@@ -20,13 +23,23 @@ export default function ACDetailsSidebar({
   onClose
 }: ACDetailsSidebarProps) {
   
+  const { draft, setDraft } = useCharacter();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [acBonus, setACBonus] = useState(0);
+  const [bonusSource, setBonusSource] = useState('');
+  
+  // Получаем бонусы из draft
+  const appliedBonuses = draft.acBonuses || [];
+  
   return (
     <div className="space-y-3 text-xs">
       {/* Содержимое */}
       <div className="space-y-2">
         {/* Итоговый КД */}
         <div className="text-center mb-4">
-          <div className="text-3xl font-bold text-white">{finalAC}</div>
+          <div className="text-3xl font-bold text-white">
+            {finalAC}
+          </div>
           <div className="text-gray-400">Итоговый класс брони</div>
         </div>
 
@@ -37,6 +50,25 @@ export default function ACDetailsSidebar({
             <span className="text-gray-500 ml-2">({acSource})</span>
           )}
         </div>
+
+        {/* Примененные бонусы */}
+        {appliedBonuses.map((bonus) => (
+          <div key={bonus.id} className="text-gray-400">
+            <span className="font-medium text-gray-200">Бонус:</span> +{bonus.bonus}
+            <span className="text-gray-500 ml-2">({bonus.source})</span>
+            <button
+              onClick={() => {
+                setDraft(prev => ({
+                  ...prev,
+                  acBonuses: prev.acBonuses?.filter(b => b.id !== bonus.id) || []
+                }));
+              }}
+              className="ml-2 text-red-400 hover:text-red-300 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
 
         {/* Боевой стиль "Оборона" */}
         {hasDefenseFightingStyle && (
@@ -63,6 +95,66 @@ export default function ACDetailsSidebar({
             <span className="text-gray-500 ml-2">Нет</span>
           </div>
         )}
+
+        {/* Раскрывающееся меню для изменения КБ */}
+        <div className="mt-3 pt-3 border-t border-gray-700">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center justify-between w-full text-left text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            <span className="font-medium text-gray-200">Дополнительные бонусы к КБ</span>
+            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          
+          {isExpanded && (
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-400 mb-1">Бонус</label>
+                  <input
+                    type="number"
+                    value={acBonus}
+                    onChange={(e) => setACBonus(parseInt(e.target.value) || 0)}
+                    className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-400 mb-1">Источник</label>
+                  <input
+                    type="text"
+                    value={bonusSource}
+                    onChange={(e) => setBonusSource(e.target.value)}
+                    className="w-full px-2 py-1 text-sm bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Например: Заклинание"
+                  />
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  if (acBonus !== 0 && bonusSource.trim()) {
+                    const newBonus = {
+                      id: uuidv4(),
+                      bonus: acBonus,
+                      source: bonusSource
+                    };
+                    setDraft(prev => ({
+                      ...prev,
+                      acBonuses: [...(prev.acBonuses || []), newBonus]
+                    }));
+                    setACBonus(0);
+                    setBonusSource('');
+                  }
+                }}
+                disabled={acBonus === 0 || !bonusSource.trim()}
+                className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+              >
+                Применить бонус
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Объяснение боевого стиля "Оборона" */}
