@@ -96,6 +96,13 @@ export const SOURCES = {
         year: 2020,
         desc: "Руководство для исследователей Дикогорья.",
     },
+    ODL: {
+        key: "ODL",
+        name: "Odyssey of the Dragonlords",
+        short: "ODL",
+        year: 2020,
+        desc: "Одиссея повелителей драконов.",
+    },
     TCE: {
         key: "TCE",
         name: "Tasha’s Cauldron of Everything",

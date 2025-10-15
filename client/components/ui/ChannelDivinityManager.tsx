@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Eye, RotateCcw, ChevronDown, Loader2, Clock, Moon, Zap } from 'lucide-react';
+import { Eye, RotateCcw, ChevronDown, Loader2, Clock, Moon, Zap, Shield, Sword, Heart, TreePine, Crown, Flame, Target } from 'lucide-react';
 import { useCharacter } from '@/store/character';
 
 interface ChannelDivinityManagerProps {
@@ -133,7 +133,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   {level >= 9 && (
                     <div className="bg-neutral-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                        <Target className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <h5 className="text-sm font-medium text-white">Порицание врагов</h5>
                           <p className="text-xs text-gray-400 mt-1">
@@ -152,7 +152,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   {actualSubclass === 'oath-of-vengeance' && (
                     <div className="bg-neutral-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                        <Sword className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <h5 className="text-sm font-medium text-white">Обет вражды</h5>
                           <p className="text-xs text-gray-400 mt-1">
@@ -173,7 +173,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   {actualSubclass === 'oath-of-devotion' && (
                     <div className="bg-neutral-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                        <Shield className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <h5 className="text-sm font-medium text-white">Священное оружие</h5>
                           <p className="text-xs text-gray-400 mt-1">
@@ -199,7 +199,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   {actualSubclass === 'oath-of-glory' && (
                     <div className="bg-neutral-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                        <Heart className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <h5 className="text-sm font-medium text-white">Воодушевляющий удар</h5>
                           <p className="text-xs text-gray-400 mt-1">
@@ -220,7 +220,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   {actualSubclass === 'oath-of-glory' && (
                     <div className="bg-neutral-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <Crown className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <h5 className="text-sm font-medium text-white">Несравненный атлет</h5>
                           <p className="text-xs text-gray-400 mt-1">
@@ -241,7 +241,7 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                   {actualSubclass === 'oath-of-the-ancients' && (
                     <div className="bg-neutral-800 rounded-lg p-3">
                       <div className="flex items-start gap-2">
-                        <Zap className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                        <TreePine className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <h5 className="text-sm font-medium text-white">Гнев природы</h5>
                           <p className="text-xs text-gray-400 mt-1">
@@ -253,6 +253,48 @@ export default function ChannelDivinityManager({ level, frameColor = '#3B82F6', 
                             Выбранные существа должны преуспеть в спасброске Силы, иначе получат состояние Опутанный 
                             на 1 минуту. Существо с этим состоянием повторяет спасбросок в конце каждого из своих ходов, 
                             при успехе оканчивая на себе это состояние.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Гнев Дракона (доступно для Клятвы повелителя драконов с 3-го уровня) */}
+                  {actualSubclass === 'oath-of-the-dragonlord' && (
+                    <div className="bg-neutral-800 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Flame className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="text-sm font-medium text-white">Гнев Дракона</h5>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Действием вы можете имитировать ужасное присутствие дракона, используя божественный канал. 
+                            Вы издаете такой же громкий рев, как взрослый дракон.
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Каждое существо на ваш выбор, находящееся в пределах 60 футов от вас и знающее о вашем 
+                            присутствии, должно преуспеть в спасброске Мудрости со Сл 14, иначе станет испуганным на 1 минуту. 
+                            Существо может повторять спасбросок в конце каждого своего хода, заканчивая эффект на себе в случае успеха.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Презрение к недостойным (доступно для Клятвы повелителя драконов с 3-го уровня) */}
+                  {actualSubclass === 'oath-of-the-dragonlord' && (
+                    <div className="bg-neutral-800 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Crown className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="text-sm font-medium text-white">Презрение к недостойным</h5>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Клятва повелителя драконов возвышает вас над множеством развращенных и слабых. 
+                            Действием вы можете произнести клятву Повелителя Драконов, используя божественный канал.
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Вражеские существа в пределах 30 футов от вас, Большого размера или меньше, должны преуспеть 
+                            в спасброске Харизмы. При провале существо сбивается с ног и теряет концентрацию на всех 
+                            заклинаниях, которые оно поддерживало активными.
                           </p>
                         </div>
                       </div>

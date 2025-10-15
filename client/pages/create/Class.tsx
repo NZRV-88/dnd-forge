@@ -71,6 +71,77 @@ export default function ClassPick() {
     const [spellbookSearch, setSpellbookSearch] = useState('');
     const [spellbookLevelFilter, setSpellbookLevelFilter] = useState<number | 'all'>('all');
     
+    // Функция для получения заклинаний из особенностей класса на определенном уровне
+    const getClassSpellsFromFeatures = (classInfo: ClassInfo, maxLevel: number) => {
+        const spells: string[] = [];
+        
+        console.log('🔍 getClassSpellsFromFeatures called with:', {
+            classInfo: classInfo?.key,
+            maxLevel,
+            subclass: draft.basics.subclass
+        });
+        
+        // Проходим по всем уровням от 1 до maxLevel
+        for (let level = 1; level <= maxLevel; level++) {
+            const features = classInfo.features[level as keyof typeof classInfo.features];
+            if (features) {
+                features.forEach(feature => {
+                    // Проверяем, есть ли у особенности поле spells
+                    if ((feature as any).spells && Array.isArray((feature as any).spells)) {
+                        spells.push(...(feature as any).spells);
+                    }
+                    // Проверяем, есть ли у особенности поле preparedSpells
+                    if ((feature as any).preparedSpells && Array.isArray((feature as any).preparedSpells)) {
+                        (feature as any).preparedSpells.forEach((spellGroup: any) => {
+                            if (spellGroup.level <= level && spellGroup.spells && Array.isArray(spellGroup.spells)) {
+                                spells.push(...spellGroup.spells);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+        
+        // Также проверяем особенности подкласса, если он выбран
+        const subclass = classInfo.subclasses.find(sc => sc.key === draft.basics.subclass);
+        console.log('🔍 Found subclass:', subclass?.key);
+        
+        if (subclass) {
+            for (let level = 1; level <= maxLevel; level++) {
+                const features = subclass.features?.[level as keyof typeof subclass.features];
+                console.log(`🔍 Level ${level} features:`, features);
+                if (features) {
+                    features.forEach(feature => {
+                        console.log('🔍 Feature:', feature.name, 'preparedSpells:', (feature as any).preparedSpells);
+                        // Проверяем, есть ли у особенности поле spells
+                        if ((feature as any).spells && Array.isArray((feature as any).spells)) {
+                            spells.push(...(feature as any).spells);
+                        }
+                        // Проверяем, есть ли у особенности поле preparedSpells
+                        if ((feature as any).preparedSpells && Array.isArray((feature as any).preparedSpells)) {
+                            (feature as any).preparedSpells.forEach((spellGroup: any) => {
+                                console.log('🔍 Spell group:', spellGroup, 'level check:', spellGroup.level, '<=', level);
+                                if (spellGroup.level <= level && spellGroup.spells && Array.isArray(spellGroup.spells)) {
+                                    console.log('🔍 Adding spells:', spellGroup.spells);
+                                    spells.push(...spellGroup.spells);
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        }
+        
+        console.log('🔍 Final spells from features:', spells);
+        return spells;
+    };
+    
+    // Функция для получения заклинаний, которые НЕ учитываются в лимите (из особенностей подкласса)
+    const getSubclassSpellsNotInLimit = () => {
+        if (!info) return [];
+        return getClassSpellsFromFeatures(info, draft.basics.level);
+    };
+    
     // Получаем подготовленные заклинания из драфта
     const preparedSpells = draft.basics.class ? (draft.chosen.spells[draft.basics.class] || []) : [];
     
@@ -89,12 +160,6 @@ export default function ClassPick() {
         return spell && spell.level === 0;
     })];
     
-    // Получаем все подготовленные заклинания (из класса + выученные)
-    const allPreparedSpells = [...preparedSpells, ...learnedSpells.filter(spellKey => {
-        const spell = Spells.find(s => s.key === spellKey);
-        return spell && spell.level > 0;
-    })];
-    
     // Загружаем персонажа при редактировании
     useEffect(() => {
         if (id && draft.id !== id && !isLoading) {
@@ -106,6 +171,59 @@ export default function ClassPick() {
         () => CLASS_CATALOG.find((c) => c.key === draft.basics.class),
         [draft.basics.class],
     );
+    
+    // Получаем заклинания из особенностей подкласса
+    const subclassSpells = useMemo(() => {
+        return info ? getClassSpellsFromFeatures(info, draft.basics.level) : [];
+    }, [info, draft.basics.level]);
+    
+    // Получаем все подготовленные заклинания (из класса + выученные + из особенностей подкласса)
+    const allPreparedSpells = useMemo(() => {
+        return [...preparedSpells, ...learnedSpells.filter(spellKey => {
+            const spell = Spells.find(s => s.key === spellKey);
+            return spell && spell.level > 0;
+        })];
+    }, [preparedSpells, learnedSpells]);
+    
+    // Разделяем заклинания на те, что учитываются в лимите, и те, что не учитываются
+    const spellsInLimit = useMemo(() => {
+        const subclassSpellsNotInLimit = getSubclassSpellsNotInLimit();
+        return allPreparedSpells.filter(spellKey => !subclassSpellsNotInLimit.includes(spellKey));
+    }, [allPreparedSpells, info, draft.basics.level]);
+    
+    const spellsNotInLimit = useMemo(() => {
+        return getSubclassSpellsNotInLimit();
+    }, [info, draft.basics.level]);
+    
+    // Обновляем allPreparedSpells с заклинаниями из особенностей подкласса
+    const uniquePreparedSpells = useMemo(() => {
+        console.log('🔍 uniquePreparedSpells calculation:', {
+            allPreparedSpells,
+            subclassSpells,
+            spellsInLimit,
+            spellsNotInLimit,
+            combined: [...allPreparedSpells, ...subclassSpells]
+        });
+        const combinedSpells = [...allPreparedSpells, ...subclassSpells];
+        const unique = [...new Set(combinedSpells)];
+        console.log('🔍 Final uniquePreparedSpells:', unique);
+        return unique;
+    }, [allPreparedSpells, subclassSpells, spellsInLimit, spellsNotInLimit]);
+    
+    // Автоматически добавляем заклинания из особенностей подкласса в драфт
+    useEffect(() => {
+        if (info && draft.basics.class && subclassSpells.length > 0) {
+            const currentSpells = draft.chosen.spells[draft.basics.class] || [];
+            const spellsToAdd = subclassSpells.filter(spellKey => !currentSpells.includes(spellKey));
+            
+            if (spellsToAdd.length > 0) {
+                console.log('🔍 Adding subclass spells to draft:', spellsToAdd);
+                const newSpells = [...currentSpells, ...spellsToAdd];
+                setChosenSpells(draft.basics.class, newSpells);
+            }
+        }
+    }, [info, draft.basics.class, subclassSpells, setChosenSpells]);
+    
     // Получаем данные персонажа для hpPerLevel и финальных характеристик
     const characterData = getAllCharacterData(draft);
     
@@ -375,6 +493,18 @@ export default function ClassPick() {
             // Если лимит не изменился или увеличился - оставляем все заклинания
             validSpells = [...featureSpells, ...regularSpells];
         }
+        
+        // ВАЖНО: Заклинания из особенностей подкласса всегда остаются, независимо от лимита
+        // Они добавляются автоматически и не должны удаляться при понижении уровня
+        const subclassSpellsForNewLevel = getClassSpellsFromFeatures(info, newLevel);
+        
+        // Разделяем заклинания на те, что учитываются в лимите, и те, что не учитываются
+        const subclassSpellsNotInLimit = getClassSpellsFromFeatures(info, newLevel);
+        const regularSpellsInLimit = validSpells.filter(spellKey => !subclassSpellsNotInLimit.includes(spellKey));
+        const subclassSpellsInLimit = validSpells.filter(spellKey => subclassSpellsNotInLimit.includes(spellKey));
+        
+        // Объединяем: обычные заклинания в лимите + все заклинания из особенностей подкласса
+        const allValidSpells = [...new Set([...regularSpellsInLimit, ...subclassSpellsForNewLevel])];
 
         // 3. Проверяем, правильно ли удаляются особенности при понижении уровня
         const cleanedSpells = { ...draft.chosen.spells };
@@ -497,7 +627,7 @@ export default function ClassPick() {
                 feats: cleanedFeats,
                 spells: {
                     ...cleanedSpells,
-                    [info.key]: validSpells
+                    [info.key]: allValidSpells
                 }
             },
             hpRolls: validHpRolls
@@ -514,26 +644,6 @@ export default function ClassPick() {
         return levelSlots.slots.length;
     };
 
-    // Функция для получения заклинаний из особенностей класса на определенном уровне
-    const getClassSpellsFromFeatures = (classInfo: ClassInfo, maxLevel: number) => {
-        const spells: string[] = [];
-        
-        // Проходим по всем уровням от 1 до maxLevel
-        for (let level = 1; level <= maxLevel; level++) {
-            const features = classInfo.features[level as keyof typeof classInfo.features];
-            if (features) {
-                features.forEach(feature => {
-                    // Проверяем, есть ли у особенности поле spells
-                    if ((feature as any).spells && Array.isArray((feature as any).spells)) {
-                        spells.push(...(feature as any).spells);
-                    }
-                });
-            }
-        }
-        
-        return spells;
-    };
-
     // Функция для расчета лимита подготовленных заклинаний
     const getPreparedSpellsLimit = (classInfo: ClassInfo, level: number, chaScore: number) => {
         if (!classInfo.spellcasting || !classInfo.spellcasting.preparedFormula) {
@@ -547,6 +657,7 @@ export default function ClassPick() {
         
         return limit;
     };
+    
 
 
     const hasSelectedClass = Boolean(draft.basics.class);
@@ -765,6 +876,11 @@ export default function ClassPick() {
             return 1; // Fallback значение
         }
     };
+    
+    // Функция для получения текущего количества подготовленных заклинаний (только тех, что учитываются в лимите)
+    const getCurrentPreparedSpellsCount = () => {
+        return spellsInLimit.length;
+    };
 
     // Функция для получения информации о слотах заклинаний
     const getSpellSlotsInfo = () => {
@@ -822,8 +938,32 @@ export default function ClassPick() {
             spell.level <= maxSpellLevel
         );
         
+        // Также добавляем заклинания, доступные через подклассы
+        const selectedSubclass = info.subclasses.find(sc => sc.key === draft.basics.subclass);
+        if (selectedSubclass) {
+            const subclassPreparedSpells = Spells.filter((spell) => 
+                spell.subclasses && 
+                spell.subclasses.includes(draft.basics.subclass) &&
+                spell.level > 0 &&
+                spell.level <= maxSpellLevel
+            );
+            allPreparedSpells.push(...subclassPreparedSpells);
+        }
+        
+        // Добавляем заклинания из особенностей подкласса
+        const subclassSpells = getClassSpellsFromFeatures(info, draft.basics.level);
+        const subclassSpellObjects = subclassSpells.map(spellKey => Spells.find(s => s.key === spellKey)).filter(Boolean);
+        
+        // Объединяем обычные заклинания класса и заклинания из особенностей подкласса
+        const combinedSpells = [...allPreparedSpells, ...subclassSpellObjects];
+        
+        // Убираем дубликаты по ключу
+        const uniqueSpells = combinedSpells.filter((spell, index, self) => 
+            index === self.findIndex(s => s.key === spell.key)
+        );
+        
         // Исключаем уже выученные заклинания и заклинания из книги заклинаний
-        return allPreparedSpells.filter(spell => 
+        return uniqueSpells.filter(spell => 
             !learnedSpells.includes(spell.key) && 
             !spellbook.includes(spell.key)
         );
@@ -1350,13 +1490,13 @@ export default function ClassPick() {
                                         
                                         {isPreparedSpellsOpen && (
                                             <div className="px-4 pb-4 border-t">
-                                                {allPreparedSpells.length === 0 ? (
+                                                {uniquePreparedSpells.length === 0 ? (
                                                     <p className="text-muted-foreground py-4">
                                                         Подготовленные заклинания отсутствуют
                                                     </p>
                                                 ) : (
                                                     <div className="py-4 space-y-2">
-                                                        {allPreparedSpells.map((spellKey, index) => {
+                                                        {uniquePreparedSpells.map((spellKey, index) => {
                                                             // Находим полную информацию о заклинании
                                                             const spell = Spells.find(s => s.key === spellKey);
                                                             if (!spell) return null;
@@ -1567,14 +1707,14 @@ export default function ClassPick() {
                                                                                                 // Убираем заклинание из подготовленных
                                                                                                 const newSpells = preparedSpells.filter(key => key !== spell.key);
                                                                                                 setChosenSpells(draft.basics.class, newSpells);
-                                                                                            } else if (preparedSpells.length < getMaxPreparedSpells()) {
+                                                                                            } else if (getCurrentPreparedSpellsCount() < getMaxPreparedSpells()) {
                                                                                                 // Добавляем заклинание в подготовленные
                                                                                                 const newSpells = [...preparedSpells, spell.key];
                                                                                                 setChosenSpells(draft.basics.class, newSpells);
                                                                                             }
                                                                                         }
                                                                                     }}
-                                                                                    disabled={!preparedSpells.includes(spell.key) && preparedSpells.length >= getMaxPreparedSpells()}
+                                                                                    disabled={!preparedSpells.includes(spell.key) && getCurrentPreparedSpellsCount() >= getMaxPreparedSpells()}
                                                                                     className={
                                                                                         preparedSpells.includes(spell.key)
                                                                                             ? 'px-2 py-1 text-xs font-medium bg-red-500 text-white hover:bg-red-600 rounded transition-colors'
@@ -1655,7 +1795,7 @@ export default function ClassPick() {
                                                         )}
                                                         {!info?.spellcasting?.cantrips && (
                                                             <>
-                                                                Подготовленные заклинания: {preparedSpells.length}/{getMaxPreparedSpells()}
+                                                                Подготовленные заклинания: {getCurrentPreparedSpellsCount()}/{getMaxPreparedSpells()}
                                                             </>
                                                         )}
                                                     </div>
@@ -1771,7 +1911,7 @@ export default function ClassPick() {
                                                                                         if (preparedSpells.includes(spell.key)) {
                                                                                             const newSpells = preparedSpells.filter(key => key !== spell.key);
                                                                                             setChosenSpells(draft.basics.class, newSpells);
-                                                                                        } else if (preparedSpells.length < getMaxPreparedSpells()) {
+                                                                                        } else if (getCurrentPreparedSpellsCount() < getMaxPreparedSpells()) {
                                                                                             const newSpells = [...preparedSpells, spell.key];
                                                                                             setChosenSpells(draft.basics.class, newSpells);
                                                                                         }
@@ -1784,7 +1924,7 @@ export default function ClassPick() {
                                                                                     : info?.spellcasting?.spellbook && spell.level > 0
                                                                                         ? (!spellbook.includes(spell.key) && spellbook.length >= getMaxSpellbookSpells())
                                                                                         : !info?.spellcasting?.cantrips && !info?.spellcasting?.spellbook && spell.level > 0
-                                                                                            ? (!preparedSpells.includes(spell.key) && preparedSpells.length >= getMaxPreparedSpells())
+                                                                                            ? (!preparedSpells.includes(spell.key) && getCurrentPreparedSpellsCount() >= getMaxPreparedSpells())
                                                                                             : false
                                                                             }
                                                                             className={
