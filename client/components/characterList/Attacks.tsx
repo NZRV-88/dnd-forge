@@ -411,6 +411,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
   
   // Функция для получения всех заклинаний персонажа
   const getAllCharacterSpells = () => {
+    console.log('getAllCharacterSpells called with characterData:', characterData);
+    console.log('Character level:', characterData?.level);
+    console.log('Character class:', characterData?.class?.key);
+    console.log('Character subclass:', characterData?.class?.subclass);
     const allSpells: any[] = [];
     const addedKeys = new Set<string>(); // Для предотвращения дублирования
     
@@ -435,8 +439,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
     
     // Добавляем заклинания, которые дает класс автоматически
     if (characterData?.class?.features) {
+      console.log('Class features found:', characterData.class.features);
       Object.entries(characterData.class.features).forEach(([level, features]) => {
         const levelNum = parseInt(level);
+        console.log('Processing features for level:', levelNum);
         // Добавляем заклинания только для особенностей текущего уровня и ниже
         if (levelNum <= characterData.level) {
           (features as any[]).forEach((feature: any) => {
@@ -454,6 +460,68 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     });
                     addedKeys.add(spellKey);
                   }
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+
+    // Добавляем заклинания от подкласса
+    if (characterData?.class?.subclass?.features) {
+      console.log('Subclass features found:', characterData.class.subclass.features);
+      Object.entries(characterData.class.subclass.features).forEach(([level, features]) => {
+        const levelNum = parseInt(level);
+        console.log('Processing subclass features for level:', levelNum);
+        // Добавляем заклинания только для особенностей текущего уровня и ниже
+        if (levelNum <= characterData.level) {
+          (features as any[]).forEach((feature: any) => {
+            if (feature.spells && Array.isArray(feature.spells)) {
+              feature.spells.forEach((spellKey: string) => {
+                if (!addedKeys.has(spellKey)) {
+                  const spellData = getSpellData(spellKey);
+                  if (spellData) {
+                    allSpells.push({
+                      ...spellData,
+                      key: spellKey,
+                      level: spellData.level || 1,
+                      isCantrip: spellData.level === 0,
+                      isClassFeature: true // Помечаем как заклинание от особенности класса
+                    });
+                    addedKeys.add(spellKey);
+                  }
+                }
+              });
+            }
+            // Добавляем заклинания из preparedSpells (для подклассов)
+            if (feature.preparedSpells && Array.isArray(feature.preparedSpells)) {
+              console.log('Found preparedSpells feature:', feature.name, 'at level', levelNum);
+              console.log('Character level:', characterData.level);
+              feature.preparedSpells.forEach((spellGroup: any) => {
+                console.log('Checking spell group level:', spellGroup.level, 'vs character level:', characterData.level);
+                // Проверяем, достиг ли персонаж уровня для получения этих заклинаний
+                if (spellGroup.level <= characterData.level && spellGroup.spells && Array.isArray(spellGroup.spells)) {
+                  console.log('Adding spells from level', spellGroup.level, ':', spellGroup.spells);
+                  spellGroup.spells.forEach((spellKey: string) => {
+                    if (!addedKeys.has(spellKey)) {
+                      const spellData = getSpellData(spellKey);
+                      if (spellData) {
+                        console.log('Adding spell:', spellKey, 'level:', spellData.level);
+                        allSpells.push({
+                          ...spellData,
+                          key: spellKey,
+                          level: spellData.level || 1,
+                          isCantrip: spellData.level === 0,
+                          isClassFeature: true, // Помечаем как заклинание от особенности класса
+                          isPreparedSpell: true // Помечаем как заклинание из preparedSpells
+                        });
+                        addedKeys.add(spellKey);
+                      }
+                    }
+                  });
+                } else {
+                  console.log('Skipping spell group level', spellGroup.level, 'because character level is', characterData.level);
                 }
               });
             }

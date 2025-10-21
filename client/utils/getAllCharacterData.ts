@@ -468,6 +468,13 @@ export function getAllCharacterData(draft: CharacterDraft) {
         });
     }
 
+    // Получаем данные класса и подкласса
+    const baseClassData = getClassByKey(draft.basics.class);
+    let subclassData = null;
+    if (draft.basics.subclass && baseClassData?.subclasses) {
+        subclassData = baseClassData.subclasses.find(sc => sc.key === draft.basics.subclass);
+    }
+
     // Отладочная информация о итоговых характеристиках
     return {
         skills: Array.from(skills),
@@ -488,7 +495,10 @@ export function getAllCharacterData(draft: CharacterDraft) {
         proficiencySources,
         equipment: draft.basics?.equipment || [],
         currency: draft.basics?.currency || null,
-        class: getClassByKey(draft.basics.class),
+        class: {
+            ...baseClassData,
+            subclass: subclassData
+        },
         level: draft.basics?.level || 1,
         background: backgroundFixed,
     };
