@@ -1135,14 +1135,26 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
             },
         }));
 
-    const setChosenFightingStyle = (source: string, styleKey: string[]) =>
-        setDraft(d => ({
-            ...d,
-            chosen: {
-                ...d.chosen,
-                fightingStyle: { ...d.chosen.fightingStyle, [source]: styleKey }
+    const setChosenFightingStyle = (source: string, styleKey: string[]) => {
+        setDraft(d => {
+            const newFightingStyle = { ...d.chosen.fightingStyle };
+            
+            // Если массив пустой, удаляем ключ
+            if (styleKey.length === 0) {
+                delete newFightingStyle[source];
+            } else {
+                newFightingStyle[source] = styleKey;
             }
-        }));
+            
+            return {
+                ...d,
+                chosen: {
+                    ...d.chosen,
+                    fightingStyle: newFightingStyle
+                }
+            };
+        });
+    };
 
     const clearClassChoices = () => {
         setDraft(d => {

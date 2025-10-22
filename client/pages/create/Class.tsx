@@ -16,6 +16,7 @@ import HealthSettingsModal from "@/components/ui/HealthSettingsModal";
 import { Spells } from "@/data/spells";
 import { getAllCharacterData } from "@/utils/getAllCharacterData";
 import { calculateMaxHP } from "@/utils/hpCalculation";
+import { ALL_FEATS } from "@/data/feats/feats";
 
 const ALL_CLASSES = [
     "fighter",
@@ -591,6 +592,15 @@ export default function ClassPick() {
                     return false; // Удаляем эту черту
                 }
             }
+            
+            // Дополнительная проверка: удаляем черты, которые требуют уровень выше текущего
+            // Это нужно для черт, полученных не через ASI класса
+            const featData = ALL_FEATS.find(f => f.key === featKey);
+            if (featData && featData.prerequisites?.level && featData.prerequisites.level > newLevel) {
+                console.log('❌ Удаляем черту по уровню:', featKey, 'требует уровень', featData.prerequisites.level);
+                return false;
+            }
+            
             return true; // Оставляем все остальные черты
         });
         
@@ -603,6 +613,46 @@ export default function ClassPick() {
             willDecrease: draft.basics.level > newLevel,
             currentLevel: draft.basics.level,
             newLevel
+        });
+        
+        // Очищаем связанные выборы для удаленных черт
+        const removedFeats = draft.chosen.feats.filter(featKey => !cleanedFeats.includes(featKey));
+        console.log('🔍 Удаленные черты:', removedFeats);
+        console.log('🔍 Все ключи боевых стилей:', Object.keys(cleanedFightingStyle));
+        
+        removedFeats.forEach(featKey => {
+            console.log('🧹 Очищаем связанные выборы для черты:', featKey);
+            
+            // Удаляем боевые стили, связанные с этой чертой
+            Object.keys(cleanedFightingStyle).forEach(fightingKey => {
+                console.log('🔍 Проверяем ключ боевого стиля:', fightingKey, 'содержит ли черту:', featKey);
+                
+                // Извлекаем название черты из полного ключа (например, "fighting-initiate" из "paladin-4-0--0:fighting-initiate")
+                const featName = featKey.split(':').pop(); // Получаем часть после последнего ":"
+                console.log('🔍 Название черты для поиска:', featName);
+                
+                if (fightingKey.includes(featKey) || 
+                    fightingKey.startsWith(`feat-${featKey}`) ||
+                    fightingKey.includes(`feat:${featName}`) ||
+                    fightingKey.includes(featName)) {
+                    console.log('🗑️ Удаляем боевой стиль:', fightingKey);
+                    delete cleanedFightingStyle[fightingKey];
+                }
+            });
+            
+            // Удаляем оружейное мастерство, связанное с этой чертой
+            Object.keys(cleanedWeaponMastery).forEach(weaponKey => {
+                // Извлекаем название черты из полного ключа
+                const featName = featKey.split(':').pop();
+                
+                if (weaponKey.includes(featKey) || 
+                    weaponKey.startsWith(`feat-${featKey}`) ||
+                    weaponKey.includes(`feat:${featName}`) ||
+                    weaponKey.includes(featName)) {
+                    console.log('🗑️ Удаляем оружейное мастерство:', weaponKey);
+                    delete cleanedWeaponMastery[weaponKey];
+                }
+            });
         });
 
         // 5. Очищаем броски HP для уровней выше нового
