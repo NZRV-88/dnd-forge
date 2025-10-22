@@ -321,7 +321,7 @@ export default function CharacterList() {
                 }
             }
         }
-    }, [char, finalStats]);
+    }, [char?.basics?.level, char?.basics?.class, char?.basics?.race]); // Только при изменении уровня, класса или расы
 
     // Обновляем char при изменении draft.chosen.spells
     useEffect(() => {
@@ -593,7 +593,7 @@ export default function CharacterList() {
             if (!charData) return;
             
             const updated = { ...charData };
-            updated.basics = { ...updated.basics, hpCurrent: curHp, hpTemp: tempHp };
+            updated.basics = { ...updated.basics, hpCurrent: curHp, tempHp: tempHp };
             updated.skills = skillProfs;
             
             const { error } = await supabase
@@ -616,7 +616,7 @@ export default function CharacterList() {
             if (!char) return;
             
             const updated = { ...char };
-            updated.basics = { ...updated.basics, hpCurrent: curHp, hpTemp: tempHp };
+            updated.basics = { ...updated.basics, hpCurrent: curHp, tempHp: tempHp };
             updated.skills = skillProfs;
             
             // Используем customEquipped если передан, иначе char.equipped
@@ -707,6 +707,35 @@ export default function CharacterList() {
             }
         } catch (error) {
             console.error("Ошибка сохранения временных хитов:", error);
+        }
+    };
+
+    // Handle both HP and temp HP changes (for damage/healing)
+    const handleHpAndTempHpChange = async (newHp: number, newTempHp: number) => {
+        if (!char) return;
+        const updated = { 
+            ...char, 
+            basics: { 
+                ...char.basics, 
+                hpCurrent: newHp,
+                tempHp: newTempHp
+            } 
+        };
+        setCharWithLog(updated);
+        setCurHp(newHp);
+        setTempHp(newTempHp);
+        
+        // Save to Supabase
+        try {
+            const { error } = await supabase
+                .from("characters")
+                .update({ data: updated, updated_at: new Date() })
+                .eq("id", id);
+            if (error) {
+                console.error("Ошибка сохранения здоровья:", error);
+            }
+        } catch (error) {
+            console.error("Ошибка сохранения здоровья:", error);
         }
     };
 
@@ -803,6 +832,7 @@ export default function CharacterList() {
                             tempHp={tempHp}
                             setTempHp={handleTempHpChange}
                             hpMax={hpMax}
+                            setHpAndTempHp={handleHpAndTempHpChange}
                         />
                     </div>
                 </div>

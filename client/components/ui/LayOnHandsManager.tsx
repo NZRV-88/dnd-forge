@@ -13,7 +13,7 @@ interface LayOnHandsManagerProps {
 }
 
 export default function LayOnHandsManager({ level, frameColor = '#3B82F6' }: LayOnHandsManagerProps) {
-  const { draft, initializeLayOnHands, useLayOnHands, restoreLayOnHands } = useCharacter();
+  const { draft, initializeLayOnHands, useLayOnHands, restoreLayOnHands, updateLayOnHandsMaxPoints } = useCharacter();
   const [healAmount, setHealAmount] = useState(1);
   const [isHealing, setIsHealing] = useState(false);
   const [isCuringPoison, setIsCuringPoison] = useState(false);
@@ -24,7 +24,14 @@ export default function LayOnHandsManager({ level, frameColor = '#3B82F6' }: Lay
     if (!draft.layOnHands) {
       initializeLayOnHands(level);
     }
-  }, [level, initializeLayOnHands, draft.layOnHands]);
+  }, [initializeLayOnHands, draft.layOnHands]);
+
+  // Обновляем максимум очков при изменении уровня (не сбрасывая текущие значения)
+  React.useEffect(() => {
+    if (draft.layOnHands && draft.layOnHands.maxPoints !== level * 5) {
+      updateLayOnHandsMaxPoints(level);
+    }
+  }, [level, updateLayOnHandsMaxPoints, draft.layOnHands]);
 
   const layOnHands = draft.layOnHands;
   if (!layOnHands) return null;

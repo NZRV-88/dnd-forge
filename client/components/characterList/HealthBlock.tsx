@@ -7,6 +7,7 @@ interface HealthBlockProps {
   tempHp: number;
   setTempHp: (v: number) => void;
   hpMax: number;
+  setHpAndTempHp?: (hp: number, tempHp: number) => void;
 }
 
 export default function HealthBlock({
@@ -15,6 +16,7 @@ export default function HealthBlock({
   tempHp,
   setTempHp,
   hpMax,
+  setHpAndTempHp,
 }: HealthBlockProps) {
   const [hpChange, setHpChange] = useState<number>(1);
 
@@ -31,7 +33,13 @@ export default function HealthBlock({
       const overheal = newHp - hpMax;
       newHp = hpMax;
     }
-    setCurHp(Math.max(0, newHp));
+    const finalHp = Math.max(0, newHp);
+    
+    if (setHpAndTempHp) {
+      setHpAndTempHp(finalHp, tempHp);
+    } else {
+      setCurHp(finalHp);
+    }
   };
 
   const damage = () => {
@@ -42,8 +50,15 @@ export default function HealthBlock({
       dmg -= absorbed;
       newTemp -= absorbed;
     }
-    setTempHp(clampTemp(newTemp));
-    setCurHp(Math.max(0, curHp - dmg));
+    const finalTemp = clampTemp(newTemp);
+    const finalHp = Math.max(0, curHp - dmg);
+    
+    if (setHpAndTempHp) {
+      setHpAndTempHp(finalHp, finalTemp);
+    } else {
+      setTempHp(finalTemp);
+      setCurHp(finalHp);
+    }
   };
 
   return (

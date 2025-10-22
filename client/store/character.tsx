@@ -228,12 +228,14 @@ export type CharacterContextType = {
     initializeLayOnHands: (level: number) => void;
     useLayOnHands: (points: number) => void;
     restoreLayOnHands: () => void;
+    updateLayOnHandsMaxPoints: (level: number) => void;
     
     // Работа с Проведением божественности (только для Паладина)
     initializeChannelDivinity: (level: number) => void;
     useChannelDivinity: () => void;
     shortRestChannelDivinity: () => void;
     longRestChannelDivinity: () => void;
+    updateChannelDivinityMaxUses: (level: number) => void;
 };
 
 /* ------------------------------------------------------
@@ -1307,14 +1309,21 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
     // Функции для работы с Возложением рук (только для Паладина)
     const initializeLayOnHands = (level: number) => {
-        setDraft(d => ({
-            ...d,
-            layOnHands: {
-                maxPoints: level * 5,
-                currentPoints: level * 5,
-                usedPoints: 0
+        setDraft(d => {
+            // Если данные уже существуют, не сбрасываем их
+            if (d.layOnHands) {
+                return d;
             }
-        }));
+            
+            return {
+                ...d,
+                layOnHands: {
+                    maxPoints: level * 5,
+                    currentPoints: level * 5,
+                    usedPoints: 0
+                }
+            };
+        });
         
         // Автоматически сохраняем в БД
         if (draft.id) {
@@ -1365,16 +1374,45 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    // Обновляем максимум очков при изменении уровня (не сбрасывая текущие значения)
+    const updateLayOnHandsMaxPoints = (level: number) => {
+        setDraft(d => {
+            if (!d.layOnHands) return d;
+            
+            const newMaxPoints = level * 5;
+            return {
+                ...d,
+                layOnHands: {
+                    ...d.layOnHands,
+                    maxPoints: newMaxPoints,
+                    currentPoints: Math.min(d.layOnHands.currentPoints, newMaxPoints)
+                }
+            };
+        });
+        
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
+
     // Функции для работы с Проведением божественности (только для Паладина)
     const initializeChannelDivinity = (level: number) => {
-        setDraft(d => ({
-            ...d,
-            channelDivinity: {
-                maxUses: level >= 11 ? 3 : 2,
-                currentUses: level >= 11 ? 3 : 2,
-                shortRestUses: 0
+        setDraft(d => {
+            // Если данные уже существуют, не сбрасываем их
+            if (d.channelDivinity) {
+                return d;
             }
-        }));
+            
+            return {
+                ...d,
+                channelDivinity: {
+                    maxUses: level >= 11 ? 3 : 2,
+                    currentUses: level >= 11 ? 3 : 2,
+                    shortRestUses: 0
+                }
+            };
+        });
         
         // Автоматически сохраняем в БД
         if (draft.id) {
@@ -1436,6 +1474,28 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
                     ...d.channelDivinity,
                     currentUses: d.channelDivinity.maxUses,
                     shortRestUses: 0
+                }
+            };
+        });
+        
+        // Автоматически сохраняем в БД
+        if (draft.id) {
+            saveToSupabase().catch(console.error);
+        }
+    };
+
+    // Обновляем максимум использований при изменении уровня (не сбрасывая текущие значения)
+    const updateChannelDivinityMaxUses = (level: number) => {
+        setDraft(d => {
+            if (!d.channelDivinity) return d;
+            
+            const newMaxUses = level >= 11 ? 3 : 2;
+            return {
+                ...d,
+                channelDivinity: {
+                    ...d.channelDivinity,
+                    maxUses: newMaxUses,
+                    currentUses: Math.min(d.channelDivinity.currentUses, newMaxUses)
                 }
             };
         });
@@ -1631,11 +1691,13 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         initializeLayOnHands,
         useLayOnHands,
         restoreLayOnHands,
+        updateLayOnHandsMaxPoints,
         
         initializeChannelDivinity,
         useChannelDivinity,
         shortRestChannelDivinity,
         longRestChannelDivinity,
+        updateChannelDivinityMaxUses,
     };
 
     // Создаем fallback API для случая, когда провайдер еще не инициализирован
@@ -1706,11 +1768,13 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
         initializeLayOnHands: () => {},
         useLayOnHands: () => {},
         restoreLayOnHands: () => {},
+        updateLayOnHandsMaxPoints: () => {},
         
         initializeChannelDivinity: () => {},
         useChannelDivinity: () => {},
         shortRestChannelDivinity: () => {},
         longRestChannelDivinity: () => {},
+        updateChannelDivinityMaxUses: () => {},
         
         isLoading: false,
         setSubclass: () => {},

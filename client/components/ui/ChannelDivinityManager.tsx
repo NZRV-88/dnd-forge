@@ -19,7 +19,7 @@ export default function ChannelDivinityManager({ level, frameColor = 'blue', sub
     return null;
   }
   
-  const { initializeChannelDivinity, useChannelDivinity, shortRestChannelDivinity, longRestChannelDivinity } = characterContext;
+  const { initializeChannelDivinity, useChannelDivinity, shortRestChannelDivinity, longRestChannelDivinity, updateChannelDivinityMaxUses } = characterContext;
   
   // Используем только переданный draft
   const currentDraft = passedDraft;
@@ -35,7 +35,17 @@ export default function ChannelDivinityManager({ level, frameColor = 'blue', sub
     if (!currentDraft.channelDivinity && level >= 3) {
       initializeChannelDivinity(level);
     }
-  }, [level, initializeChannelDivinity, currentDraft.channelDivinity]);
+  }, [initializeChannelDivinity, currentDraft.channelDivinity]);
+
+  // Обновляем максимум использований при изменении уровня (не сбрасывая текущие значения)
+  React.useEffect(() => {
+    if (currentDraft.channelDivinity && level >= 3) {
+      const expectedMaxUses = level >= 11 ? 3 : 2;
+      if (currentDraft.channelDivinity.maxUses !== expectedMaxUses) {
+        updateChannelDivinityMaxUses(level);
+      }
+    }
+  }, [level, updateChannelDivinityMaxUses, currentDraft.channelDivinity]);
 
   const channelDivinity = currentDraft.channelDivinity;
 
