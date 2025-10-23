@@ -5,6 +5,7 @@ import DynamicFrame from "@/components/ui/DynamicFrame";
 import { Weapons } from "@/data/items/weapons";
 import { getClassByKey } from "@/data/classes";
 import { Spells } from "@/data/spells";
+import { getSpellDisplayDamage, getCantripScalingInfo } from "@/utils/spellUtils";
 import { Gears, Ammunitions } from "@/data/items/gear";
 import { Armors } from "@/data/items/armors";
 import { Tools } from "@/data/items/tools";
@@ -62,7 +63,7 @@ type TabType = "actions" | "spells" | "inventory" | "features";
 type ActionType = "attack" | "action" | "bonus" | "reaction";
 
 // Функция для отображения карточки заклинания
-const renderSpellCard = (spell: any, onRemove?: () => void, onAdd?: () => void, isPrepared?: boolean, isLearned?: boolean, frameColor?: string, disabled?: boolean) => {
+const renderSpellCard = (spell: any, onRemove?: () => void, onAdd?: () => void, isPrepared?: boolean, isLearned?: boolean, frameColor?: string, disabled?: boolean, characterLevel?: number) => {
   return (
     <div className="border-b border-gray-600 bg-neutral-900 shadow-inner shadow-sm">
       <Collapsible>
@@ -201,7 +202,12 @@ const renderSpellCard = (spell: any, onRemove?: () => void, onAdd?: () => void, 
 
               {spell.damage && (
                 <div className="text-gray-400">
-                  <span className="font-medium text-gray-200">Урон:</span> {spell.damage.dice} {spell.damage.type}
+                  <span className="font-medium text-gray-200">Урон:</span> {getSpellDisplayDamage(spell, characterLevel || 1)} {spell.damage.type}
+                  {spell.level === 0 && spell.scaling?.type === 'cantrip' && (
+                    <div className="text-xs text-blue-300 mt-1">
+                      <span className="font-medium">Масштабирование:</span> {getCantripScalingInfo(spell)}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -4650,7 +4656,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       allActions.push({ type: 'weapon', data: weapon, index: i });
                     });
                     
-                    // Добавляем заклинания только с castingTime = "Действие"
+                    // Добавляем заклинания только с castingTime = "Действие" (исключаем заговоры)
                     console.log('Attacks: characterData:', characterData);
                     console.log('Attacks: characterData.spells:', characterData?.spells);
                     if (characterData?.spells?.length > 0) {
@@ -4658,6 +4664,10 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                       characterData.spells.forEach((spell: string, i: number) => {
                         const spellData = getSpellData(spell);
                         console.log(`Attacks: spell ${spell}:`, spellData);
+                        
+                        // Исключаем заговоры (level 0) из отображения на вкладке действий
+                        if (spellData?.level === 0) return;
+                        
                         // Проверяем, является ли заклинание действием
                         const castingTime = spellData?.castingTime;
                         const isAction = Array.isArray(castingTime) 
@@ -4906,8 +4916,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         const isSelfTarget = spellRange && spellRange.toLowerCase().includes('на себя');
                         const showAttackBonus = !isSelfTarget;
                         
-                        // Получаем урон из данных заклинания (без модификатора характеристики)
-                        const spellDamage = spellData?.damage?.dice || "1d10";
+                        // Получаем урон из данных заклинания с учетом масштабирования
+                        const spellDamage = getSpellDisplayDamage(spellData, level) || "1d10";
                         
                         return (
                           <div key={`spell-${action.index}`}>
@@ -5069,6 +5079,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                     
                     if (allSpells.length > 0) {
                       allSpells.forEach((spell: any, i: number) => {
+                        // Исключаем заговоры (level 0) из отображения на вкладке действий
+                        if (spell.level === 0) return;
+                        
                         // Проверяем, является ли заклинание бонусным действием
                         const castingTime = spell?.castingTime;
                         const isBonusAction = Array.isArray(castingTime)
@@ -5114,8 +5127,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                         const isSelfTarget = spellRange && spellRange.toLowerCase().includes('на себя');
                         const showAttackBonus = !isSelfTarget;
                         
-                        // Получаем урон из данных заклинания (без модификатора характеристики)
-                        const spellDamage = spellData?.damage?.dice || "1d10";
+                        // Получаем урон из данных заклинания с учетом масштабирования
+                        const spellDamage = getSpellDisplayDamage(spellData, level) || "1d10";
                         
                         return (
                           <div key={`bonus-spell-${action.index}`}>
@@ -5350,12 +5363,12 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   // Группируем заклинания по уровням
                   console.log('Spells tab: filteredSpells:', filteredSpells);
                   const spellsByLevel = filteredSpells.reduce((acc, spell) => {
-                    const level = spell.level;
-                    console.log('Spells tab: grouping spell', spell.name, 'level:', level);
-                    if (!acc[level]) {
-                      acc[level] = [];
+                    const spellLevel = spell.level;
+                    console.log('Spells tab: grouping spell', spell.name, 'level:', spellLevel);
+                    if (!acc[spellLevel]) {
+                      acc[spellLevel] = [];
                     }
-                    acc[level].push(spell);
+                    acc[spellLevel].push(spell);
                     return acc;
                   }, {} as Record<number, any[]>);
                   
@@ -5365,13 +5378,13 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                   const sortedLevels = Object.keys(spellsByLevel).map(Number).sort((a, b) => a - b);
                   console.log('Spells tab: sortedLevels:', sortedLevels);
                   
-                  return sortedLevels.map(level => {
-                    const spells = spellsByLevel[level];
-                    const levelName = level === 0 ? 'ЗАГОВОРЫ' : `${level} УРОВЕНЬ`;
-                    console.log(`Spells tab: rendering level ${level} (${levelName}) with ${spells.length} spells:`, spells.map(s => s.name));
+                  return sortedLevels.map(spellLevel => {
+                    const spells = spellsByLevel[spellLevel];
+                    const levelName = spellLevel === 0 ? 'ЗАГОВОРЫ' : `${spellLevel} УРОВЕНЬ`;
+                    console.log(`Spells tab: rendering level ${spellLevel} (${levelName}) with ${spells.length} spells:`, spells.map(s => s.name));
                     
                     return (
-                      <div key={level} className="space-y-2">
+                      <div key={spellLevel} className="space-y-2">
                         {/* Заголовок уровня */}
                         <div
                           className="text-xs font-semibold uppercase mb-2 text-gray-400 flex items-center justify-between pb-2"
@@ -5380,16 +5393,16 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                           }}
                         >
                           <span>{levelName}</span>
-              {level > 0 && (() => {
-                console.log(`Getting slots for level ${level}`);
-                const slots = getSpellSlotsForLevel(level);
-                console.log(`Level ${level} slots:`, slots);
-                console.log(`Rendering checkboxes for level ${level}, slots: ${slots}`);
+              {spellLevel > 0 && (() => {
+                console.log(`Getting slots for level ${spellLevel}`);
+                const slots = getSpellSlotsForLevel(spellLevel);
+                console.log(`Level ${spellLevel} slots:`, slots);
+                console.log(`Rendering checkboxes for level ${spellLevel}, slots: ${slots}`);
                 return (
                   <div className="flex items-center gap-2 mr-4">
                     <div className="flex gap-1">
                       {Array.from({ length: Math.max(slots, 1) }, (_, i) => {
-                        const isUsed = i < (draft?.usedSpellSlots?.[level] || 0);
+                        const isUsed = i < (draft?.usedSpellSlots?.[spellLevel] || 0);
                         const isAvailable = i < slots;
                         return (
                           <div
@@ -5401,9 +5414,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                             }}
                             onClick={() => {
                               if (isUsed) {
-                                freeSpellSlot(level);
+                                freeSpellSlot(spellLevel);
                               } else if (isAvailable) {
-                                useSpellSlot(level);
+                                useSpellSlot(spellLevel);
                               }
                             }}
                           >
@@ -5468,8 +5481,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                                   castingTime === 'Бонусное действие' ? 'БД' : 
                                                   castingTime || '—';
                           
-                          // Получаем эффект (только урон, не описание)
-                          const effect = spell.damage?.dice || '—';
+                          // Получаем эффект (только урон, не описание) с учетом масштабирования
+                          const effect = getSpellDisplayDamage(spell, level) || '—';
+                          
                           
                           return (
                             <div key={index}>
@@ -5587,7 +5601,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                 <div className="text-gray-300 flex items-center justify-center">
                                   {spell.damage?.dice ? (
                                     <button
-                                      onClick={() => handleDamage(spell.name, spellAbility, spellCastingModifier, spell.damage.dice, true)}
+                                      onClick={() => handleDamage(spell.name, spellAbility, spellCastingModifier, effect, true)}
                                       disabled={loadingDamage[`spell-${spell.name}`]}
                                       className="w-16 h-8 bg-transparent disabled:bg-gray-600 rounded text-sm font-semibold transition-colors border flex items-center justify-center"
                                       style={{
@@ -5608,7 +5622,7 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                       {loadingDamage[`spell-${spell.name}`] ? (
                                         <Loader2 className="w-3 h-3 animate-spin" />
                                       ) : (
-                                        spell.damage.dice
+                                        effect
                                       )}
                                     </button>
                                   ) : spell.heal ? (
@@ -7182,7 +7196,8 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                 isPrepared,
                                 false,
                                 getFrameColor(frameColor),
-                                isDisabled
+                                isDisabled,
+                                level
                               )}
                             </div>
                           );
@@ -7243,7 +7258,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                   undefined,
                                   true,
                                   false,
-                                  getFrameColor(frameColor)
+                                  getFrameColor(frameColor),
+                                  false,
+                                  level
                                 )}
                               </div>
                             );
@@ -7274,7 +7291,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                       undefined,
                                       false,
                                       true,
-                                      getFrameColor(frameColor)
+                                      getFrameColor(frameColor),
+                                      false,
+                                      level
                                     )}
                                   </div>
                                 );
@@ -7405,7 +7424,9 @@ export default function Attacks({ attacks, equipped, stats, proficiencyBonus, cl
                                 undefined,
                                 false,
                                 isLearned,
-                                getFrameColor(frameColor)
+                                getFrameColor(frameColor),
+                                false,
+                                level
                               )}
                             </div>
                           );

@@ -208,3 +208,86 @@ export const getSpellName = (spellKey: string): string => {
   const spell = getSpellData(spellKey);
   return spell?.name || spellKey;
 };
+
+/**
+ * Рассчитывает урон заговора в зависимости от уровня персонажа
+ */
+export const getCantripDamage = (spell: any, characterLevel: number): string => {
+  if (!spell?.damage || !spell?.scaling || spell.scaling.type !== 'cantrip') {
+    return spell?.damage?.dice || '';
+  }
+
+  const baseDice = spell.damage.dice;
+  const scaling = spell.scaling;
+  const levels = scaling.progression.levels;
+  
+  // Определяем количество дополнительных костей на основе уровня персонажа
+  let additionalDice = 0;
+  for (const level of levels) {
+    if (characterLevel >= level) {
+      additionalDice++;
+    }
+  }
+  
+  // Парсим базовую кость (например, "1d8" -> { count: 1, sides: 8 })
+  const baseMatch = baseDice.match(/(\d+)d(\d+)/);
+  if (!baseMatch) return baseDice;
+  
+  const baseCount = parseInt(baseMatch[1]);
+  const diceSides = baseMatch[2];
+  
+  // Рассчитываем общее количество костей
+  const totalCount = baseCount + additionalDice;
+  
+  return `${totalCount}d${diceSides}`;
+};
+
+/**
+ * Получает отображаемый урон заклинания с учетом масштабирования
+ */
+export const getSpellDisplayDamage = (spell: any, characterLevel: number): string => {
+  if (!spell?.damage) return '';
+  
+  // Для заговоров используем специальную функцию масштабирования
+  if (spell.level === 0 && spell.scaling?.type === 'cantrip') {
+    return getCantripDamage(spell, characterLevel);
+  }
+  
+  // Для обычных заклинаний возвращаем базовый урон
+  return spell.damage.dice;
+};
+
+/**
+ * Получает информацию о масштабировании заговора для отображения
+ */
+export const getCantripScalingInfo = (spell: any): string => {
+  if (!spell?.damage || !spell?.scaling || spell.scaling.type !== 'cantrip') {
+    return '';
+  }
+
+  const baseDice = spell.damage.dice;
+  const scaling = spell.scaling;
+  const levels = scaling.progression.levels;
+  
+  // Парсим базовую кость
+  const baseMatch = baseDice.match(/(\d+)d(\d+)/);
+  if (!baseMatch) return '';
+  
+  const baseCount = parseInt(baseMatch[1]);
+  const diceSides = baseMatch[2];
+  
+  // Создаем строку с информацией о масштабировании
+  const scalingInfo = [];
+  
+  // Базовый урон (1-4 уровень)
+  scalingInfo.push(`1-4: ${baseCount}d${diceSides}`);
+  
+  // Урон на каждом уровне усиления
+  levels.forEach((level, index) => {
+    const diceCount = baseCount + index + 1;
+    const nextLevel = index < levels.length - 1 ? levels[index + 1] - 1 : 20;
+    scalingInfo.push(`${level}-${nextLevel}: ${diceCount}d${diceSides}`);
+  });
+  
+  return scalingInfo.join(', ');
+};

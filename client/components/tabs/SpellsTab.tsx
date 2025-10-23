@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Spells } from "@/data/spells";
-import { getAllCharacterSpells, getAvailableSpells, getFilteredSpells, getAvailableSpellLevels, getSpellSlotsForLevel, hasAvailableSlots, getMaxPreparedSpells } from "@/utils/spellUtils";
+import { getAllCharacterSpells, getAvailableSpells, getFilteredSpells, getAvailableSpellLevels, getSpellSlotsForLevel, hasAvailableSlots, getMaxPreparedSpells, getSpellDisplayDamage, getCantripScalingInfo } from "@/utils/spellUtils";
 import DynamicFrame from "@/components/ui/DynamicFrame";
 import { Wand, Search, Plus, Settings } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -196,6 +196,16 @@ export default function SpellsTab({
                           <p><strong>Дистанция:</strong> {spell.range}</p>
                           <p><strong>Компоненты:</strong> {spell.components}</p>
                           <p><strong>Длительность:</strong> {spell.duration}</p>
+                          {spell.damage && (
+                            <div>
+                              <p><strong>Урон:</strong> {getSpellDisplayDamage(spell, characterData.level || 1)} {spell.damage.type}</p>
+                              {spell.level === 0 && spell.scaling?.type === 'cantrip' && (
+                                <p className="text-xs text-blue-300 mt-1">
+                                  <strong>Масштабирование:</strong> {getCantripScalingInfo(spell)}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CollapsibleContent>
@@ -273,9 +283,21 @@ export default function SpellsTab({
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-800 rounded">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-200">{spell.name}</span>
-                        <span className="text-sm text-gray-400">
-                          {spell.level === 0 ? 'Заговор' : `${spell.level} уровень`}
-                        </span>
+                        <div className="text-sm text-gray-400">
+                          <div className="flex items-center gap-2">
+                            <span>{spell.level === 0 ? 'Заговор' : `${spell.level} уровень`}</span>
+                            {spell.damage && (
+                              <span>
+                                - {getSpellDisplayDamage(spell, characterData.level || 1)} {spell.damage.type}
+                              </span>
+                            )}
+                          </div>
+                          {spell.level === 0 && spell.scaling?.type === 'cantrip' && (
+                            <div className="text-xs text-blue-300 mt-1">
+                              Масштабирование: {getCantripScalingInfo(spell)}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={() => addSpell(spell.key)}
